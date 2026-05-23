@@ -4,7 +4,7 @@
 # the domain below, and reverse-proxies all traffic to the `app` service
 # on its internal port 3000.
 #
-ambar-daellen.felsenau.org {
+app.al-daellen.ch {
 	encode zstd gzip
 
 	# Security headers
