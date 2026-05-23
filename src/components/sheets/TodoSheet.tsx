@@ -5,6 +5,8 @@ import { Sheet } from "../Sheet";
 import { DetailRow } from "../DetailRow";
 import { Avatar } from "../Avatar";
 import { ScopeToggle } from "../ScopeToggle";
+import { TagInput } from "../TagInput";
+import { useStore } from "@/lib/store";
 import type { Priority, Todo, UserId } from "@/lib/types";
 import { USERS } from "@/lib/types";
 import { formatDate, relativeWhen } from "@/lib/date";
@@ -19,8 +21,14 @@ type Props = {
 };
 
 export function TodoSheet({ todo, onClose, onChange, onDelete, currentUser }: Props) {
+  const todos = useStore((s) => s.todos);
   if (!todo) return null;
   const p = PRIO[todo.prio];
+
+  const knownTags = Array.from(
+    new Set(todos.flatMap((t) => t.tags ?? [])),
+  ).filter((t) => !(todo.tags ?? []).includes(t));
+
   return (
     <Sheet open onClose={onClose} title="Aufgabe">
       <div className="flex items-start justify-between gap-3">
@@ -93,6 +101,15 @@ export function TodoSheet({ todo, onClose, onChange, onDelete, currentUser }: Pr
           );
         })}
       </div>
+
+      <div className="uplabel text-[10.5px] mt-4 mb-1.5" style={{ color: "var(--muted)" }}>
+        Bereiche / Tags
+      </div>
+      <TagInput
+        value={todo.tags ?? []}
+        onChange={(next) => onChange(todo.id, { tags: next })}
+        knownTags={knownTags}
+      />
 
       <div className="flex items-center justify-between mt-3">
         <div className="uplabel text-[10.5px]" style={{ color: "var(--muted)" }}>

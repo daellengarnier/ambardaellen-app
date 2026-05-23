@@ -8,7 +8,7 @@ import { USERS } from "@/lib/types";
 import { relativeWhen } from "@/lib/date";
 import { Card } from "@/components/Card";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AvatarPair, AvatarWithScope } from "@/components/Avatar";
+import { AvatarWithScope } from "@/components/Avatar";
 import { RoundCheck } from "@/components/RoundCheck";
 import { Empty } from "@/components/Empty";
 import { ClientOnly } from "@/components/ClientOnly";
@@ -93,7 +93,7 @@ function ShopContent() {
 
   return (
     <>
-      <ScreenHeader title="Einkauf" subtitle={`${openItems.length} offen`} right={<AvatarPair size={24} />} />
+      <ScreenHeader title="Einkauf" subtitle={`${openItems.length} offen`} />
 
       <div className="px-4 pb-2.5">
         <Card className="p-2">

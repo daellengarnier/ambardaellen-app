@@ -10,34 +10,35 @@ export function PhoneShell({ children }: { children: ReactNode }) {
       <div className="app-atmos" aria-hidden="true">
         <Atmosphere />
       </div>
-      <main className="app-content phone-scroll">{children}</main>
+      <main className="app-content">{children}</main>
       <BottomTabs />
 
       <style jsx>{`
         .app-shell {
           position: relative;
-          height: 100dvh;
+          min-height: 100dvh;
           width: 100%;
           max-width: 480px;
           margin: 0 auto;
           background: var(--cream);
-          overflow: hidden;
           isolation: isolate;
         }
         .app-atmos {
-          position: absolute;
+          position: fixed;
           inset: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          max-width: 480px;
+          width: 100%;
           z-index: 0;
           pointer-events: none;
         }
         .app-content {
-          position: absolute;
-          inset: 0;
+          position: relative;
           z-index: 10;
-          overflow-y: auto;
-          -webkit-overflow-scrolling: touch;
+          min-height: 100dvh;
           padding-top: max(env(safe-area-inset-top), 0.5rem);
-          padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
+          padding-bottom: calc(env(safe-area-inset-bottom) + 110px);
         }
         @media (min-width: 481px) {
           :global(body) {

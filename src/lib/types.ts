@@ -19,6 +19,14 @@ export type ActivityIconKind =
   | "book"
   | "house";
 
+export type PacklistItem = {
+  id: string;
+  text: string;
+  packed: boolean;
+  scope: Scope; // gemeinsam packen vs persönlich (eigene Sachen)
+  by: UserId; // wer hat das Item hinzugefügt
+};
+
 export type Activity = {
   id: string;
   title: string;
@@ -30,6 +38,8 @@ export type Activity = {
   scope: Scope;
   note: string;
   icon: ActivityIconKind;
+  tags: string[];
+  packlist: PacklistItem[];
 };
 
 export type ShoppingItem = {
@@ -56,7 +66,22 @@ export type Todo = {
   scope: Scope;
   addedAt: number;
   note: string;
+  tags: string[];
 };
+
+// Tag-Vorschläge für Bereiche / Kontexte
+export const TAG_SUGGESTIONS = [
+  "arbeit",
+  "haushalt",
+  "familie",
+  "freunde",
+  "gesundheit",
+  "finanzen",
+  "hobby",
+  "spinnerei",
+  "reise",
+  "lernen",
+] as const;
 
 export type Term = "kurz" | "mittel" | "lang";
 

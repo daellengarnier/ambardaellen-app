@@ -6,6 +6,7 @@ import type {
   Activity,
   Cycle,
   Goal,
+  PacklistItem,
   ShoppingItem,
   Todo,
   UserId,
@@ -39,7 +40,7 @@ type State = {
   removeShopping: (id: string) => void;
 
   // todos
-  addTodo: (input: Pick<Todo, "text" | "scope" | "prio" | "due">) => void;
+  addTodo: (input: Pick<Todo, "text" | "scope" | "prio" | "due"> & { tags?: string[]; note?: string }) => void;
   toggleTodo: (id: string) => void;
   updateTodo: (id: string, patch: Partial<Todo>) => void;
   removeTodo: (id: string) => void;
@@ -48,6 +49,12 @@ type State = {
   addActivity: (input: Omit<Activity, "id" | "by">) => void;
   updateActivity: (id: string, patch: Partial<Activity>) => void;
   removeActivity: (id: string) => void;
+
+  // packlist (per activity)
+  addPacklistItem: (activityId: string, text: string, scope: PacklistItem["scope"]) => void;
+  togglePacklistItem: (activityId: string, itemId: string) => void;
+  removePacklistItem: (activityId: string, itemId: string) => void;
+  resetPacklist: (activityId: string) => void;
 
   // cycle
   setCycle: (cycle: Cycle) => void;
@@ -108,7 +115,7 @@ export const useStore = create<State>()(
       removeShopping: (id) =>
         set((s) => ({ shopping: s.shopping.filter((it) => it.id !== id) })),
 
-      addTodo: ({ text, scope, prio, due }) => {
+      addTodo: ({ text, scope, prio, due, tags = [], note = "" }) => {
         const t = text.trim();
         if (!t) return;
         const by = get().currentUser;
@@ -123,7 +130,8 @@ export const useStore = create<State>()(
               by,
               scope,
               addedAt: Date.now(),
-              note: "",
+              note,
+              tags,
             },
             ...s.todos,
           ],
@@ -157,6 +165,54 @@ export const useStore = create<State>()(
 
       setCycle: (cycle) => set({ cycle }),
       updateCycle: (patch) => set((s) => ({ cycle: { ...s.cycle, ...patch } })),
+
+      addPacklistItem: (activityId, text, scope) => {
+        const t = text.trim();
+        if (!t) return;
+        const by = get().currentUser;
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? {
+                  ...a,
+                  packlist: [
+                    ...a.packlist,
+                    { id: uid("pk"), text: t, packed: false, scope, by },
+                  ],
+                }
+              : a,
+          ),
+        }));
+      },
+      togglePacklistItem: (activityId, itemId) =>
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? {
+                  ...a,
+                  packlist: a.packlist.map((p) =>
+                    p.id === itemId ? { ...p, packed: !p.packed } : p,
+                  ),
+                }
+              : a,
+          ),
+        })),
+      removePacklistItem: (activityId, itemId) =>
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? { ...a, packlist: a.packlist.filter((p) => p.id !== itemId) }
+              : a,
+          ),
+        })),
+      resetPacklist: (activityId) =>
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? { ...a, packlist: a.packlist.map((p) => ({ ...p, packed: false })) }
+              : a,
+          ),
+        })),
 
       addGoal: (input) => {
         const t = input.title.trim();
@@ -210,8 +266,22 @@ export const useStore = create<State>()(
     }),
     {
       name: "ambardaellen-store",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
+      migrate: (persisted: unknown, version: number) => {
+        // Bei Schema-Bumps Seeds neu laden (lokale Daten weg, aber besser als Crash).
+        if (!persisted || version < 2) {
+          return {
+            currentUser: "D" as UserId,
+            activities: SEED_ACTIVITIES,
+            shopping: SEED_SHOPPING,
+            todos: SEED_TODOS,
+            goals: SEED_GOALS,
+            cycle: SEED_CYCLE,
+          };
+        }
+        return persisted as State;
+      },
     },
   ),
 );

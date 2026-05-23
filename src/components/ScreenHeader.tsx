@@ -1,10 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { UserSwitchPair } from "./Avatar";
 
 type Props = {
   title: string;
   subtitle?: string;
+  /** Zusätzliche Action (z. B. + Button) rechts neben dem User-Switcher. */
   right?: ReactNode;
 };
 
@@ -21,7 +23,10 @@ export function ScreenHeader({ title, subtitle, right }: Props) {
           {title}
         </h1>
       </div>
-      {right && <div className="shrink-0 pt-1">{right}</div>}
+      <div className="shrink-0 pt-1 flex items-center gap-2">
+        <UserSwitchPair size={26} />
+        {right}
+      </div>
     </header>
   );
 }

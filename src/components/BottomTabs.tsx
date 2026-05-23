@@ -18,18 +18,19 @@ export function BottomTabs() {
   return (
     <nav
       aria-label="Hauptnavigation"
-      className="absolute left-0 right-0 z-40 px-2.5 pt-1"
+      className="fixed left-0 right-0 z-40 mx-auto px-2.5 pt-1 pointer-events-none"
       style={{
         bottom: 0,
+        maxWidth: 480,
         paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)",
         background:
           "linear-gradient(to top, rgba(239,230,211,0.98) 55%, rgba(239,230,211,0))",
       }}
     >
       <div
-        className="flex items-stretch justify-between px-1 py-1 rounded-[26px] backdrop-blur-md shadow-card"
+        className="flex items-stretch justify-between px-1 py-1 rounded-[26px] backdrop-blur-md shadow-card pointer-events-auto"
         style={{
-          background: "rgba(251,246,232,0.85)",
+          background: "rgba(251,246,232,0.92)",
           border: "1px solid rgba(218,201,168,0.5)",
         }}
       >
@@ -39,6 +40,7 @@ export function BottomTabs() {
             <Link
               key={href}
               href={href}
+              prefetch
               className="tap relative flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-2xl"
               style={
                 active

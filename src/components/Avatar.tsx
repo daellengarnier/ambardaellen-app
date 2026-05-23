@@ -4,14 +4,16 @@ import { Lock } from "lucide-react";
 import type { Scope, UserId } from "@/lib/types";
 import { USERS } from "@/lib/types";
 import { isPrivate } from "@/lib/scope";
+import { useStore } from "@/lib/store";
 
 type AvatarProps = {
   id: UserId;
   size?: number;
   ring?: boolean;
+  dim?: boolean;
 };
 
-export function Avatar({ id, size = 24, ring = false }: AvatarProps) {
+export function Avatar({ id, size = 24, ring = false, dim = false }: AvatarProps) {
   const u = USERS[id];
   return (
     <span
@@ -22,6 +24,8 @@ export function Avatar({ id, size = 24, ring = false }: AvatarProps) {
         backgroundColor: u.color,
         fontSize: size * 0.45,
         boxShadow: ring ? "0 0 0 2px var(--paper)" : undefined,
+        opacity: dim ? 0.42 : 1,
+        transition: "opacity 200ms",
       }}
       aria-label={u.name}
     >
@@ -37,6 +41,35 @@ export function AvatarPair({ size = 22 }: { size?: number }) {
       <span style={{ marginLeft: -Math.round(size / 3) }}>
         <Avatar id="D" size={size} ring />
       </span>
+    </span>
+  );
+}
+
+/**
+ * Header-Variante: aktiver User hat Ring + volle Farbe, anderer ist matt.
+ * Tap auf einen Avatar wechselt den User.
+ */
+export function UserSwitchPair({ size = 28 }: { size?: number }) {
+  const currentUser = useStore((s) => s.currentUser);
+  const setCurrentUser = useStore((s) => s.setCurrentUser);
+  return (
+    <span className="inline-flex items-center gap-0">
+      {(["A", "D"] as const).map((id, i) => {
+        const active = currentUser === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setCurrentUser(id)}
+            className="tap inline-flex"
+            style={{ marginLeft: i === 0 ? 0 : -Math.round(size / 3) }}
+            aria-label={`Wechseln zu ${USERS[id].name}`}
+            aria-pressed={active}
+          >
+            <Avatar id={id} size={size} ring={active} dim={!active} />
+          </button>
+        );
+      })}
     </span>
   );
 }

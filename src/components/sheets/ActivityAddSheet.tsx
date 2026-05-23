@@ -5,6 +5,8 @@ import { Heart, Coffee, Leaf, Sparkles, BookOpen, Home } from "lucide-react";
 import { Sheet } from "../Sheet";
 import { Segmented } from "../Segmented";
 import { ScopeToggle } from "../ScopeToggle";
+import { TagInput } from "../TagInput";
+import { useStore } from "@/lib/store";
 import type { Activity, ActivityIconKind, ActivityStatus, Scope, UserId } from "@/lib/types";
 
 const ACT_ICONS: Array<{ v: ActivityIconKind; Icon: typeof Heart }> = [
@@ -37,6 +39,9 @@ function ActivityAddForm({
   onAdd: (input: Omit<Activity, "id" | "by">) => void;
   currentUser: UserId;
 }) {
+  const activities = useStore((s) => s.activities);
+  const knownTags = Array.from(new Set(activities.flatMap((a) => a.tags ?? [])));
+
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -45,10 +50,11 @@ function ActivityAddForm({
   const [icon, setIcon] = useState<ActivityIconKind>("heart");
   const [status, setStatus] = useState<ActivityStatus>("geplant");
   const [scope, setScope] = useState<Scope>("geteilt");
+  const [tags, setTags] = useState<string[]>([]);
 
   return (
     <Sheet open onClose={onClose} title="Neue Aktivität">
-      <Field label="Was?" value={title} onChange={setTitle} placeholder="z. B. Picknick im Park" />
+      <Field label="Was?" value={title} onChange={setTitle} placeholder="z. B. Picknick im Park" autoFocus />
 
       <div className="grid grid-cols-2 gap-2 mt-3">
         <DateField label="Datum" value={date} onChange={setDate} type="date" />
@@ -69,6 +75,11 @@ function ActivityAddForm({
           { value: "erledigt", label: "Erledigt" },
         ]}
       />
+
+      <div className="uplabel text-[10.5px] mt-3 mb-1.5" style={{ color: "var(--muted)" }}>
+        Bereiche / Tags
+      </div>
+      <TagInput value={tags} onChange={setTags} knownTags={knownTags} />
 
       <div className="uplabel text-[10.5px] mt-3 mb-1.5" style={{ color: "var(--muted)" }}>
         Icon
@@ -125,6 +136,8 @@ function ActivityAddForm({
             scope,
             note,
             icon,
+            tags,
+            packlist: [],
           });
           onClose();
         }}
@@ -142,11 +155,13 @@ function Field({
   value,
   onChange,
   placeholder,
+  autoFocus,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  autoFocus?: boolean;
 }) {
   return (
     <div className="mt-3">
@@ -157,6 +172,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        autoFocus={autoFocus}
         className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
         style={{ background: "rgba(228,217,191,0.5)" }}
       />

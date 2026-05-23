@@ -11,6 +11,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { AvatarWithScope } from "@/components/Avatar";
 import { RoundCheck } from "@/components/RoundCheck";
 import { Empty } from "@/components/Empty";
+import { TagChips } from "@/components/TagChips";
 import { ClientOnly } from "@/components/ClientOnly";
 import { TodoSheet } from "@/components/sheets/TodoSheet";
 import { TodoAddSheet } from "@/components/sheets/TodoAddSheet";
@@ -25,11 +26,7 @@ export default function TodoPage() {
 }
 
 function Skeleton() {
-  return (
-    <div className="pt-2 pb-3">
-      <ScreenHeader title="Todo" subtitle="—" />
-    </div>
-  );
+  return <ScreenHeader title="Todo" subtitle="—" />;
 }
 
 type ScopeFilter = "alle" | "geteilt" | "nur-ich";
@@ -44,6 +41,7 @@ function TodoContent() {
 
   const [query, setQuery] = useState("");
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("alle");
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [openTodo, setOpenTodo] = useState<Todo | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -52,14 +50,24 @@ function TodoContent() {
     let arr = visibleTo(todos, currentUser);
     if (scopeFilter === "geteilt") arr = arr.filter((t) => t.scope === "geteilt");
     if (scopeFilter === "nur-ich") arr = arr.filter((t) => t.scope === currentUser);
+    if (tagFilter) arr = arr.filter((t) => (t.tags ?? []).includes(tagFilter));
     if (query.trim()) {
       const q = query.toLowerCase();
       arr = arr.filter(
-        (t) => t.text.toLowerCase().includes(q) || (t.note || "").toLowerCase().includes(q),
+        (t) =>
+          t.text.toLowerCase().includes(q) ||
+          (t.note || "").toLowerCase().includes(q) ||
+          (t.tags ?? []).some((tag) => tag.includes(q)),
       );
     }
     return arr;
-  }, [todos, scopeFilter, query, currentUser]);
+  }, [todos, scopeFilter, tagFilter, query, currentUser]);
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    visibleTo(todos, currentUser).forEach((t) => (t.tags ?? []).forEach((tg) => set.add(tg)));
+    return [...set].sort();
+  }, [todos, currentUser]);
 
   const openItems = myTodos.filter((t) => !t.done);
   const doneItems = myTodos.filter((t) => t.done);
@@ -151,12 +159,48 @@ function TodoContent() {
         })}
       </div>
 
+      {allTags.length > 0 && (
+        <div className="px-4 pb-2 flex gap-1.5 overflow-x-auto phone-scroll">
+          <button
+            type="button"
+            onClick={() => setTagFilter(null)}
+            className="tap shrink-0 text-[11px] rounded-full px-2.5 py-1 font-medium"
+            style={
+              tagFilter === null
+                ? { background: "var(--ink)", color: "var(--paper)" }
+                : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
+            }
+          >
+            alle Bereiche
+          </button>
+          {allTags.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTagFilter(tagFilter === t ? null : t)}
+              className="tap shrink-0 text-[11px] rounded-full px-2.5 py-1 font-medium"
+              style={
+                tagFilter === t
+                  ? { background: "var(--terra)", color: "white" }
+                  : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
+              }
+            >
+              #{t}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="px-4 space-y-3">
         {buckets.length === 0 && doneItems.length === 0 && (
           <Empty
             icon={<ListTodo size={22} strokeWidth={1.75} />}
-            title={query ? "Nichts gefunden" : "Alles erledigt"}
-            body={query ? "Andere Suche probieren?" : "Du bist auf dem Laufenden."}
+            title={query || tagFilter ? "Nichts gefunden" : "Alles erledigt"}
+            body={
+              query || tagFilter
+                ? "Filter anpassen?"
+                : "Du bist auf dem Laufenden."
+            }
           />
         )}
 
@@ -297,9 +341,9 @@ function TodoRow({
           )}
           <span className="truncate">{t.text}</span>
         </div>
-        {(t.due || t.note) && (
+        {(t.due || t.note || (t.tags ?? []).length > 0) && (
           <div
-            className="text-[11px] mt-0.5 flex items-center gap-1.5 truncate"
+            className="text-[11px] mt-0.5 flex items-center gap-1.5 flex-wrap"
             style={{ color: "var(--muted)" }}
           >
             {t.due && (
@@ -313,8 +357,10 @@ function TodoRow({
                 {shortDate(t.due)}
               </span>
             )}
-            {t.note && t.due && <span>·</span>}
-            {t.note && <span className="truncate">{t.note.split("\n")[0]}</span>}
+            {(t.tags ?? []).length > 0 && (
+              <TagChips tags={t.tags} size="xs" max={3} />
+            )}
+            {t.note && <span className="truncate">· {t.note.split("\n")[0]}</span>}
           </div>
         )}
       </div>
