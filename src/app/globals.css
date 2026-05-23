@@ -1,0 +1,192 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Design Tokens — Ambar & Dällen
+   Source: design_handoff/DESIGN_TOKENS.md (verifiziert gegen App.html)
+   ============================================================ */
+:root {
+  --cream:      #EFE6D3;
+  --cream-deep: #E4D9BF;
+  --paper:      #FBF6E8;
+  --paper-2:    #F5EEDB;
+  --ink:        #211913;
+  --ink-soft:   #4F4338;
+  --muted:      #978675;
+  --line:       #DAC9A8;
+  --terra:      #C5634B;
+  --terra-deep: #A14934;
+  --terra-soft: #ECC4B0;
+  --sage:       #7E977B;
+  --sage-soft:  #CBD8C2;
+  --plum:       #4B3050;
+  --plum-soft:  #C7B0CB;
+  --gold:       #C8973F;
+  --gold-soft:  #E8D29A;
+  --rose:       #C77F77;
+
+  /* User identity colors */
+  --user-a:      #C77052;
+  --user-a-soft: #F2D9CB;
+  --user-d:      #7E9A79;
+  --user-d-soft: #D7E2D4;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-cream-deep: var(--cream-deep);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-terra: var(--terra);
+  --color-terra-deep: var(--terra-deep);
+  --color-terra-soft: var(--terra-soft);
+  --color-sage: var(--sage);
+  --color-sage-soft: var(--sage-soft);
+  --color-plum: var(--plum);
+  --color-plum-soft: var(--plum-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-rose: var(--rose);
+  --font-serif: var(--font-instrument-serif);
+}
+
+html, body {
+  background: var(--cream);
+  color: var(--ink);
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.005em;
+  overscroll-behavior-y: none;
+}
+
+/* Typography utilities */
+.serif {
+  font-family: var(--font-instrument-serif), "Cormorant Garamond", Georgia, serif;
+  font-style: normal;
+  letter-spacing: -0.012em;
+}
+.serif-i {
+  font-family: var(--font-instrument-serif), "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  letter-spacing: -0.012em;
+}
+.mono {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+.uplabel {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+}
+
+/* Hide scrollbars inside the phone scroll containers */
+.phone-scroll::-webkit-scrollbar { display: none; }
+.phone-scroll { scrollbar-width: none; }
+
+/* Tap feedback */
+.tap { transition: transform .12s ease, background .12s ease; }
+.tap:active { transform: scale(0.97); }
+
+/* Inputs */
+input, textarea, button, select { font-family: inherit; }
+input:focus, textarea:focus { outline: none; }
+
+/* Soft shadow tokens */
+.shadow-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.55),
+    0 1px 0 rgba(33,25,19,0.04),
+    0 14px 32px -16px rgba(75,48,80,0.16),
+    0 2px 6px -2px rgba(75,48,80,0.06);
+}
+.shadow-float {
+  box-shadow:
+    0 8px 24px -10px rgba(33,25,19,0.28),
+    0 28px 56px -22px rgba(75,48,80,0.30),
+    inset 0 1px 0 rgba(255,255,255,0.65);
+}
+.shadow-glow-terra { box-shadow: 0 12px 30px -14px rgba(197,99,75,0.45); }
+.shadow-glow-plum  { box-shadow: 0 12px 30px -14px rgba(75,48,80,0.45); }
+
+/* Bottom-sheet & scrim animations */
+@keyframes sheetIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+.sheet-enter { animation: sheetIn 320ms cubic-bezier(.22,1,.36,1); }
+.scrim-enter { animation: fadeIn 240ms ease-out; }
+
+/* Checkbox tick draw */
+@keyframes tickIn {
+  from { stroke-dashoffset: 16; }
+  to   { stroke-dashoffset: 0; }
+}
+.tick-path {
+  stroke-dasharray: 16;
+  animation: tickIn 220ms ease-out forwards;
+}
+
+/* Dot-Pattern Placeholder */
+.dot-bg {
+  background-image: radial-gradient(rgba(154,142,126,0.35) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+/* ============================================================
+   Atmosphere — slow drifting watercolor blobs + rings + grain
+   ============================================================ */
+.atmos-layer {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.atmos-layer > svg { width: 100%; height: 100%; display: block; }
+
+@keyframes driftA { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(38px,-30px) scale(1.18); } }
+@keyframes driftB { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-36px,26px) scale(1.22); } }
+@keyframes driftC { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(28px,42px) scale(0.88); } }
+@keyframes driftD { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px,-42px) scale(1.14); } }
+@keyframes driftE { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(46px,18px) scale(1.10); } }
+@keyframes hueDrift { 0%,100% { filter: hue-rotate(0deg) saturate(1); } 33% { filter: hue-rotate(-6deg) saturate(1.08); } 66% { filter: hue-rotate(8deg) saturate(0.96); } }
+@keyframes slowSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.blob {
+  transform-origin: center;
+  transform-box: fill-box;
+  will-change: transform;
+  mix-blend-mode: multiply;
+}
+.blob-a { animation: driftA 32s ease-in-out infinite; }
+.blob-b { animation: driftB 41s ease-in-out infinite; }
+.blob-c { animation: driftC 28s ease-in-out infinite; }
+.blob-d { animation: driftD 47s ease-in-out infinite; }
+.blob-e { animation: driftE 38s ease-in-out infinite; }
+.blob-group { animation: hueDrift 60s ease-in-out infinite; }
+.atmos-spin { transform-origin: 183px 410px; animation: slowSpin 180s linear infinite; }
+
+@keyframes ringPulse {
+  0%,100% { transform: scale(1); opacity: 0.10; }
+  50%     { transform: scale(1.06); opacity: 0.16; }
+}
+.atmos-rings { animation: ringPulse 18s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+
+/* Safe-area helpers (PWA on iOS) */
+@supports(padding: max(0px)) {
+  .safe-top    { padding-top:    max(env(safe-area-inset-top), 0.5rem); }
+  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
+}
+
+/* Disable iOS text-size-adjust + selection on chrome */
+html { -webkit-text-size-adjust: 100%; }

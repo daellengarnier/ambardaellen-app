@@ -1,0 +1,19 @@
+{
+  "name": "Ambar & Dällen",
+  "short_name": "A&D",
+  "description": "Unser gemeinsamer Küchentisch — digital.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EFE6D3",
+  "theme_color": "#EFE6D3",
+  "orientation": "portrait",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

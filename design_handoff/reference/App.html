@@ -1,0 +1,2585 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ambar &amp; Dällen</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --cream:      #EFE6D3;
+    --cream-deep: #E4D9BF;
+    --paper:      #FBF6E8;
+    --paper-2:    #F5EEDB;
+    --ink:        #211913;
+    --ink-soft:   #4F4338;
+    --muted:      #978675;
+    --terra:      #C5634B;
+    --terra-deep: #A14934;
+    --terra-soft: #ECC4B0;
+    --sage:       #7E977B;
+    --sage-soft:  #CBD8C2;
+    --plum:       #4B3050;
+    --plum-soft:  #C7B0CB;
+    --gold:       #C8973F;
+    --gold-soft:  #E8D29A;
+    --rose:       #C77F77;
+    --line:       #DAC9A8;
+  }
+  html, body { background: #D9CCAE; }
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.005em;
+  }
+  .serif { font-family: 'Instrument Serif', 'Cormorant Garamond', Georgia, serif; font-style: normal; letter-spacing: -0.012em; }
+  .serif-i { font-family: 'Instrument Serif', 'Cormorant Garamond', Georgia, serif; font-style: italic; letter-spacing: -0.012em; }
+  .mono { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
+  .uplabel { text-transform: uppercase; letter-spacing: 0.18em; font-weight: 600; }
+  /* Hide scrollbars inside the phone */
+  .phone-scroll::-webkit-scrollbar { display: none; }
+  .phone-scroll { scrollbar-width: none; }
+
+  /* Bottom sheet animation */
+  @keyframes sheetIn {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  .sheet-enter { animation: sheetIn 320ms cubic-bezier(.22,1,.36,1); }
+  .scrim-enter { animation: fadeIn 240ms ease-out; }
+
+  /* Tap feedback */
+  .tap { transition: transform .12s ease, background .12s ease; }
+  .tap:active { transform: scale(0.97); }
+
+  /* Checkbox tick draw */
+  @keyframes tickIn {
+    from { stroke-dashoffset: 16; }
+    to   { stroke-dashoffset: 0; }
+  }
+  .tick-path {
+    stroke-dasharray: 16;
+    animation: tickIn 220ms ease-out forwards;
+  }
+
+  /* Inputs */
+  input, textarea, button, select { font-family: inherit; }
+  input:focus, textarea:focus { outline: none; }
+
+  /* Soft shadow tokens */
+  .shadow-card {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.55),
+      0 1px 0 rgba(33,25,19,0.04),
+      0 14px 32px -16px rgba(75,48,80,0.16),
+      0 2px 6px -2px rgba(75,48,80,0.06);
+  }
+  .shadow-float {
+    box-shadow:
+      0 8px 24px -10px rgba(33,25,19,0.28),
+      0 28px 56px -22px rgba(75,48,80,0.30),
+      inset 0 1px 0 rgba(255,255,255,0.65);
+  }
+  .shadow-glow-terra { box-shadow: 0 12px 30px -14px rgba(197,99,75,0.45); }
+  .shadow-glow-plum  { box-shadow: 0 12px 30px -14px rgba(75,48,80,0.45); }
+
+  /* The phone frame */
+  .phone {
+    width: 390px;
+    height: 844px;
+    border-radius: 52px;
+    background: linear-gradient(155deg, #0F0B0E 0%, #1E1518 100%);
+    padding: 12px;
+    box-shadow:
+      0 60px 120px -40px rgba(33,25,19,0.55),
+      0 0 0 1px rgba(255,255,255,0.04) inset;
+  }
+  .screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    background: var(--cream);
+    isolation: isolate;
+  }
+  .notch {
+    position: absolute;
+    top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 32px; border-radius: 20px;
+    background: #1a1612;
+    z-index: 60;
+  }
+
+  /* Subtle dot pattern for placeholders */
+  .dot-bg {
+    background-image: radial-gradient(rgba(154,142,126,0.35) 1px, transparent 1px);
+    background-size: 12px 12px;
+  }
+
+  /* Atmosphere — slow drifting color blobs + grain */
+  .atmos-layer {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    overflow: hidden;
+  }
+  .atmos-layer svg { width: 100%; height: 100%; display: block; }
+
+  @keyframes driftA { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(38px,-30px) scale(1.18); } }
+  @keyframes driftB { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-36px,26px) scale(1.22); } }
+  @keyframes driftC { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(28px,42px) scale(0.88); } }
+  @keyframes driftD { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px,-42px) scale(1.14); } }
+  @keyframes driftE { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(46px,18px) scale(1.10); } }
+  @keyframes hueDrift { 0%,100% { filter: hue-rotate(0deg) saturate(1); } 33% { filter: hue-rotate(-6deg) saturate(1.08); } 66% { filter: hue-rotate(8deg) saturate(0.96); } }
+  @keyframes slowSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  .blob { transform-origin: center; transform-box: fill-box; will-change: transform; mix-blend-mode: multiply; }
+  .blob-a { animation: driftA 32s ease-in-out infinite; }
+  .blob-b { animation: driftB 41s ease-in-out infinite; }
+  .blob-c { animation: driftC 28s ease-in-out infinite; }
+  .blob-d { animation: driftD 47s ease-in-out infinite; }
+  .blob-e { animation: driftE 38s ease-in-out infinite; }
+  .blob-group { animation: hueDrift 60s ease-in-out infinite; }
+  .atmos-spin { transform-origin: 183px 410px; animation: slowSpin 180s linear infinite; }
+
+  /* concentric rings, very faint */
+  @keyframes ringPulse {
+    0%,100% { transform: scale(1); opacity: 0.10; }
+    50%     { transform: scale(1.06); opacity: 0.16; }
+  }
+  .atmos-rings { animation: ringPulse 18s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+</style>
+</head>
+<body class="min-h-screen w-full flex items-center justify-center py-8" style="background-color: rgb(203, 164, 76)">
+  <div id="root"></div>
+
+  <!-- App -->
+  <script type="text/babel" data-presets="react">
+  const { useState, useMemo, useEffect, useRef } = React;
+
+  /* ============================================================
+     ATMOSPHERE — slow drifting watercolor blobs + grain
+     ============================================================ */
+  const Atmosphere = React.memo(function Atmosphere() {
+    // Grain pattern as data URI (cheap, static)
+    const grainSvg = encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="220" height="220">
+        <filter id="g">
+          <feTurbulence type="fractalNoise" baseFrequency="0.92" numOctaves="2" stitchTiles="stitch"/>
+          <feColorMatrix values="0 0 0 0 0.30  0 0 0 0 0.26  0 0 0 0 0.20  0 0 0 0.85 0"/>
+        </filter>
+        <rect width="100%" height="100%" filter="url(#g)" opacity="0.55"/>
+      </svg>
+    `.trim());
+    return (
+      <div className="atmos-layer" aria-hidden="true">
+        <svg viewBox="0 0 366 820" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <radialGradient id="b-terra" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"  stopColor="#C5634B" stopOpacity="0.72"/>
+              <stop offset="55%" stopColor="#C5634B" stopOpacity="0.16"/>
+              <stop offset="100%" stopColor="#C5634B" stopOpacity="0"/>
+            </radialGradient>
+            <radialGradient id="b-sage" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"  stopColor="#7E977B" stopOpacity="0.62"/>
+              <stop offset="55%" stopColor="#7E977B" stopOpacity="0.14"/>
+              <stop offset="100%" stopColor="#7E977B" stopOpacity="0"/>
+            </radialGradient>
+            <radialGradient id="b-rose" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"  stopColor="#C77F77" stopOpacity="0.68"/>
+              <stop offset="55%" stopColor="#C77F77" stopOpacity="0.14"/>
+              <stop offset="100%" stopColor="#C77F77" stopOpacity="0"/>
+            </radialGradient>
+            <radialGradient id="b-gold" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"  stopColor="#C8973F" stopOpacity="0.55"/>
+              <stop offset="55%" stopColor="#C8973F" stopOpacity="0.13"/>
+              <stop offset="100%" stopColor="#C8973F" stopOpacity="0"/>
+            </radialGradient>
+            <radialGradient id="b-plum" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"  stopColor="#4B3050" stopOpacity="0.52"/>
+              <stop offset="55%" stopColor="#4B3050" stopOpacity="0.12"/>
+              <stop offset="100%" stopColor="#4B3050" stopOpacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <g className="blob-group">
+            <circle className="blob blob-a" cx="60"  cy="120" r="220" fill="url(#b-terra)"/>
+            <circle className="blob blob-b" cx="320" cy="220" r="250" fill="url(#b-sage)"/>
+            <circle className="blob blob-c" cx="280" cy="560" r="240" fill="url(#b-rose)"/>
+            <circle className="blob blob-d" cx="40"  cy="640" r="260" fill="url(#b-gold)"/>
+            <circle className="blob blob-e" cx="200" cy="400" r="200" fill="url(#b-plum)"/>
+          </g>
+
+          {/* slow-rotating concentric rings — psychedelic anchor */}
+          <g className="atmos-spin" opacity="0.16">
+            {[100, 150, 210, 290, 380, 480].map((r, i) => (
+              <circle key={i} cx="183" cy="410" r={r}
+                fill="none" stroke="#5B3D5C" strokeWidth="0.7"
+                strokeDasharray={i % 2 ? "2 6" : "1 12"}
+                opacity={0.55 - i*0.06}/>
+            ))}
+          </g>
+
+          {/* faint radial spokes */}
+          <g opacity="0.08" style={{ transformOrigin: "183px 410px" }}>
+            {Array.from({ length: 24 }).map((_, i) => {
+              const ang = (i/24) * Math.PI * 2;
+              const x1 = 183 + Math.cos(ang) * 60;
+              const y1 = 410 + Math.sin(ang) * 60;
+              const x2 = 183 + Math.cos(ang) * 480;
+              const y2 = 410 + Math.sin(ang) * 480;
+              return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#3B2A33" strokeWidth="0.5"/>;
+            })}
+          </g>
+        </svg>
+
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `url("data:image/svg+xml;utf8,${grainSvg}")`,
+          backgroundSize: "220px 220px",
+          opacity: 0.42,
+          mixBlendMode: "multiply",
+          pointerEvents: "none",
+        }}/>
+      </div>
+    );
+  });
+
+  /* ============================================================
+     ICONS — minimal lucide-style inline SVGs
+     ============================================================ */
+  const Svg = ({ children, size = 22, strokeWidth = 1.75, className = "" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={strokeWidth}
+      strokeLinecap="round" strokeLinejoin="round" className={className}>
+      {children}
+    </svg>
+  );
+  const IconHome = (p) => <Svg {...p}><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></Svg>;
+  const IconCal  = (p) => <Svg {...p}><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></Svg>;
+  const IconCart = (p) => <Svg {...p}><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></Svg>;
+  const IconNote = (p) => <Svg {...p}><path d="M5 4h11l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M15 4v4h4"/><path d="M8 13h6M8 17h4"/></Svg>;
+  const IconTarget = (p) => <Svg {...p}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></Svg>;
+  const IconPlus = (p) => <Svg {...p}><path d="M12 5v14M5 12h14"/></Svg>;
+  const IconCheck = (p) => <Svg {...p}><path d="M5 12.5 10 17 19 7"/></Svg>;
+  const IconX = (p) => <Svg {...p}><path d="M6 6l12 12M18 6 6 18"/></Svg>;
+  const IconSearch = (p) => <Svg {...p}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></Svg>;
+  const IconClock = (p) => <Svg {...p}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></Svg>;
+  const IconChev = (p) => <Svg {...p}><path d="m9 6 6 6-6 6"/></Svg>;
+  const IconMore = (p) => <Svg {...p}><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></Svg>;
+  const IconPin = (p) => <Svg {...p}><path d="M12 2v6M12 22v-6M5 9h14l-2 5H7L5 9Z"/></Svg>;
+  const IconHeart = (p) => <Svg {...p}><path d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.65-7 10-7 10Z"/></Svg>;
+  const IconSparkle = (p) => <Svg {...p}><path d="M12 4v4M12 16v4M4 12h4M16 12h4M6.3 6.3l2.8 2.8M14.9 14.9l2.8 2.8M17.7 6.3l-2.8 2.8M9.1 14.9 6.3 17.7"/></Svg>;
+  const IconFlag = (p) => <Svg {...p}><path d="M5 21V4h12l-2 4 2 4H5"/></Svg>;
+  const IconLeaf = (p) => <Svg {...p}><path d="M4 20c0-9 7-16 16-16-1 9-7 16-16 16Z"/><path d="M4 20 14 10"/></Svg>;
+  const IconCoffee = (p) => <Svg {...p}><path d="M4 9h13v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V9Z"/><path d="M17 11h2a2 2 0 0 1 0 4h-2"/><path d="M8 4v2M12 4v2"/></Svg>;
+  const IconBook = (p) => <Svg {...p}><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2V5Z"/><path d="M4 19a2 2 0 0 0 2 2h12"/></Svg>;
+  const IconHouse = (p) => <Svg {...p}><path d="M3 11 12 4l9 7"/><path d="M5 10v9h14v-9"/></Svg>;
+
+  /* ============================================================
+     CONSTANTS — users + sample data
+     ============================================================ */
+  const USERS = {
+    A: { id: "A", name: "Ambar",  color: "#C77052", soft: "#F2D9CB" }, // terracotta
+    D: { id: "D", name: "Dällen", color: "#7E9A79", soft: "#D7E2D4" }, // sage
+  };
+
+  const todayISO = new Date().toISOString().slice(0,10);
+  const offset = (d) => {
+    const x = new Date();
+    x.setDate(x.getDate() + d);
+    return x.toISOString().slice(0,10);
+  };
+
+  const STORES = []; // unused — kept for backwards compat
+
+  const SEED_CYCLE = {
+    owner: "A",          // owned by Ambar
+    scope: "geteilt",    // visible to both
+    avgCycle: 28,
+    avgPeriod: 5,
+    periodStarts: [offset(-68), offset(-40), offset(-12)],
+    entries: {
+      [offset(-12)]: { flow: 2, mood: "weich",      energy: 2, symptoms: ["krämpfe"], note: "Periode begonnen. Bauchwärmflasche." },
+      [offset(-11)]: { flow: 3, mood: "weich",      energy: 2, symptoms: ["krämpfe","müde"] },
+      [offset(-10)]: { flow: 2, mood: "okay",       energy: 3, symptoms: ["müde"] },
+      [offset(-9)]:  { flow: 1, mood: "okay",       energy: 3, symptoms: [] },
+      [offset(-8)]:  { flow: 1, mood: "klar",       energy: 4, symptoms: [] },
+      [offset(-5)]:  { mood: "klar",                energy: 4, symptoms: [] },
+      [offset(-3)]:  { mood: "energisch",           energy: 5, note: "Lange am Kanal spaziert" },
+      [offset(-2)]:  { mood: "energisch",           energy: 5, symptoms: ["libido"] },
+      [offset(-1)]:  { mood: "fokussiert",          energy: 5, symptoms: [] },
+      [offset(0)]:   { mood: "fokussiert",          energy: 4 },
+    },
+  };
+
+  const SEED_ACTIVITIES = [
+    { id: "a1", title: "Frühstück bei Tati", date: offset(0),  time: "09:30", place: "Café Tati, Kreuzberg", status: "geplant", by: "A", scope: "geteilt", note: "Reservierung steht auf meinen Namen 🙂", icon: "coffee" },
+    { id: "a2", title: "Markt am Maybachufer", date: offset(2), time: "11:00", place: "Maybachufer", status: "geplant", by: "D", scope: "geteilt", note: "Blumen für die Küche mitbringen", icon: "leaf" },
+    { id: "a3", title: "Kino — La Chimera", date: offset(5), time: "20:15", place: "Wolf Kino", status: "geplant", by: "A", scope: "geteilt", note: "Karten schon gekauft", icon: "heart" },
+    { id: "a4", title: "Wochenendtrip Spreewald", date: offset(14), time: "", place: "Lübbenau", status: "idee", by: "D", scope: "geteilt", note: "Drei Pensionen rausgesucht, schau mal in Notizen", icon: "leaf" },
+    { id: "a5", title: "Töpferkurs ausprobieren", date: "", time: "", place: "", status: "idee", by: "A", scope: "geteilt", note: "Studio in Neukölln, Samstags", icon: "sparkle" },
+    { id: "a6", title: "Lange Nacht der Museen", date: offset(21), time: "18:00", place: "Berlin Mitte", status: "idee", by: "A", scope: "geteilt", note: "", icon: "sparkle" },
+    { id: "a7", title: "Brunch bei Mara & Joon", date: offset(-3), time: "12:00", place: "bei uns", status: "erledigt", by: "D", scope: "geteilt", note: "War schön. Lasagne lief gut.", icon: "coffee" },
+    { id: "a8", title: "Yoga Probestunde", date: offset(-7), time: "18:30", place: "Studio Sonnen­allee", status: "erledigt", by: "A", scope: "A", note: "", icon: "heart" },
+    { id: "a9", title: "Telefonat mit Lukas", date: offset(1), time: "17:00", place: "", status: "geplant", by: "D", scope: "D", note: "Über das Projekt sprechen", icon: "book" },
+    { id: "a10", title: "Therapie", date: offset(3), time: "10:00", place: "Praxis Schöneberg", status: "geplant", by: "A", scope: "A", note: "", icon: "heart" },
+  ];
+
+  const SEED_SHOPPING = [
+    { id: "s1", text: "Tomaten (San Marzano)", done: false, by: "A", scope: "geteilt", spinnerei: false, qty: "1 Dose", added: "vor 2 Std" },
+    { id: "s2", text: "Sauerteigbrot",          done: false, by: "D", scope: "geteilt", spinnerei: false, qty: "",       added: "vor 5 Std" },
+    { id: "s3", text: "Olivenöl",               done: false, by: "A", scope: "geteilt", spinnerei: false, qty: "groß",   added: "gestern" },
+    { id: "s4", text: "Basilikum",              done: true,  by: "D", scope: "geteilt", spinnerei: false, qty: "",       added: "gestern" },
+    { id: "s5", text: "Zahnpasta",              done: false, by: "A", scope: "A",       spinnerei: false, qty: "",       added: "vor 3 Tagen" },
+    { id: "s6", text: "Waschmittel Sensitiv",   done: false, by: "D", scope: "geteilt", spinnerei: false, qty: "",       added: "heute" },
+    { id: "s7", text: "Wattepads",              done: true,  by: "A", scope: "A",       spinnerei: false, qty: "",       added: "gestern" },
+    { id: "s8", text: "Batterien AA",           done: false, by: "D", scope: "geteilt", spinnerei: false, qty: "4er",    added: "vor 4 Tagen" },
+    { id: "s9", text: "Geschenkpapier",         done: false, by: "A", scope: "geteilt", spinnerei: true,  qty: "",       added: "heute" },
+    { id: "s10", text: "Messing-Kerzenständer", done: false, by: "A", scope: "geteilt", spinnerei: true,  qty: "",       added: "vor 2 Tagen" },
+    { id: "s11", text: "Notizbuch von Midori",  done: false, by: "A", scope: "A",       spinnerei: true,  qty: "",       added: "gestern" },
+    { id: "s12", text: "Rasierklingen",         done: false, by: "D", scope: "D",       spinnerei: false, qty: "",       added: "heute" },
+    { id: "s13", text: "Schöner Topf für die Küche", done: false, by: "D", scope: "geteilt", spinnerei: true, qty: "Stahl", added: "vor 5 Tagen" },
+  ];
+
+  const SEED_TODOS = [
+    { id: "t1", text: "Mietvertrag verlängern",            done: false, due: offset(2),  prio: "hoch",   by: "D", scope: "geteilt", when: "vor 2 Tagen", note: "Verwaltung anrufen, Konditionen klären" },
+    { id: "t2", text: "Krankenkasse wechseln vergleichen", done: false, due: offset(0),  prio: "normal", by: "A", scope: "geteilt", when: "gestern", note: "Comparis-Vergleich abschicken" },
+    { id: "t3", text: "Geschirrspüler reparieren lassen",  done: false, due: offset(-1), prio: "hoch",   by: "D", scope: "geteilt", when: "vor 3 Tagen", note: "Reparatur Nyffeler — 044 555 12 34" },
+    { id: "t4", text: "Steuererklärung Beilagen sortieren",done: false, due: offset(5),  prio: "normal", by: "A", scope: "geteilt", when: "letzte Woche", note: "" },
+    { id: "t5", text: "Geschenk für Mama besorgen",        done: false, due: offset(9),  prio: "normal", by: "D", scope: "geteilt", when: "vor 2 Tagen", note: "Workshop-Gutschein Naturparfüm" },
+    { id: "t6", text: "Notiz: Filme die wir schauen",      done: false, due: "",          prio: "tief",   by: "A", scope: "geteilt", when: "heute", note: "Past Lives, Aftersun, Drive My Car, The Worst Person…" },
+    { id: "t7", text: "Spreewald-Pensionen anfragen",      done: true,  due: offset(-4), prio: "normal", by: "D", scope: "geteilt", when: "vor 6 Tagen", note: "" },
+
+    { id: "t8", text: "Therapie-Termin Mai bestätigen",    done: false, due: offset(1),  prio: "normal", by: "A", scope: "A",       when: "heute", note: "" },
+    { id: "t9", text: "Yoga-Karte aufladen",               done: false, due: offset(3),  prio: "tief",   by: "A", scope: "A",       when: "gestern", note: "" },
+    { id: "t10", text: "Buch zurück Bibliothek",           done: false, due: offset(-2), prio: "normal", by: "A", scope: "A",       when: "vor 5 Tagen", note: "Ernaux — Die Jahre" },
+    { id: "t11", text: "Velomechaniker Termin",            done: false, due: offset(6),  prio: "normal", by: "D", scope: "D",       when: "heute", note: "Bremsen + Service" },
+    { id: "t12", text: "Pull request Review Jonas",        done: false, due: offset(0),  prio: "hoch",   by: "D", scope: "D",       when: "heute", note: "" },
+    { id: "t13", text: "Vater anrufen",                    done: false, due: "",         prio: "normal", by: "D", scope: "D",       when: "vor 4 Tagen", note: "" },
+  ];
+
+  const SEED_GOALS = [
+    { id: "g1", title: "Sparen für Sommerreise Portugal", term: "mittel", target: 2400, current: 1350, by: "A", scope: "geteilt", unit: "€",
+      steps: [
+        { id: "g1s1", text: "Monatlich 200€ auf Gemeinschaftskonto", done: true },
+        { id: "g1s2", text: "Flüge buchen (Juni)", done: false },
+        { id: "g1s3", text: "Route durch Alentejo planen", done: false },
+        { id: "g1s4", text: "Mietwagen vergleichen", done: false },
+      ]},
+    { id: "g2", title: "Zweimal pro Woche zusammen kochen", term: "kurz", target: 8, current: 5, by: "D", scope: "geteilt", unit: "",
+      steps: [
+        { id: "g2s1", text: "Wochenplan Sonntagsabend", done: true },
+        { id: "g2s2", text: "Vorrat auffüllen", done: true },
+        { id: "g2s3", text: "Neues Rezept pro Woche probieren", done: false },
+      ]},
+    { id: "g3", title: "Spanisch B1 (Ambar lehrt, Dällen lernt)", term: "lang", target: 100, current: 32, by: "A", scope: "geteilt", unit: "%",
+      steps: [
+        { id: "g3s1", text: "Duolingo täglich 15 Min", done: true },
+        { id: "g3s2", text: "1x pro Woche nur Spanisch am Esstisch", done: false },
+        { id: "g3s3", text: "Reise nach Bogotá zu Familie", done: false },
+      ]},
+    { id: "g4", title: "Eine Wand im Wohnzimmer neu streichen", term: "kurz", target: 4, current: 1, by: "D", scope: "geteilt", unit: "",
+      steps: [
+        { id: "g4s1", text: "Farbmuster bestellen", done: true },
+        { id: "g4s2", text: "Möbel rücken", done: false },
+        { id: "g4s3", text: "Wand abkleben + grundieren", done: false },
+        { id: "g4s4", text: "2 Anstriche", done: false },
+      ]},
+    { id: "g5", title: "3x pro Woche laufen", term: "kurz", target: 12, current: 7, by: "D", scope: "D", unit: "Läufe",
+      steps: [
+        { id: "g5s1", text: "Neue Laufschuhe", done: true },
+        { id: "g5s2", text: "Strecke im Tempelhofer Feld", done: true },
+        { id: "g5s3", text: "10km am Stück", done: false },
+      ]},
+    { id: "g6", title: "Keramik-Serie für Studio fertig", term: "mittel", target: 12, current: 4, by: "A", scope: "A", unit: "Stück",
+      steps: [
+        { id: "g6s1", text: "Skizzen alle 12 Formen", done: true },
+        { id: "g6s2", text: "Tonbestellung", done: true },
+        { id: "g6s3", text: "Erste Brennrunde", done: false },
+        { id: "g6s4", text: "Glasur entwickeln", done: false },
+      ]},
+  ];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  const formatDate = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso + "T00:00:00");
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((d - today) / 86400000);
+    const weekday = d.toLocaleDateString("de-DE", { weekday: "long" });
+    const day = d.toLocaleDateString("de-DE", { day: "numeric", month: "long" });
+    if (diff === 0) return `Heute · ${day}`;
+    if (diff === 1) return `Morgen · ${day}`;
+    if (diff === -1) return `Gestern · ${day}`;
+    if (diff > 1 && diff < 7) return `${weekday} · ${day}`;
+    return `${weekday}, ${day}`;
+  };
+  const shortDate = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso + "T00:00:00");
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((d - today) / 86400000);
+    if (diff === 0) return "Heute";
+    if (diff === 1) return "Morgen";
+    if (diff === -1) return "Gestern";
+    return d.toLocaleDateString("de-DE", { day: "numeric", month: "short" });
+  };
+  const uid = () => Math.random().toString(36).slice(2,9);
+
+  /* ============================================================
+     CYCLE — phase analysis + helpers
+     ============================================================ */
+  const MOODS = [
+    { id: "weich",      label: "weich",       emoji: "🌧" },
+    { id: "okay",       label: "okay",        emoji: "·" },
+    { id: "klar",       label: "klar",        emoji: "☁︎" },
+    { id: "fokussiert", label: "fokussiert",  emoji: "◐" },
+    { id: "energisch",  label: "energisch",   emoji: "✦" },
+    { id: "dunkel",     label: "dunkel",      emoji: "▢" },
+    { id: "aufgewühlt", label: "aufgewühlt",  emoji: "≋" },
+  ];
+  const SYMPTOMS = [
+    "krämpfe", "müde", "kopfweh", "blähbauch",
+    "brustempfindlich", "libido", "akne", "schlaflos",
+    "rückenschmerz", "weinerlich",
+  ];
+  const FLOW = [
+    { v: 0, label: "—" },
+    { v: 1, label: "leicht" },
+    { v: 2, label: "mittel" },
+    { v: 3, label: "stark" },
+  ];
+
+  function diffDays(aIso, bIso) {
+    const a = new Date(aIso + "T00:00:00");
+    const b = new Date(bIso + "T00:00:00");
+    return Math.round((a - b) / 86400000);
+  }
+
+  function addDays(iso, n) {
+    const d = new Date(iso + "T00:00:00");
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0,10);
+  }
+
+  function cycleAnalysis(cycle, today = todayISO) {
+    if (!cycle || !cycle.periodStarts.length) return null;
+    const lastStart = cycle.periodStarts[cycle.periodStarts.length-1];
+    const day = diffDays(today, lastStart) + 1;
+    const cycLen = cycle.avgCycle;
+    const ovulationDayInCycle = cycLen - 14; // luteal ~14d
+    const fertileStart = ovulationDayInCycle - 3;
+    const fertileEnd   = ovulationDayInCycle + 1;
+    const nextPeriod = addDays(lastStart, cycLen);
+    const ovulationDate = addDays(lastStart, ovulationDayInCycle - 1);
+
+    let phase, phaseLabel, color;
+    if (day <= cycle.avgPeriod) {
+      phase = "menstruation"; phaseLabel = "Menstruation"; color = "#A8484E";
+    } else if (day < fertileStart) {
+      phase = "follikel"; phaseLabel = "Folliklephase"; color = "#D4A86A";
+    } else if (day >= fertileStart && day <= fertileEnd) {
+      phase = "fertil"; phaseLabel = day === ovulationDayInCycle ? "Eisprung" : "Fruchtbares Fenster"; color = "#E07A5F";
+    } else if (day <= cycLen) {
+      phase = "luteal"; phaseLabel = "Lutealphase"; color = "#8DA888";
+    } else {
+      // overdue
+      phase = "ueberfaellig"; phaseLabel = `Überfällig (${day - cycLen} T.)`; color = "#A8484E";
+    }
+
+    return {
+      day, cycLen,
+      lastStart, nextPeriod, ovulationDate,
+      ovulationDayInCycle, fertileStart, fertileEnd,
+      daysUntilPeriod: cycLen - day,
+      daysUntilOvulation: ovulationDayInCycle - day,
+      phase, phaseLabel, color,
+      isFertile: day >= fertileStart && day <= fertileEnd,
+      isOvulation: day === ovulationDayInCycle,
+      isPeriod: day <= cycle.avgPeriod,
+    };
+  }
+
+  function phaseForDay(cycle, dayInCycle) {
+    if (dayInCycle <= cycle.avgPeriod) return "menstruation";
+    const ov = cycle.avgCycle - 14;
+    if (dayInCycle < ov - 3) return "follikel";
+    if (dayInCycle <= ov + 1) return "fertil";
+    if (dayInCycle <= cycle.avgCycle) return "luteal";
+    return "ueberfaellig";
+  }
+
+  const PHASE_COLORS = {
+    menstruation: "#A8484E",
+    follikel:     "#D4A86A",
+    fertil:       "#E07A5F",
+    luteal:       "#8DA888",
+    ueberfaellig: "#A8484E",
+  };
+
+  /* ICS export for iPhone Calendar */
+  function toICS(activity) {
+    const fmt = (d) => d.toISOString().replace(/[-:]/g,'').slice(0,15) + 'Z';
+    const start = activity.date
+      ? new Date(`${activity.date}T${activity.time || "09:00"}:00`)
+      : new Date();
+    const end = new Date(start.getTime() + 60*60*1000);
+    const escape = (s) => (s||"").replace(/[\\,;]/g, m => "\\"+m).replace(/\n/g,'\\n');
+    return [
+      "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//AmbarDallen//Prototype//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:${activity.id}@ambardallen.app`,
+      `DTSTAMP:${fmt(new Date())}`,
+      `DTSTART:${fmt(start)}`,
+      `DTEND:${fmt(end)}`,
+      `SUMMARY:${escape(activity.title)}`,
+      activity.place ? `LOCATION:${escape(activity.place)}` : null,
+      activity.note ? `DESCRIPTION:${escape(activity.note)}` : null,
+      "END:VEVENT","END:VCALENDAR",
+    ].filter(Boolean).join("\r\n");
+  }
+
+  function downloadICS(activity) {
+    const ics = toICS(activity);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${activity.title.replace(/[^A-Za-z0-9äöüÄÖÜß ]/g,"").trim().slice(0,40) || "termin"}.ics`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  // Show items that are shared OR owned by the current user.
+  // Items scoped to the other partner are hidden.
+  const visibleTo = (items, user) =>
+    items.filter(it => !it.scope || it.scope === "geteilt" || it.scope === user);
+
+  const isPrivate = (it) => it.scope && it.scope !== "geteilt";
+
+  // tiny lock-ish glyph for "nur ich"
+  const IconLock = (p) => <Svg {...p}><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></Svg>;
+  const IconUsers = (p) => <Svg {...p}><circle cx="9" cy="9" r="3"/><circle cx="16" cy="10" r="2.4"/><path d="M3 19c0-3 3-5 6-5s6 2 6 5"/><path d="M14 19c0-2 1.5-3.5 3.5-3.5S21 17 21 19"/></Svg>;
+
+  /* Subtle privacy indicator that overlays an avatar */
+  const ScopeBadge = ({ scope, size = 14 }) => {
+    if (!scope || scope === "geteilt") return null;
+    return (
+      <div className="inline-flex items-center justify-center rounded-full"
+        style={{
+          width: size, height: size,
+          background: "var(--paper)",
+          color: "var(--ink-soft)",
+          boxShadow: "0 0 0 1.5px var(--paper)",
+        }}>
+        <IconLock size={size - 4} strokeWidth={2}/>
+      </div>
+    );
+  };
+
+  /* Avatar with optional private-lock badge in the corner */
+  const AvatarWithScope = ({ by, scope, size = 22 }) => (
+    <div className="relative inline-flex shrink-0">
+      <Avatar id={by} size={size}/>
+      {isPrivate({ scope }) && (
+        <div className="absolute -bottom-1 -right-1">
+          <ScopeBadge scope={scope} size={Math.round(size * 0.55)}/>
+        </div>
+      )}
+    </div>
+  );
+
+  /* ============================================================
+     SHARED COMPONENTS
+     ============================================================ */
+  const Avatar = ({ id, size = 24, ring = false }) => {
+    const u = USERS[id];
+    return (
+      <div
+        className="inline-flex items-center justify-center font-semibold rounded-full select-none"
+        style={{
+          width: size, height: size,
+          background: u.color, color: "white",
+          fontSize: size * 0.45,
+          letterSpacing: 0,
+          boxShadow: ring ? `0 0 0 2px var(--paper)` : "none",
+        }}
+      >{u.id}</div>
+    );
+  };
+
+  const AvatarPair = ({ size = 22 }) => (
+    <div className="flex">
+      <Avatar id="A" size={size} ring />
+      <div style={{ marginLeft: -size/3 }}><Avatar id="D" size={size} ring /></div>
+    </div>
+  );
+
+  /* Card — the universal surface */
+  const Card = ({ children, onClick, className = "" }) => (
+    <div
+      onClick={onClick}
+      className={`bg-[var(--paper)] rounded-2xl shadow-card ${onClick ? "tap cursor-pointer" : ""} ${className}`}
+    >{children}</div>
+  );
+
+  /* Bottom sheet */
+  const Sheet = ({ open, onClose, title, children }) => {
+    if (!open) return null;
+    return (
+      <>
+        <div
+          className="absolute inset-0 z-40 bg-black/30 scrim-enter"
+          onClick={onClose}
+        />
+        <div
+          className="absolute bottom-0 left-0 right-0 z-50 sheet-enter"
+        >
+          <div className="bg-[var(--paper)] rounded-t-3xl shadow-float overflow-hidden"
+               style={{ maxHeight: "78%" }}>
+            <div className="flex justify-center pt-2 pb-1">
+              <div className="w-10 h-1.5 rounded-full bg-[var(--line)]" />
+            </div>
+            {title && (
+              <div className="flex items-center justify-between px-5 pt-1 pb-2">
+                <h3 className="serif-i text-[24px] leading-tight">{title}</h3>
+                <button onClick={onClose} className="p-1.5 -mr-1 rounded-full text-[var(--ink-soft)] tap">
+                  <IconX size={20}/>
+                </button>
+              </div>
+            )}
+            <div className="phone-scroll overflow-y-auto px-5 pb-7" style={{ maxHeight: "calc(78vh - 56px)" }}>
+              {children}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  /* Header */
+  const ScreenHeader = ({ title, subtitle, right }) => (
+    <div className="px-4 pt-2 pb-3 flex items-end justify-between">
+      <div>
+        {subtitle && (
+          <div className="uplabel text-[10.5px] text-[var(--muted)] mb-1">{subtitle}</div>
+        )}
+        <h1 className="serif-i text-[36px] leading-[0.95] tracking-tight">{title}</h1>
+      </div>
+      {right}
+    </div>
+  );
+
+  /* Chip / segmented */
+  const Segmented = ({ value, onChange, options }) => (
+    <div className="inline-flex p-1 rounded-full bg-[var(--cream-deep)]">
+      {options.map(opt => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className={`px-3.5 py-1.5 rounded-full text-[13.5px] font-medium tap ${
+            value === opt.value
+              ? "bg-[var(--paper)] text-[var(--ink)] shadow-card"
+              : "text-[var(--ink-soft)]"
+          }`}
+        >{opt.label}</button>
+      ))}
+    </div>
+  );
+
+  /* Toggleable checkbox */
+  const RoundCheck = ({ checked, onClick, color = "var(--terra)", size = 26 }) => (
+    <button
+      onClick={(e)=>{ e.stopPropagation(); onClick && onClick(); }}
+      className="tap shrink-0 inline-flex items-center justify-center rounded-full"
+      style={{
+        width: size, height: size,
+        background: checked ? color : "transparent",
+        border: checked ? "none" : `1.6px solid var(--line)`,
+      }}
+      aria-pressed={checked}
+    >
+      {checked && (
+        <svg width={size*0.6} height={size*0.6} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <path className="tick-path" d="M5 12.5 10 17 19 7"/>
+        </svg>
+      )}
+    </button>
+  );
+
+  /* Scope toggle — Gemeinsam / Nur ich */
+  const ScopeToggle = ({ value, onChange, currentUser, compact = false }) => {
+    const u = USERS[currentUser];
+    return (
+      <div className="inline-flex p-1 rounded-full bg-[var(--cream-deep)]">
+        <button onClick={() => onChange("geteilt")}
+          className={`${compact ? "px-2.5 py-1 text-[11.5px]" : "px-3 py-1.5 text-[13px]"} rounded-full font-medium inline-flex items-center gap-1.5 tap ${value==="geteilt" ? "bg-[var(--paper)] text-[var(--ink)] shadow-card" : "text-[var(--ink-soft)]"}`}>
+          <IconUsers size={compact ? 12 : 13}/> Gemeinsam
+        </button>
+        <button onClick={() => onChange(currentUser)}
+          className={`${compact ? "px-2.5 py-1 text-[11.5px]" : "px-3 py-1.5 text-[13px]"} rounded-full font-medium inline-flex items-center gap-1.5 tap ${value===currentUser ? "bg-[var(--paper)] text-[var(--ink)] shadow-card" : "text-[var(--ink-soft)]"}`}>
+          <IconLock size={compact ? 12 : 13}/> Nur {u.name}
+        </button>
+      </div>
+    );
+  };
+  const Empty = ({ icon, title, body }) => (
+    <div className="px-5 py-10 text-center">
+      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--cream-deep)] text-[var(--ink-soft)] mb-3">
+        {icon}
+      </div>
+      <div className="text-[16px] font-medium mb-1">{title}</div>
+      <div className="text-[14px] text-[var(--muted)] max-w-[260px] mx-auto leading-relaxed">{body}</div>
+    </div>
+  );
+
+  /* ============================================================
+     STATUS BAR (iOS-ish)
+     ============================================================ */
+  const StatusBar = () => (
+    <div className="absolute top-0 left-0 right-0 z-30 h-[44px] flex items-center justify-between px-7 text-[14px] font-semibold text-[var(--ink)]">
+      <span>9:41</span>
+      <span className="flex items-center gap-1">
+        {/* signal */}
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.6"/><rect x="4.5" y="5" width="3" height="6" rx="0.6"/><rect x="9" y="3" width="3" height="8" rx="0.6"/><rect x="13.5" y="0" width="3" height="11" rx="0.6"/></svg>
+        {/* wifi */}
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><path d="M7.5 2.5C9.7 2.5 11.7 3.3 13.2 4.7l1.3-1.3C12.7 1.6 10.2.6 7.5.6S2.3 1.6.5 3.4l1.3 1.3C3.3 3.3 5.3 2.5 7.5 2.5Z"/><path d="M7.5 5.6c1.4 0 2.6.5 3.5 1.4l1.3-1.3C11 4.5 9.3 3.8 7.5 3.8 5.7 3.8 4 4.5 2.7 5.7L4 7c.9-.9 2.1-1.4 3.5-1.4Z"/><circle cx="7.5" cy="9" r="1.5"/></svg>
+        {/* battery */}
+        <svg width="27" height="12" viewBox="0 0 27 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="19" height="8" rx="1.6" fill="currentColor"/><rect x="24" y="4" width="2" height="4" rx="0.6" fill="currentColor" opacity="0.5"/></svg>
+      </span>
+    </div>
+  );
+
+  /* ============================================================
+     TAB BAR
+     ============================================================ */
+  const IconCheckSquare = (p) => <Svg {...p}><rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/></Svg>;
+  const IconList = (p) => <Svg {...p}><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></Svg>;
+
+  const TABS = [
+    { id: "heute", label: "Heute",       Icon: IconHome },
+    { id: "akt",   label: "Aktivitäten", Icon: IconCal },
+    { id: "shop",  label: "Einkauf",     Icon: IconCart },
+    { id: "todo",  label: "Todo",        Icon: IconCheckSquare },
+    { id: "ziel",  label: "Ziele",       Icon: IconTarget },
+  ];
+
+  const TabBar = ({ tab, setTab }) => (
+    <div className="absolute bottom-0 left-0 right-0 z-30 px-2.5 pb-2 pt-1"
+      style={{
+        background: "linear-gradient(to top, rgba(239,230,211,0.98) 55%, rgba(239,230,211,0))",
+      }}>
+      <div className="rounded-[26px] shadow-card flex items-stretch px-1 py-1 backdrop-blur"
+        style={{
+          background: "rgba(251,246,232,0.85)",
+          border: "1px solid rgba(218,201,168,0.5)",
+        }}>
+        {TABS.map(t => {
+          const active = tab === t.id;
+          const { Icon } = t;
+          return (
+            <button key={t.id}
+              onClick={() => setTab(t.id)}
+              className="flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-2xl tap relative"
+              style={{
+                color: active ? "var(--terra-deep)" : "var(--ink-soft)",
+              }}>
+              {active && (
+                <span className="absolute inset-x-2 inset-y-1 rounded-2xl"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(197,99,75,0.16), rgba(75,48,80,0.10))",
+                  }}/>
+              )}
+              <Icon size={20} strokeWidth={active ? 2 : 1.6} className="relative"/>
+              <span className="text-[10px] relative" style={{ letterSpacing: 0.1, fontWeight: active ? 600 : 500 }}>{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  /* ============================================================
+     SCREEN: HEUTE
+     ============================================================ */
+  const HeuteScreen = ({ currentUser, activities, shopping, todos, goals, cycle, onOpenCycle, toggleShopping, quickAddShopping, toggleTodo, openActivity, openShopping, openTodo, openGoal, goTab }) => {
+    const [quickAddInput, setQuickAddInput] = useState("");
+    const myActivities = visibleTo(activities, currentUser);
+    const myShopping   = visibleTo(shopping, currentUser);
+    const myTodos      = visibleTo(todos, currentUser);
+    const myGoals      = visibleTo(goals, currentUser);
+
+    const todayActs = myActivities.filter(a => a.date === todayISO && a.status !== "erledigt");
+    const nextAct = todayActs[0] || myActivities
+      .filter(a => a.status === "geplant" && a.date && a.date > todayISO)
+      .sort((a,b) => a.date.localeCompare(b.date))[0];
+    const openShop = myShopping.filter(s => !s.done && !s.spinnerei);
+
+    // Urgent todos for "Aufgaben" pinnwand
+    const urgentTodos = myTodos
+      .filter(t => !t.done && (!t.due || t.due <= offset(7)))
+      .sort((a, b) => {
+        const ba = dueBucket(a.due), bb = dueBucket(b.due);
+        const order = { ueber:0, heute:1, morgen:2, woche:3, kein:4 };
+        if ((order[ba]||5) !== (order[bb]||5)) return (order[ba]||5) - (order[bb]||5);
+        return (PRIO[a.prio]?.rank ?? 1) - (PRIO[b.prio]?.rank ?? 1);
+      })
+      .slice(0, 4);
+
+    const topGoal = myGoals.find(g => g.scope === "geteilt") || myGoals[0];
+
+    const now = new Date();
+    const greet = now.getHours() < 11 ? "Guten Morgen" : now.getHours() < 18 ? "Hallo ihr zwei" : "Schönen Abend";
+    const dateLine = now.toLocaleDateString("de-DE", { weekday:"long", day:"numeric", month:"long" });
+
+    return (
+      <div className="phone-scroll overflow-y-auto h-full pt-[48px] pb-[96px]">
+        <div className="px-4 pt-1 pb-3">
+          <div className="uplabel text-[10.5px] text-[var(--muted)]">{dateLine}</div>
+          <div className="flex items-end justify-between gap-3 mt-1">
+            <h1 className="text-[30px] font-semibold leading-tight tracking-tight flex-1 min-w-0">{greet}</h1>
+            <AvatarPair size={28}/>
+          </div>
+        </div>
+
+        {/* Featured: Cycle tile */}
+        {cycle && (
+          <div className="px-4 mb-2">
+            <CycleTile cycle={cycle} onOpen={onOpenCycle} canEdit={currentUser === cycle.owner}/>
+          </div>
+        )}
+
+        {/* Asymmetric 2-column grid: left stacked tiles, right tall Einkauf */}
+        <div className="px-4 mb-3 grid grid-cols-2 gap-2 items-stretch">
+          <div className="flex flex-col gap-2">
+            {/* Termin tile */}
+            <Card onClick={() => nextAct ? openActivity(nextAct) : goTab("akt")} className="p-3 flex-1">
+              <div className="uplabel text-[10px] text-[var(--muted)] mb-1.5 flex items-center justify-between gap-1">
+                <span>Termine</span>
+                {nextAct && (
+                  <span className="text-[10px] normal-case tracking-normal font-medium" style={{ color: USERS[nextAct.by].color }}>
+                    {shortDate(nextAct.date)}
+                  </span>
+                )}
+              </div>
+              {nextAct ? (
+                <>
+                  <div className="text-[14px] font-semibold leading-snug line-clamp-2 mb-0.5 flex items-start gap-1.5">
+                    {isPrivate(nextAct) && <IconLock size={10} strokeWidth={2} className="text-[var(--muted)] shrink-0 mt-1"/>}
+                    <span>{nextAct.title}</span>
+                  </div>
+                  <div className="text-[11.5px] text-[var(--ink-soft)] truncate">
+                    {nextAct.time && <span>{nextAct.time}</span>}{nextAct.place && ` · ${nextAct.place}`}
+                  </div>
+                </>
+              ) : (
+                <div className="text-[12.5px] text-[var(--muted)] italic">nichts geplant</div>
+              )}
+            </Card>
+
+            {/* Goal mini */}
+            {topGoal && (
+              <Card onClick={() => openGoal(topGoal)} className="p-3 flex-1">
+                <div className="uplabel text-[10px] text-[var(--muted)] mb-1.5 flex items-center gap-1">
+                  Im Blick {isPrivate(topGoal) && <IconLock size={9} strokeWidth={2}/>}
+                </div>
+                <div className="text-[12.5px] font-semibold leading-snug line-clamp-2 mb-2">{topGoal.title}</div>
+                <GoalProgress goal={topGoal}/>
+              </Card>
+            )}
+          </div>
+
+          {/* Einkauf — tall card matching the height of left column */}
+          <Card className="p-0 overflow-hidden flex flex-col">
+            <div className="px-3 pt-2.5 pb-1.5 flex items-center justify-between">
+              <div className="uplabel text-[10px] text-[var(--ink-soft)] inline-flex items-center gap-1.5">
+                <IconCart size={11}/> Einkauf
+              </div>
+              <button onClick={() => goTab("shop")} className="uplabel text-[9.5px] text-[var(--muted)] tap">
+                {openShop.length} offen
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {openShop.length === 0 ? (
+                <div className="px-3 py-3 text-[12px] text-[var(--ink-soft)] italic">leer ✓</div>
+              ) : (
+                <div className="phone-scroll overflow-y-auto h-full">
+                  {openShop.map((s) => (
+                    <div key={s.id}
+                      onClick={(e) => { e.stopPropagation(); openShopping(s); }}
+                      className="flex items-center gap-2 px-2.5 py-1.5 tap cursor-pointer border-b border-[var(--line)]/40 last:border-0">
+                      <RoundCheck checked={false} onClick={() => toggleShopping(s.id)} size={16} color="var(--sage)"/>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12px] truncate">{s.text}</div>
+                      </div>
+                      {isPrivate(s) && <IconLock size={8} strokeWidth={2} className="text-[var(--muted)] shrink-0"/>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="border-t border-[var(--line)]/60 bg-[var(--cream-deep)]/30 px-1.5 py-1 flex items-center gap-1">
+              <input
+                value={quickAddInput}
+                onChange={e => setQuickAddInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && quickAddInput.trim()) { quickAddShopping(quickAddInput); setQuickAddInput(""); } }}
+                placeholder="+ hinzufügen"
+                className="flex-1 bg-transparent text-[12px] py-1 px-1.5 placeholder:text-[var(--muted)] min-w-0"/>
+              <button onClick={() => { if (quickAddInput.trim()) { quickAddShopping(quickAddInput); setQuickAddInput(""); } }}
+                className="tap w-6 h-6 rounded-md bg-[var(--terra)] text-white flex items-center justify-center shrink-0">
+                <IconPlus size={12}/>
+              </button>
+            </div>
+          </Card>
+        </div>
+
+        {/* Aufgaben — Pinnwand-style */}
+        <div className="px-4 mb-2">
+          <div className="flex items-center justify-between mb-1.5 gap-2">
+            <h2 className="uplabel text-[10.5px] text-[var(--ink-soft)]">Aufgaben</h2>
+            <button onClick={() => goTab("todo")} className="uplabel text-[10.5px] text-[var(--terra)] tap whitespace-nowrap shrink-0">
+              Alle
+            </button>
+          </div>
+          {urgentTodos.length === 0 ? (
+            <Card className="p-3">
+              <div className="text-[13px] text-[var(--ink-soft)] italic">Keine offenen Aufgaben für die kommenden Tage.</div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {urgentTodos.map(t => {
+                const p = PRIO[t.prio] || PRIO.normal;
+                const bucket = dueBucket(t.due);
+                const isOver = bucket === "ueber";
+                const bucketLabel = bucket === "kein" ? "" : BUCKET_LABEL[bucket];
+                return (
+                  <Card key={t.id} onClick={() => openTodo(t)} className="p-2.5 relative">
+                    {/* Priority strip on left */}
+                    <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r"
+                      style={{ background: p.color, opacity: p.dot ? 1 : 0.35 }}/>
+                    <div className="pl-1.5">
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className="uplabel text-[9px] whitespace-nowrap"
+                          style={{ color: isOver ? "#C5634B" : "var(--muted)" }}>
+                          {bucketLabel || "Offen"}
+                        </span>
+                        <AvatarWithScope by={t.by} scope={t.scope} size={14}/>
+                      </div>
+                      <div className="text-[12.5px] font-semibold leading-snug line-clamp-3 mb-1">{t.text}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-[10.5px] text-[var(--ink-soft)]">
+                          <RoundCheck checked={false} onClick={() => toggleTodo(t.id)} size={14} color={p.color}/>
+                          erledigen
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const SectionTitle = ({ title, action }) => (
+    <div className="flex items-center justify-between mb-1.5 mt-0.5 gap-2">
+      <h2 className="uplabel text-[10.5px] text-[var(--ink-soft)]">{title}</h2>
+      {action && (
+        <button onClick={action.onClick} className="uplabel text-[10.5px] text-[var(--terra)] tap whitespace-nowrap shrink-0">
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+
+  const Tag = ({ label }) => (
+    <span className="inline-flex items-center px-2 py-0.5 text-[11.5px] rounded-full bg-[var(--cream-deep)] text-[var(--ink-soft)]">
+      #{label}
+    </span>
+  );
+
+  const ActivityIcon = ({ kind }) => {
+    const map = { coffee: IconCoffee, leaf: IconLeaf, heart: IconHeart, sparkle: IconSparkle, book: IconBook, house: IconHouse };
+    const Icon = map[kind] || IconCal;
+    return (
+      <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center"
+        style={{ background: "var(--cream-deep)", color: "var(--ink)" }}>
+        <Icon size={18}/>
+      </div>
+    );
+  };
+
+  const GoalProgress = ({ goal }) => {
+    const pct = Math.min(100, Math.round((goal.current/goal.target) * 100));
+    return (
+      <div>
+        <div className="h-2 rounded-full bg-[var(--cream-deep)] overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${pct}%`, background: USERS[goal.by].color }}/>
+        </div>
+        <div className="flex justify-between text-[12.5px] text-[var(--ink-soft)] mt-1.5">
+          <span>{goal.current} / {goal.target}{goal.title.includes("Sparen") ? " €" : ""}</span>
+          <span>{pct}%</span>
+        </div>
+      </div>
+    );
+  };
+
+  /* ============================================================
+     SCREEN: AKTIVITÄTEN
+     ============================================================ */
+  const AktScreen = ({ currentUser, activities, openActivity, addActivity }) => {
+    const [filter, setFilter] = useState("geplant");
+    const [scopeFilter, setScopeFilter] = useState("alle"); // alle | geteilt | nur-ich
+    const filtered = useMemo(() => {
+      let arr = visibleTo(activities, currentUser);
+      arr = arr.filter(a => a.status === filter);
+      if (scopeFilter === "geteilt") arr = arr.filter(a => a.scope === "geteilt");
+      if (scopeFilter === "nur-ich") arr = arr.filter(a => a.scope === currentUser);
+      return arr.sort((a,b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return a.date.localeCompare(b.date);
+      });
+    }, [activities, filter, scopeFilter, currentUser]);
+
+    // group by date label
+    const grouped = useMemo(() => {
+      const map = new Map();
+      filtered.forEach(a => {
+        const key = a.date ? a.date : "ohne-datum";
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(a);
+      });
+      return Array.from(map.entries());
+    }, [filtered]);
+
+    return (
+      <div className="phone-scroll overflow-y-auto h-full pt-[48px] pb-[96px]">
+        <ScreenHeader title="Aktivitäten" subtitle="Gemeinsam unterwegs"
+          right={
+            <button onClick={addActivity}
+              className="tap w-9 h-9 rounded-full bg-[var(--terra)] text-white shadow-card flex items-center justify-center">
+              <IconPlus size={18}/>
+            </button>
+          }/>
+        <div className="px-4 pb-1.5">
+          <Segmented value={filter} onChange={setFilter}
+            options={[
+              { value: "geplant",  label: "Geplant" },
+              { value: "idee",     label: "Ideen" },
+              { value: "erledigt", label: "Erledigt" },
+            ]}/>
+        </div>
+        <div className="px-4 pb-1.5 flex gap-1.5">
+          {[
+            { v: "alle",    l: "Alle" },
+            { v: "geteilt", l: "Gemeinsam", icon: <IconUsers size={11}/> },
+            { v: "nur-ich", l: `Nur ${USERS[currentUser].name}`, icon: <IconLock size={11} strokeWidth={2}/> },
+          ].map(o => (
+            <button key={o.v} onClick={() => setScopeFilter(o.v)}
+              className={`px-2.5 py-1 text-[11.5px] rounded-full font-medium tap inline-flex items-center gap-1 ${
+                scopeFilter===o.v ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--cream-deep)] text-[var(--ink-soft)]"
+              }`}>
+              {o.icon}{o.l}
+            </button>
+          ))}
+        </div>
+
+        <div className="px-4 mt-1.5 space-y-3.5">
+          {grouped.length === 0 && (
+            <Empty icon={<IconCal size={22}/>} title="Noch nichts hier"
+              body={ filter === "idee" ? "Sammle Ideen für Dates und Ausflüge — ohne Druck." : "Plant euer nächstes Abenteuer." }/>
+          )}
+          {grouped.map(([date, items]) => (
+            <div key={date}>
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[var(--muted)] mb-1.5 px-1">
+                {date === "ohne-datum" ? "Ohne Datum" : formatDate(date)}
+              </div>
+              <div className="space-y-1.5">
+                {items.map(a => (
+                  <Card key={a.id} onClick={() => openActivity(a)} className="p-3 flex items-center gap-3">
+                    <ActivityIcon kind={a.icon}/>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14.5px] font-medium truncate">{a.title}</div>
+                      <div className="text-[12px] text-[var(--ink-soft)] mt-0.5 flex items-center gap-2">
+                        {a.time && <span className="inline-flex items-center gap-1"><IconClock size={11}/>{a.time}</span>}
+                        {a.place && <span className="truncate">· {a.place}</span>}
+                      </div>
+                    </div>
+                    <AvatarWithScope by={a.by} scope={a.scope} size={20}/>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  /* ============================================================
+     SCREEN: EINKAUF
+     ============================================================ */
+
+  /* Compact reusable shopping row — used on Heute too */
+  const ShoppingRow = ({ s, onToggle, onOpen, dense = false }) => (
+    <div onClick={(e) => { e.stopPropagation(); onOpen && onOpen(s); }}
+      className={`flex items-center gap-2.5 ${dense ? "px-2.5 py-2" : "px-3 py-2.5"} tap cursor-pointer`}>
+      <RoundCheck checked={s.done} onClick={() => onToggle && onToggle(s.id)} size={dense ? 20 : 22}
+        color={s.spinnerei ? "var(--terra)" : "var(--sage)"}/>
+      <div className="flex-1 min-w-0">
+        <div className={`${dense ? "text-[13.5px]" : "text-[14px]"} ${s.done ? "line-through text-[var(--muted)]" : ""} flex items-center gap-1.5`}>
+          {s.spinnerei && !s.done && <span className="text-[var(--terra)]">✦</span>}
+          <span className="truncate">{s.text}</span>
+        </div>
+        {(s.qty || s.added) && (
+          <div className="text-[11px] text-[var(--muted)] mt-0.5 truncate">
+            {s.qty && <span>{s.qty}{s.added ? " · " : ""}</span>}{s.added}
+          </div>
+        )}
+      </div>
+      <AvatarWithScope by={s.by} scope={s.scope} size={dense ? 18 : 20}/>
+    </div>
+  );
+
+  const ShopScreen = ({ shopping, setShopping, openShopping, currentUser }) => {
+    const [input, setInput] = useState("");
+    const [spinnerei, setSpinnerei] = useState(false);
+    const [scopeForNew, setScopeForNew] = useState("geteilt");
+    const [showDone, setShowDone] = useState(false);
+
+    const visibleShopping = useMemo(() => visibleTo(shopping, currentUser), [shopping, currentUser]);
+
+    const add = () => {
+      if (!input.trim()) return;
+      setShopping([{
+        id: uid(), text: input.trim(), spinnerei,
+        done: false, by: currentUser, scope: scopeForNew, qty: "", added: "gerade eben",
+      }, ...shopping]);
+      setInput("");
+    };
+
+    const toggle = (id) => setShopping(shopping.map(s => s.id===id ? {...s, done: !s.done} : s));
+
+    const openItems    = visibleShopping.filter(s => !s.done);
+    const gemeinsam    = openItems.filter(s => !s.spinnerei && s.scope === "geteilt");
+    const privat       = openItems.filter(s => !s.spinnerei && s.scope === currentUser);
+    const spinnereiArr = openItems.filter(s =>  s.spinnerei);
+    const doneItems    = visibleShopping.filter(s => s.done);
+
+    const sections = [
+      { key: "gemeinsam", label: "Gemeinsam", items: gemeinsam,    accent: "var(--sage)",  icon: <IconUsers size={11}/> },
+      { key: "privat",    label: `Privat · ${USERS[currentUser].name}`, items: privat,     accent: USERS[currentUser].color, icon: <IconLock size={11} strokeWidth={2}/> },
+      { key: "spinnerei", label: "Spinnerei", items: spinnereiArr, accent: "var(--terra)", icon: <span className="text-[var(--terra)]">✦</span>, hint: "Wünsche & Nice-to-haves" },
+    ];
+
+    return (
+      <div className="phone-scroll overflow-y-auto h-full pt-[48px] pb-[96px]">
+        <ScreenHeader title="Einkauf" subtitle={`${openItems.length} offen`}
+          right={<AvatarPair size={24}/>}/>
+
+        {/* Quick add */}
+        <div className="px-4 pb-2.5">
+          <div className="bg-[var(--paper)] rounded-2xl shadow-card p-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-[var(--cream-deep)] flex items-center justify-center text-[var(--terra)] shrink-0">
+                <IconPlus size={16}/>
+              </div>
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") add(); }}
+                placeholder="Was fehlt?"
+                className="flex-1 bg-transparent text-[14.5px] placeholder:text-[var(--muted)] py-1"/>
+              <button onClick={add}
+                className="tap text-[13px] font-medium px-3 py-1.5 rounded-full text-white"
+                style={{ background: input.trim() ? "var(--terra)" : "var(--terra-soft)" }}>
+                Hinzu
+              </button>
+            </div>
+            <div className="mt-2 pl-1 flex items-center justify-between gap-2">
+              <div className="inline-flex p-0.5 rounded-full bg-[var(--cream-deep)]">
+                <button onClick={() => { setScopeForNew("geteilt"); setSpinnerei(false); }}
+                  className={`px-2.5 py-0.5 text-[11.5px] rounded-full tap font-medium inline-flex items-center gap-1 ${scopeForNew==="geteilt" && !spinnerei ? "bg-[var(--paper)] text-[var(--ink)] shadow-card" : "text-[var(--ink-soft)]"}`}>
+                  <IconUsers size={11}/> Gemeinsam
+                </button>
+                <button onClick={() => { setScopeForNew(currentUser); setSpinnerei(false); }}
+                  className={`px-2.5 py-0.5 text-[11.5px] rounded-full tap font-medium inline-flex items-center gap-1 ${scopeForNew===currentUser && !spinnerei ? "bg-[var(--paper)] text-[var(--ink)] shadow-card" : "text-[var(--ink-soft)]"}`}>
+                  <IconLock size={11} strokeWidth={2}/> Privat
+                </button>
+                <button onClick={() => setSpinnerei(true)}
+                  className={`px-2.5 py-0.5 text-[11.5px] rounded-full tap font-medium inline-flex items-center gap-1 ${spinnerei ? "bg-[var(--paper)] text-[var(--terra)] shadow-card" : "text-[var(--ink-soft)]"}`}>
+                  <span>✦</span> Spinnerei
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Three sections */}
+        <div className="px-4 space-y-3">
+          {sections.map(sec => sec.items.length > 0 && (
+            <div key={sec.key}>
+              <div className="flex items-center gap-1.5 mb-1.5 px-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: sec.accent }}/>
+                <h2 className="uplabel text-[10.5px] text-[var(--ink-soft)] inline-flex items-center gap-1">
+                  {sec.icon} {sec.label}
+                </h2>
+                <span className="text-[11px] text-[var(--muted)]">· {sec.items.length}</span>
+                {sec.hint && <span className="text-[10.5px] text-[var(--muted)] italic ml-auto">{sec.hint}</span>}
+              </div>
+              <Card className="p-1">
+                {sec.items.map((s, i) => (
+                  <div key={s.id} className={i < sec.items.length-1 ? "border-b border-[var(--line)]/60" : ""}>
+                    <ShoppingRow s={s} onToggle={toggle} onOpen={openShopping}/>
+                  </div>
+                ))}
+              </Card>
+            </div>
+          ))}
+
+          {/* Done */}
+          {doneItems.length > 0 && (
+            <div>
+              <button onClick={() => setShowDone(!showDone)}
+                className="flex items-center gap-1.5 px-1 py-1 uplabel text-[10.5px] text-[var(--ink-soft)] tap">
+                Erledigt · {doneItems.length}
+                <IconChev size={12} className={`transition-transform ${showDone ? "rotate-90" : ""}`}/>
+              </button>
+              {showDone && (
+                <Card className="p-1 mt-1">
+                  {doneItems.map((s, i) => (
+                    <div key={s.id} className={i < doneItems.length-1 ? "border-b border-[var(--line)]/60" : ""}>
+                      <ShoppingRow s={s} onToggle={toggle} onOpen={openShopping} dense/>
+                    </div>
+                  ))}
+                </Card>
+              )}
+            </div>
+          )}
+
+          {visibleShopping.length === 0 && (
+            <Empty icon={<IconCart size={22}/>} title="Liste ist leer" body="Tippe oben ein, was als nächstes mit muss."/>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  /* ============================================================
+     SCREEN: TODO
+     ============================================================ */
+  const PRIO = {
+    hoch:   { label: "Hoch",   color: "#C5634B", dot: true,  rank: 0 },
+    normal: { label: "Normal", color: "#7E977B", dot: false, rank: 1 },
+    tief:   { label: "Tief",   color: "#978675", dot: false, rank: 2 },
+  };
+
+  function dueBucket(due) {
+    if (!due) return "kein";
+    const d = diffDays(due, todayISO);
+    if (d < 0)  return "ueber";
+    if (d === 0) return "heute";
+    if (d === 1) return "morgen";
+    if (d <= 7)  return "woche";
+    return "spaeter";
+  }
+  const BUCKET_LABEL = {
+    ueber:   "Überfällig",
+    heute:   "Heute",
+    morgen:  "Morgen",
+    woche:   "Diese Woche",
+    spaeter: "Später",
+    kein:    "Ohne Datum",
+  };
+
+  const TodoRow = ({ t, onToggle, onOpen, dense = false }) => {
+    const p = PRIO[t.prio] || PRIO.normal;
+    return (
+      <div onClick={(e) => { e.stopPropagation(); onOpen && onOpen(t); }}
+        className={`flex items-start gap-2.5 ${dense ? "px-2.5 py-2" : "px-3 py-2.5"} tap cursor-pointer`}>
+        <div className="pt-0.5">
+          <RoundCheck checked={t.done} onClick={() => onToggle && onToggle(t.id)} size={dense ? 20 : 22}
+            color={p.color}/>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className={`${dense ? "text-[13.5px]" : "text-[14px]"} ${t.done ? "line-through text-[var(--muted)]" : ""} flex items-center gap-1.5`}>
+            {p.dot && !t.done && <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0" style={{ background: p.color }}/>}
+            <span className="truncate">{t.text}</span>
+          </div>
+          {(t.due || t.note) && (
+            <div className="text-[11px] text-[var(--muted)] mt-0.5 flex items-center gap-1.5 truncate">
+              {t.due && <span className={t.due < todayISO && !t.done ? "text-[#C5634B] font-medium" : ""}>{shortDate(t.due)}</span>}
+              {t.note && t.due && <span>·</span>}
+              {t.note && <span className="truncate">{t.note.split("\n")[0]}</span>}
+            </div>
+          )}
+        </div>
+        <AvatarWithScope by={t.by} scope={t.scope} size={dense ? 18 : 20}/>
+      </div>
+    );
+  };
+
+  const TodoScreen = ({ currentUser, todos, openTodo, addTodo, toggleTodo }) => {
+    const [query, setQuery] = useState("");
+    const [scopeFilter, setScopeFilter] = useState("alle");
+    const [showDone, setShowDone] = useState(false);
+
+    const myTodos = useMemo(() => {
+      let arr = visibleTo(todos, currentUser);
+      if (scopeFilter === "geteilt") arr = arr.filter(t => t.scope === "geteilt");
+      if (scopeFilter === "nur-ich") arr = arr.filter(t => t.scope === currentUser);
+      if (query.trim()) {
+        const q = query.toLowerCase();
+        arr = arr.filter(t => t.text.toLowerCase().includes(q) || (t.note||"").toLowerCase().includes(q));
+      }
+      return arr;
+    }, [todos, scopeFilter, query, currentUser]);
+
+    const openItems = myTodos.filter(t => !t.done);
+    const doneItems = myTodos.filter(t => t.done);
+
+    const buckets = useMemo(() => {
+      const order = ["ueber","heute","morgen","woche","spaeter","kein"];
+      const m = Object.fromEntries(order.map(k => [k, []]));
+      openItems.forEach(t => {
+        m[dueBucket(t.due)].push(t);
+      });
+      // sort within bucket: prio rank, then due asc
+      Object.values(m).forEach(arr => arr.sort((a,b) => {
+        const pr = (PRIO[a.prio]?.rank ?? 1) - (PRIO[b.prio]?.rank ?? 1);
+        if (pr !== 0) return pr;
+        if (a.due && b.due) return a.due.localeCompare(b.due);
+        return 0;
+      }));
+      return order.map(k => [k, m[k]]).filter(([_,arr]) => arr.length);
+    }, [openItems]);
+
+    return (
+      <div className="phone-scroll overflow-y-auto h-full pt-[48px] pb-[96px]">
+        <ScreenHeader title="Todo" subtitle={`${openItems.length} offen`}
+          right={
+            <button onClick={addTodo}
+              className="tap w-9 h-9 rounded-full bg-[var(--terra)] text-white shadow-card flex items-center justify-center">
+              <IconPlus size={18}/>
+            </button>
+          }/>
+
+        {/* Search */}
+        <div className="px-4 pb-1.5">
+          <div className="flex items-center gap-2 bg-[var(--paper)] rounded-2xl px-3 py-2 shadow-card">
+            <IconSearch size={16} className="text-[var(--muted)]"/>
+            <input value={query} onChange={e=>setQuery(e.target.value)}
+              placeholder="Suchen…"
+              className="flex-1 bg-transparent text-[14px] placeholder:text-[var(--muted)]"/>
+            {query && <button onClick={()=>setQuery("")} className="text-[var(--muted)] tap"><IconX size={14}/></button>}
+          </div>
+        </div>
+
+        {/* Scope filter */}
+        <div className="px-4 pb-2 flex gap-1.5">
+          {[
+            { v: "alle",    l: "Alle" },
+            { v: "geteilt", l: "Gemeinsam", icon: <IconUsers size={11}/> },
+            { v: "nur-ich", l: `Privat`, icon: <IconLock size={11} strokeWidth={2}/> },
+          ].map(o => (
+            <button key={o.v} onClick={() => setScopeFilter(o.v)}
+              className={`px-2.5 py-1 text-[11.5px] rounded-full font-medium tap inline-flex items-center gap-1 ${
+                scopeFilter===o.v ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--cream-deep)] text-[var(--ink-soft)]"
+              }`}>
+              {o.icon}{o.l}
+            </button>
+          ))}
+        </div>
+
+        <div className="px-4 space-y-3">
+          {buckets.length === 0 && doneItems.length === 0 && (
+            <Empty icon={<IconCheckSquare size={22}/>} title={query ? "Nichts gefunden" : "Alles erledigt"}
+              body={query ? "Andere Suche probieren?" : "Du bist auf dem Laufenden."}/>
+          )}
+          {buckets.map(([k, arr]) => (
+            <div key={k}>
+              <div className="flex items-center gap-1.5 mb-1.5 px-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full"
+                  style={{ background: k==="ueber" ? "#C5634B" : k==="heute" ? "var(--terra)" : "var(--ink-soft)" }}/>
+                <h2 className="uplabel text-[10.5px] text-[var(--ink-soft)]">{BUCKET_LABEL[k]}</h2>
+                <span className="text-[11px] text-[var(--muted)]">· {arr.length}</span>
+              </div>
+              <Card className="p-1">
+                {arr.map((t, i) => (
+                  <div key={t.id} className={i < arr.length-1 ? "border-b border-[var(--line)]/60" : ""}>
+                    <TodoRow t={t} onToggle={toggleTodo} onOpen={openTodo}/>
+                  </div>
+                ))}
+              </Card>
+            </div>
+          ))}
+
+          {/* Done */}
+          {doneItems.length > 0 && (
+            <div>
+              <button onClick={() => setShowDone(!showDone)}
+                className="flex items-center gap-1.5 px-1 py-1 uplabel text-[10.5px] text-[var(--ink-soft)] tap">
+                Erledigt · {doneItems.length}
+                <IconChev size={12} className={`transition-transform ${showDone ? "rotate-90" : ""}`}/>
+              </button>
+              {showDone && (
+                <Card className="p-1 mt-1">
+                  {doneItems.map((t, i) => (
+                    <div key={t.id} className={i < doneItems.length-1 ? "border-b border-[var(--line)]/60" : ""}>
+                      <TodoRow t={t} onToggle={toggleTodo} onOpen={openTodo} dense/>
+                    </div>
+                  ))}
+                </Card>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+  /* ============================================================
+     SCREEN: ZIELE
+     ============================================================ */
+  const TERM_LABEL = { kurz: "Kurzfristig", mittel: "Mittelfristig", lang: "Langfristig" };
+  const TERM_ORDER = ["kurz","mittel","lang"];
+
+  const GoalScreen = ({ currentUser, goals, openGoal, addGoal }) => {
+    const [scopeFilter, setScopeFilter] = useState("alle");
+    const myGoals = useMemo(() => {
+      let arr = visibleTo(goals, currentUser);
+      if (scopeFilter === "geteilt") arr = arr.filter(g => g.scope === "geteilt");
+      if (scopeFilter === "nur-ich") arr = arr.filter(g => g.scope === currentUser);
+      return arr;
+    }, [goals, scopeFilter, currentUser]);
+    const grouped = useMemo(() => {
+      const m = {};
+      TERM_ORDER.forEach(k => m[k] = []);
+      myGoals.forEach(g => m[g.term].push(g));
+      return m;
+    }, [myGoals]);
+
+    return (
+      <div className="phone-scroll overflow-y-auto h-full pt-[48px] pb-[96px]">
+        <ScreenHeader title="Ziele" subtitle="Wohin wir wollen"
+          right={
+            <button onClick={addGoal}
+              className="tap w-9 h-9 rounded-full bg-[var(--terra)] text-white shadow-card flex items-center justify-center">
+              <IconPlus size={18}/>
+            </button>
+          }/>
+
+        <div className="px-4 pb-1.5 flex gap-1.5">
+          {[
+            { v: "alle",    l: "Alle" },
+            { v: "geteilt", l: "Gemeinsam", icon: <IconUsers size={11}/> },
+            { v: "nur-ich", l: `Nur ${USERS[currentUser].name}`, icon: <IconLock size={11} strokeWidth={2}/> },
+          ].map(o => (
+            <button key={o.v} onClick={() => setScopeFilter(o.v)}
+              className={`px-2.5 py-1 text-[11.5px] rounded-full font-medium tap inline-flex items-center gap-1 ${
+                scopeFilter===o.v ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--cream-deep)] text-[var(--ink-soft)]"
+              }`}>
+              {o.icon}{o.l}
+            </button>
+          ))}
+        </div>
+
+        <div className="px-4 space-y-3.5">
+          {TERM_ORDER.map(term => {
+            const items = grouped[term];
+            if (items.length === 0) return null;
+            return (
+              <div key={term}>
+                <div className="flex items-center gap-1.5 mb-1.5 px-1">
+                  <IconFlag size={12} className="text-[var(--ink-soft)]"/>
+                  <h2 className="text-[11.5px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">{TERM_LABEL[term]}</h2>
+                </div>
+                <div className="space-y-1.5">
+                  {items.map(g => {
+                    const doneSteps = g.steps.filter(s=>s.done).length;
+                    return (
+                      <Card key={g.id} onClick={()=>openGoal(g)} className="p-3.5">
+                        <div className="flex items-start justify-between gap-3 mb-1.5">
+                          <div className="text-[14.5px] font-medium leading-snug pr-2">{g.title}</div>
+                          <AvatarWithScope by={g.by} scope={g.scope} size={20}/>
+                        </div>
+                        <GoalProgress goal={g}/>
+                        <div className="flex items-center justify-between mt-2 text-[11.5px] text-[var(--muted)]">
+                          <span>{doneSteps} / {g.steps.length} Schritte</span>
+                          <span className="inline-flex items-center gap-1 text-[var(--terra)] font-medium">
+                            Öffnen <IconChev size={11}/>
+                          </span>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  /* ============================================================
+     DETAIL SHEETS
+     ============================================================ */
+  const ActivityDetail = ({ activity, onClose, onChange, onDelete, currentUser }) => {
+    const a = activity;
+    if (!a) return null;
+    return (
+      <Sheet open={!!a} onClose={onClose} title="Aktivität">
+        <div className="flex items-center gap-3 mb-4">
+          <ActivityIcon kind={a.icon}/>
+          <div className="flex-1 min-w-0">
+            <div className="serif-i text-[22px] leading-tight">{a.title}</div>
+            <div className="text-[13px] text-[var(--ink-soft)] mt-1">
+              {a.date ? formatDate(a.date) : "Ohne Datum"}{a.time && ` · ${a.time}`}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {a.place && (
+            <DetailRow label="Ort" value={a.place} icon={<IconPin size={16}/>}/>
+          )}
+          <DetailRow label="Hinzugefügt von"
+            value={<span className="inline-flex items-center gap-2"><Avatar id={a.by} size={20}/>{USERS[a.by].name}</span>}
+            icon={<IconHeart size={16}/>}/>
+          {a.note && (
+            <div className="bg-[var(--cream-deep)]/60 rounded-2xl p-3.5 mt-3">
+              <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)] mb-1">Notiz</div>
+              <div className="text-[14.5px] whitespace-pre-line leading-relaxed">{a.note}</div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)]">Sichtbar für</div>
+          <ScopeToggle value={a.scope || "geteilt"}
+            onChange={(s) => onChange({ ...a, scope: s })}
+            currentUser={currentUser} compact/>
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          {a.status !== "erledigt" ? (
+            <button onClick={() => { onChange({ ...a, status: "erledigt" }); onClose(); }}
+              className="flex-1 py-3 rounded-2xl bg-[var(--sage)] text-white text-[15px] font-semibold tap">
+              Erledigt ✓
+            </button>
+          ) : (
+            <button onClick={() => { onChange({ ...a, status: "geplant" }); onClose(); }}
+              className="flex-1 py-3 rounded-2xl bg-[var(--cream-deep)] text-[var(--ink)] text-[15px] font-semibold tap">
+              Wieder planen
+            </button>
+          )}
+          {a.status === "idee" && (
+            <button onClick={() => { onChange({ ...a, status: "geplant" }); onClose(); }}
+              className="flex-1 py-3 rounded-2xl bg-[var(--terra)] text-white text-[15px] font-semibold tap">
+              Einplanen
+            </button>
+          )}
+          <button onClick={() => { onDelete(a.id); onClose(); }}
+            className="px-4 rounded-2xl bg-[var(--cream-deep)] text-[var(--ink-soft)] tap">
+            <IconX size={18}/>
+          </button>
+        </div>
+
+        {/* iCal export */}
+        {a.date && a.status !== "erledigt" && (
+          <button onClick={() => downloadICS(a)}
+            className="w-full mt-2.5 py-3 rounded-2xl bg-[var(--cream-deep)] text-[var(--ink)] text-[14.5px] font-semibold tap inline-flex items-center justify-center gap-2">
+            <IconCal size={16}/> Zum iPhone Kalender hinzufügen
+          </button>
+        )}
+      </Sheet>
+    );
+  };
+
+  const DetailRow = ({ label, value, icon }) => (
+    <div className="flex items-center gap-3 py-2 border-b border-[var(--line)]/60 last:border-0">
+      <div className="w-8 h-8 rounded-xl bg-[var(--cream-deep)] flex items-center justify-center text-[var(--ink-soft)] shrink-0">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)]">{label}</div>
+        <div className="text-[14.5px] truncate">{value}</div>
+      </div>
+    </div>
+  );
+
+  const ShoppingDetail = ({ item, onClose, onToggle, onDelete, onChange, currentUser }) => {
+    if (!item) return null;
+    return (
+      <Sheet open={!!item} onClose={onClose} title="Eintrag">
+        <div className="flex items-start gap-2 justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="text-[24px] font-semibold leading-tight flex items-center gap-1.5">
+              {item.spinnerei && <span className="text-[var(--terra)]">✦</span>}
+              {item.text}
+            </div>
+            {item.qty && <div className="text-[13.5px] text-[var(--ink-soft)] mt-1">{item.qty}</div>}
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <DetailRow label="Hinzugefügt von"
+            value={<span className="inline-flex items-center gap-2"><Avatar id={item.by} size={20}/>{USERS[item.by].name}</span>}
+            icon={<IconHeart size={16}/>}/>
+          <DetailRow label="Wann" value={item.added} icon={<IconClock size={16}/>}/>
+        </div>
+
+        <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)] mt-4 mb-1.5">Liste</div>
+        <div className="inline-flex p-0.5 rounded-full bg-[var(--cream-deep)]">
+          <button onClick={() => onChange && onChange({ ...item, spinnerei: false, scope: "geteilt" })}
+            className={`px-2.5 py-1 text-[12px] rounded-full tap font-medium inline-flex items-center gap-1 ${!item.spinnerei && item.scope==="geteilt" ? "bg-[var(--paper)] shadow-card" : "text-[var(--ink-soft)]"}`}>
+            <IconUsers size={12}/> Gemeinsam
+          </button>
+          <button onClick={() => onChange && onChange({ ...item, spinnerei: false, scope: currentUser })}
+            className={`px-2.5 py-1 text-[12px] rounded-full tap font-medium inline-flex items-center gap-1 ${!item.spinnerei && item.scope!=="geteilt" ? "bg-[var(--paper)] shadow-card" : "text-[var(--ink-soft)]"}`}>
+            <IconLock size={12} strokeWidth={2}/> Privat
+          </button>
+          <button onClick={() => onChange && onChange({ ...item, spinnerei: true })}
+            className={`px-2.5 py-1 text-[12px] rounded-full tap font-medium inline-flex items-center gap-1 ${item.spinnerei ? "bg-[var(--paper)] text-[var(--terra)] shadow-card" : "text-[var(--ink-soft)]"}`}>
+            <span>✦</span> Spinnerei
+          </button>
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          <button onClick={() => { onToggle(item.id); onClose(); }}
+            className={`flex-1 py-3 rounded-2xl text-[15px] font-semibold tap ${item.done ? "bg-[var(--cream-deep)] text-[var(--ink)]" : "bg-[var(--sage)] text-white"}`}>
+            {item.done ? "Wieder offen" : "Gekauft ✓"}
+          </button>
+          <button onClick={() => { onDelete(item.id); onClose(); }}
+            className="px-4 rounded-2xl bg-[var(--cream-deep)] text-[var(--ink-soft)] tap">
+            <IconX size={18}/>
+          </button>
+        </div>
+      </Sheet>
+    );
+  };
+
+  const TodoDetail = ({ todo, onClose, onChange, onDelete, currentUser }) => {
+    if (!todo) return null;
+    const p = PRIO[todo.prio] || PRIO.normal;
+    return (
+      <Sheet open={!!todo} onClose={onClose} title="Aufgabe">
+        <div className="flex items-start justify-between gap-3">
+          <div className="text-[22px] font-semibold leading-tight flex-1 flex items-start gap-2">
+            {p.dot && <span className="inline-block w-2 h-2 rounded-full mt-2.5 shrink-0" style={{ background: p.color }}/>}
+            <span>{todo.text}</span>
+          </div>
+          <Avatar id={todo.by} size={22}/>
+        </div>
+        {todo.note && (
+          <div className="bg-[var(--cream-deep)]/60 rounded-2xl p-3 mt-3">
+            <div className="uplabel text-[10px] text-[var(--muted)] mb-1">Notiz</div>
+            <div className="text-[14px] whitespace-pre-line leading-relaxed">{todo.note}</div>
+          </div>
+        )}
+
+        <div className="mt-4 space-y-2">
+          <DetailRow label="Fällig"
+            value={todo.due ? formatDate(todo.due) : "Ohne Datum"}
+            icon={<IconCal size={16}/>}/>
+          <DetailRow label="Hinzugefügt"
+            value={`${USERS[todo.by].name} · ${todo.when}`}
+            icon={<IconClock size={16}/>}/>
+        </div>
+
+        <div className="uplabel text-[10.5px] text-[var(--muted)] mt-4 mb-1.5">Priorität</div>
+        <div className="inline-flex p-0.5 rounded-full bg-[var(--cream-deep)]">
+          {Object.entries(PRIO).map(([k, v]) => (
+            <button key={k} onClick={() => onChange({ ...todo, prio: k })}
+              className={`px-3 py-1 text-[12px] rounded-full font-medium tap inline-flex items-center gap-1 ${todo.prio === k ? "bg-[var(--paper)] shadow-card" : "text-[var(--ink-soft)]"}`}
+              style={todo.prio === k ? { color: v.color } : {}}>
+              {v.dot && <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: v.color }}/>}
+              {v.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between mt-3">
+          <div className="uplabel text-[10.5px] text-[var(--muted)]">Sichtbar für</div>
+          <ScopeToggle value={todo.scope || "geteilt"}
+            onChange={(s) => onChange({ ...todo, scope: s })}
+            currentUser={currentUser} compact/>
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          <button onClick={() => { onChange({ ...todo, done: !todo.done }); onClose(); }}
+            className={`flex-1 py-3 rounded-2xl text-[15px] font-semibold tap ${todo.done ? "bg-[var(--cream-deep)] text-[var(--ink)]" : "bg-[var(--sage)] text-white"}`}>
+            {todo.done ? "Wieder offen" : "Erledigt ✓"}
+          </button>
+          <button onClick={() => { onDelete(todo.id); onClose(); }}
+            className="px-4 rounded-2xl bg-[var(--cream-deep)] text-[var(--ink-soft)] tap">
+            <IconX size={18}/>
+          </button>
+        </div>
+      </Sheet>
+    );
+  };
+
+  const GoalDetail = ({ goal, onClose, onChange, onDelete, currentUser }) => {
+    if (!goal) return null;
+    const doneSteps = goal.steps.filter(s => s.done).length;
+    const pct = Math.min(100, Math.round((goal.current / Math.max(goal.target, 1)) * 100));
+    const [newStep, setNewStep] = useState("");
+
+    const toggleStep = (id) =>
+      onChange({ ...goal, steps: goal.steps.map(s => s.id === id ? { ...s, done: !s.done } : s) });
+    const removeStep = (id) =>
+      onChange({ ...goal, steps: goal.steps.filter(s => s.id !== id) });
+    const addStep = () => {
+      const text = newStep.trim();
+      if (!text) return;
+      onChange({ ...goal, steps: [...goal.steps, { id: uid(), text, done: false }] });
+      setNewStep("");
+    };
+    const bumpCurrent = (delta) =>
+      onChange({ ...goal, current: Math.max(0, Math.min(goal.target, goal.current + delta)) });
+
+    return (
+      <Sheet open={!!goal} onClose={onClose} title="Ziel">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="uplabel text-[10px] text-[var(--muted)] flex items-center gap-1.5 mb-1">
+              <IconFlag size={11} strokeWidth={2}/>
+              {TERM_LABEL[goal.term]}
+            </div>
+            <div className="serif text-[24px] leading-tight">{goal.title}</div>
+          </div>
+          <AvatarWithScope by={goal.by} scope={goal.scope} size={24}/>
+        </div>
+
+        {/* Progress block */}
+        <div className="mt-4 bg-[var(--cream-deep)]/60 rounded-2xl p-4">
+          <div className="flex items-baseline justify-between mb-2">
+            <div className="flex items-baseline gap-1.5">
+              <span className="mono text-[28px] font-semibold leading-none">{goal.current}</span>
+              <span className="text-[14px] text-[var(--muted)]">/ {goal.target}{goal.unit ? ` ${goal.unit}` : ""}</span>
+            </div>
+            <span className="mono text-[13px] text-[var(--ink-soft)]">{pct}%</span>
+          </div>
+          <GoalProgress goal={goal}/>
+          <div className="flex gap-2 mt-3">
+            <button onClick={() => bumpCurrent(-1)}
+              className="flex-1 py-2 rounded-xl bg-[var(--paper)] text-[14px] font-medium tap text-[var(--ink-soft)]">
+              −1
+            </button>
+            <button onClick={() => bumpCurrent(1)}
+              className="flex-1 py-2 rounded-xl bg-[var(--paper)] text-[14px] font-medium tap text-[var(--ink-soft)]">
+              +1
+            </button>
+            <button onClick={() => bumpCurrent(5)}
+              className="flex-1 py-2 rounded-xl bg-[var(--paper)] text-[14px] font-medium tap text-[var(--ink-soft)]">
+              +5
+            </button>
+          </div>
+        </div>
+
+        {/* Steps */}
+        <div className="uplabel text-[10.5px] text-[var(--muted)] mt-4 mb-1.5 flex items-center justify-between">
+          <span>Schritte</span>
+          <span className="mono text-[10.5px] tracking-normal normal-case">{doneSteps} / {goal.steps.length}</span>
+        </div>
+        <div className="rounded-2xl bg-[var(--cream-deep)]/40 overflow-hidden">
+          {goal.steps.length === 0 && (
+            <div className="px-3.5 py-3 text-[13px] text-[var(--muted)]">Noch keine Schritte.</div>
+          )}
+          {goal.steps.map((s, i) => (
+            <div key={s.id}
+              className={`flex items-center gap-3 px-3 py-2.5 ${i < goal.steps.length-1 ? "border-b border-[var(--line)]/60" : ""}`}>
+              <button onClick={() => toggleStep(s.id)}
+                className={`w-5 h-5 rounded-md tap shrink-0 flex items-center justify-center border ${s.done ? "bg-[var(--sage)] border-[var(--sage)] text-white" : "border-[var(--muted)]/60 bg-[var(--paper)]"}`}>
+                {s.done && <IconCheck size={13} strokeWidth={3}/>}
+              </button>
+              <div className={`flex-1 text-[14px] leading-snug ${s.done ? "line-through text-[var(--muted)]" : ""}`}>
+                {s.text}
+              </div>
+              <button onClick={() => removeStep(s.id)}
+                className="text-[var(--muted)] tap p-1">
+                <IconX size={14}/>
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Add step */}
+        <div className="flex gap-2 mt-2">
+          <input value={newStep} onChange={e => setNewStep(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") addStep(); }}
+            placeholder="Schritt hinzufügen…"
+            className="flex-1 bg-[var(--cream-deep)]/60 rounded-2xl px-3.5 py-2.5 text-[14px] placeholder:text-[var(--muted)]"/>
+          <button onClick={addStep}
+            className="px-3 rounded-2xl bg-[var(--ink)] text-[var(--paper)] tap">
+            <IconPlus size={16} strokeWidth={2.4}/>
+          </button>
+        </div>
+
+        {/* Term toggle */}
+        <div className="uplabel text-[10.5px] text-[var(--muted)] mt-4 mb-1.5">Zeithorizont</div>
+        <Segmented value={goal.term} onChange={(t) => onChange({ ...goal, term: t })}
+          options={[
+            { value: "kurz",   label: "Kurz" },
+            { value: "mittel", label: "Mittel" },
+            { value: "lang",   label: "Lang" },
+          ]}/>
+
+        <div className="flex items-center justify-between mt-3">
+          <div className="uplabel text-[10.5px] text-[var(--muted)]">Sichtbar für</div>
+          <ScopeToggle value={goal.scope || "geteilt"}
+            onChange={(s) => onChange({ ...goal, scope: s })}
+            currentUser={currentUser} compact/>
+        </div>
+
+        <button onClick={() => { onDelete(goal.id); onClose(); }}
+          className="w-full mt-5 py-3 rounded-2xl bg-[var(--cream-deep)] text-[var(--ink-soft)] text-[14px] font-medium tap">
+          Ziel löschen
+        </button>
+      </Sheet>
+    );
+  };
+
+  const ACT_ICONS = [
+    { v: "heart",   Icon: IconHeart   },
+    { v: "coffee",  Icon: IconCoffee  },
+    { v: "leaf",    Icon: IconLeaf    },
+    { v: "sparkle", Icon: IconSparkle },
+    { v: "book",    Icon: IconBook    },
+    { v: "house",   Icon: IconHouse   },
+  ];
+
+  const ActivityAddSheet = ({ open, onClose, onAdd, currentUser }) => {
+    const [title, setTitle] = useState("");
+    const [date, setDate] = useState("");
+    const [time, setTime] = useState("");
+    const [place, setPlace] = useState("");
+    const [note, setNote] = useState("");
+    const [icon, setIcon] = useState("heart");
+    const [status, setStatus] = useState("geplant");
+    const [scope, setScope] = useState("geteilt");
+    useEffect(() => {
+      if (open) {
+        setTitle(""); setDate(""); setTime(""); setPlace(""); setNote("");
+        setIcon("heart"); setStatus("geplant"); setScope("geteilt");
+      }
+    }, [open]);
+    return (
+      <Sheet open={open} onClose={onClose} title="Neue Aktivität">
+        <Field label="Was?" value={title} onChange={setTitle} placeholder="z. B. Picknick im Park"/>
+
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <div>
+            <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)] mb-1.5">Datum</div>
+            <input type="date" value={date} onChange={e=>setDate(e.target.value)}
+              className="w-full bg-[var(--cream-deep)]/60 rounded-2xl px-3.5 py-3 text-[15px] placeholder:text-[var(--muted)]"/>
+          </div>
+          <div>
+            <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)] mb-1.5">Zeit</div>
+            <input type="time" value={time} onChange={e=>setTime(e.target.value)}
+              className="w-full bg-[var(--cream-deep)]/60 rounded-2xl px-3.5 py-3 text-[15px] placeholder:text-[var(--muted)]"/>
+          </div>
+        </div>
+
+        <Field label="Ort (optional)" value={place} onChange={setPlace} placeholder="z. B. Tempelhofer Feld"/>
+
+        <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)] mt-3 mb-1.5">Status</div>
+        <Segmented value={status} onChange={setStatus} options={[
+          { value:"geplant",  label:"Geplant" },
+          { value:"idee",     label:"Idee" },
+          { value:"erledigt", label:"Erledigt" },
+        ]}/>
+
+        <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)] mt-3 mb-1.5">Icon</div>
+        <div className="flex gap-1.5 flex-wrap">
+          {ACT_ICONS.map(({ v, Icon }) => (
+            <button key={v} onClick={() => setIcon(v)}
+              className={`tap w-10 h-10 rounded-2xl flex items-center justify-center ${icon === v ? "bg-[var(--terra)] text-white shadow-card" : "bg-[var(--cream-deep)] text-[var(--ink-soft)]"}`}>
+              <Icon size={18}/>
+            </button>
+          ))}
+        </div>
+
+        <div className="uplabel text-[10.5px] text-[var(--muted)] mt-3 mb-1.5">Notiz (optional)</div>
+        <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2}
+          placeholder="Details, Reservierung, Links…"
+          className="w-full bg-[var(--cream-deep)]/60 rounded-2xl p-3 text-[14.5px] placeholder:text-[var(--muted)] resize-none"/>
+
+        <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)] mt-3 mb-1.5">Sichtbar für</div>
+        <ScopeToggle value={scope} onChange={setScope} currentUser={currentUser}/>
+
+        <button
+          onClick={() => {
+            if (!title.trim()) return;
+            onAdd({
+              id: uid(), title: title.trim(), date, time, place,
+              status, by: currentUser, scope, note, icon,
+            });
+            onClose();
+          }}
+          className="w-full mt-5 py-3.5 rounded-2xl bg-[var(--terra)] text-white text-[15.5px] font-semibold tap">
+          Hinzufügen
+        </button>
+      </Sheet>
+    );
+  };
+
+  const TodoAddSheet = ({ open, onClose, onAdd, currentUser }) => {
+    const [text, setText] = useState("");
+    const [note, setNote] = useState("");
+    const [due, setDue] = useState("");
+    const [prio, setPrio] = useState("normal");
+    const [scope, setScope] = useState("geteilt");
+    useEffect(() => { if (open) { setText(""); setNote(""); setDue(""); setPrio("normal"); setScope("geteilt"); } }, [open]);
+    return (
+      <Sheet open={open} onClose={onClose} title="Neue Aufgabe">
+        <Field label="Was?" value={text} onChange={setText} placeholder="z. B. Mietvertrag verlängern"/>
+        <Field label="Fällig (optional)" type="date" value={due} onChange={setDue}/>
+
+        <div className="uplabel text-[10.5px] text-[var(--muted)] mt-3 mb-1.5">Priorität</div>
+        <Segmented value={prio} onChange={setPrio} options={[
+          { value:"tief",   label:"Tief" },
+          { value:"normal", label:"Normal" },
+          { value:"hoch",   label:"Hoch" },
+        ]}/>
+
+        <div className="uplabel text-[10.5px] text-[var(--muted)] mt-3 mb-1.5">Notiz (optional)</div>
+        <textarea value={note} onChange={e=>setNote(e.target.value)} rows={3}
+          placeholder="Details, Kontakt, Links…"
+          className="w-full bg-[var(--cream-deep)]/60 rounded-2xl p-3 text-[14.5px] placeholder:text-[var(--muted)] resize-none"/>
+
+        <div className="uplabel text-[10.5px] text-[var(--muted)] mt-3 mb-1.5">Sichtbar für</div>
+        <ScopeToggle value={scope} onChange={setScope} currentUser={currentUser}/>
+
+        <button
+          onClick={() => {
+            if (!text.trim()) return;
+            onAdd({ id: uid(), text: text.trim(), note, due, prio, by: currentUser, scope, done: false, when: "gerade eben" });
+            onClose();
+          }}
+          className="w-full mt-5 py-3.5 rounded-2xl bg-[var(--terra)] text-white text-[15.5px] font-semibold tap">
+          Hinzufügen
+        </button>
+      </Sheet>
+    );
+  };
+
+  const GoalAddSheet = ({ open, onClose, onAdd, currentUser }) => {
+    const [title, setTitle] = useState("");
+    const [term, setTerm] = useState("kurz");
+    const [target, setTarget] = useState(5);
+    const [scope, setScope] = useState("geteilt");
+    useEffect(() => { if (open) { setTitle(""); setTerm("kurz"); setTarget(5); setScope("geteilt"); } }, [open]);
+    return (
+      <Sheet open={open} onClose={onClose} title="Neues Ziel">
+        <Field label="Ziel" value={title} onChange={setTitle} placeholder="z. B. Sonntags wandern gehen"/>
+        <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)] mt-3 mb-1.5">Zeithorizont</div>
+        <Segmented value={term} onChange={setTerm} options={[
+          { value:"kurz",   label:"Kurz" },
+          { value:"mittel", label:"Mittel" },
+          { value:"lang",   label:"Lang" },
+        ]}/>
+        <Field label="Zielwert (z. B. Anzahl Schritte / Euro)" type="number" value={target} onChange={v=>setTarget(Number(v)||0)}/>
+        <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)] mt-3 mb-1.5">Sichtbar für</div>
+        <ScopeToggle value={scope} onChange={setScope} currentUser={currentUser}/>
+        <button
+          onClick={() => {
+            if (!title.trim()) return;
+            onAdd({ id: uid(), title: title.trim(), term, target: target||1, current: 0, by: currentUser, scope, unit: "", steps: [] });
+            onClose();
+          }}
+          className="w-full mt-5 py-3.5 rounded-2xl bg-[var(--terra)] text-white text-[15.5px] font-semibold tap">
+          Anlegen
+        </button>
+      </Sheet>
+    );
+  };
+
+  const Field = ({ label, value, onChange, placeholder, type = "text" }) => (
+    <div className="mt-3">
+      <div className="text-[11.5px] uppercase tracking-[0.12em] text-[var(--muted)] mb-1.5">{label}</div>
+      <input type={type} value={value} onChange={e=>onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full bg-[var(--cream-deep)]/60 rounded-2xl px-3.5 py-3 text-[15px] placeholder:text-[var(--muted)]"/>
+    </div>
+  );
+
+  /* ============================================================
+     CYCLE — tile, ring, calendar, sheet
+     ============================================================ */
+  const CycleBar = ({ cycle, analysis }) => {
+    const len = cycle.avgCycle;
+    const ovD = len - 14;
+    const phases = [
+      { from: 1, to: cycle.avgPeriod, color: PHASE_COLORS.menstruation },
+      { from: cycle.avgPeriod, to: ovD - 3, color: PHASE_COLORS.follikel },
+      { from: ovD - 3, to: ovD + 1, color: PHASE_COLORS.fertil },
+      { from: ovD + 1, to: len, color: PHASE_COLORS.luteal },
+    ];
+    return (
+      <div className="relative h-2 rounded-full overflow-hidden bg-[var(--cream-deep)]">
+        {phases.map((p, i) => (
+          <div key={i} className="absolute top-0 bottom-0"
+            style={{
+              left: `${((p.from-1)/len) * 100}%`,
+              width: `${((p.to - (p.from-1))/len) * 100}%`,
+              background: p.color, opacity: 0.6,
+            }}/>
+        ))}
+        <div className="absolute top-[-2px] bottom-[-2px]"
+          style={{
+            left: `${((Math.min(analysis.day, len) - 0.5)/len) * 100}%`,
+            width: 2.5,
+            background: "var(--ink)",
+            boxShadow: "0 0 0 2px var(--paper)",
+            borderRadius: 2,
+          }}/>
+      </div>
+    );
+  };
+
+  const CycleTile = ({ cycle, onOpen, canEdit }) => {
+    const a = cycleAnalysis(cycle);
+    if (!a) return null;
+    return (
+      <Card onClick={onOpen} className="p-3.5 relative overflow-hidden">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 flex flex-col items-center justify-center w-14 pt-1">
+            <div className="text-[40px] leading-none font-semibold tracking-tight mono" style={{ color: a.color }}>
+              {a.day}
+            </div>
+            <div className="uplabel text-[9px] text-[var(--muted)] mt-1">Tag</div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="uplabel text-[10px] text-[var(--muted)] flex items-center gap-1.5">
+                Zyklus · Ambar {!canEdit && <IconLock size={9} strokeWidth={2}/>}
+              </div>
+            </div>
+            <div className="text-[16px] font-semibold leading-tight" style={{ color: a.color }}>{a.phaseLabel}</div>
+            <div className="mt-2"><CycleBar cycle={cycle} analysis={a}/></div>
+            <div className="flex items-center justify-between mt-1.5 text-[11px] text-[var(--ink-soft)] gap-2">
+              <span className="whitespace-nowrap">
+                {a.daysUntilOvulation > 0
+                  ? `Eisprung in ${a.daysUntilOvulation} T.`
+                  : a.daysUntilOvulation === 0
+                    ? "Eisprung heute"
+                    : (a.daysUntilPeriod < 0 ? "" : `Eisprung vor ${-a.daysUntilOvulation} T.`)}
+              </span>
+              <span className="whitespace-nowrap">
+                {a.daysUntilPeriod > 0
+                  ? `Periode in ${a.daysUntilPeriod} T.`
+                  : a.daysUntilPeriod === 0
+                    ? "Periode heute"
+                    : `${-a.daysUntilPeriod} T. überfällig`}
+              </span>
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  /* Circular ring visualization */
+  const CycleRing = ({ cycle, analysis }) => {
+    const size = 200, cx = size/2, cy = size/2, r = 78, sw = 14;
+    const len = cycle.avgCycle;
+    const ovD = len - 14;
+
+    const arcPath = (from, to) => {
+      const f = Math.max(0, from - 1);
+      const t = Math.min(len, to);
+      if (t <= f) return "";
+      const a0 = (f/len) * Math.PI * 2 - Math.PI/2;
+      const a1 = (t/len) * Math.PI * 2 - Math.PI/2;
+      const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+      const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+      const large = (a1 - a0) > Math.PI ? 1 : 0;
+      return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+    };
+    const phases = [
+      { from: 1,                   to: cycle.avgPeriod,    color: PHASE_COLORS.menstruation, label: "Periode" },
+      { from: cycle.avgPeriod + 1, to: ovD - 3 - 1,        color: PHASE_COLORS.follikel,     label: "Follikel" },
+      { from: ovD - 3,             to: ovD + 1,            color: PHASE_COLORS.fertil,       label: "Fruchtbar" },
+      { from: ovD + 2,             to: len,                color: PHASE_COLORS.luteal,       label: "Luteal" },
+    ];
+
+    // today marker position
+    const dayClamped = ((analysis.day - 0.5) % len + len) % len;
+    const at = (dayClamped/len) * Math.PI * 2 - Math.PI/2;
+    const mx = cx + r * Math.cos(at);
+    const my = cy + r * Math.sin(at);
+
+    // ovulation marker
+    const ot = ((ovD - 0.5)/len) * Math.PI * 2 - Math.PI/2;
+    const ox = cx + r * Math.cos(ot);
+    const oy = cy + r * Math.sin(ot);
+
+    return (
+      <div className="flex items-center justify-center">
+        <svg width={size} height={size}>
+          {/* Background ring */}
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--cream-deep)" strokeWidth={sw}/>
+          {/* Phase arcs */}
+          {phases.map((p, i) => (
+            <path key={i} d={arcPath(p.from, p.to)} fill="none"
+              stroke={p.color} strokeWidth={sw} opacity="0.85"/>
+          ))}
+          {/* Ovulation dot */}
+          <circle cx={ox} cy={oy} r={3.5} fill={PHASE_COLORS.fertil} stroke="var(--paper)" strokeWidth="1.5"/>
+          {/* Today marker */}
+          <circle cx={mx} cy={my} r={10} fill="var(--paper)" stroke={analysis.color} strokeWidth="3"/>
+          {/* Center text */}
+          <text x={cx} y={cy-2} textAnchor="middle" fill="#211913" fontSize="56" fontWeight="400" fontStyle="italic" fontFamily="'Instrument Serif', Georgia, serif">{analysis.day}</text>
+          <text x={cx} y={cy+22} textAnchor="middle" fill="#978675" fontSize="9.5" letterSpacing="3" fontWeight="600">TAG · {len}</text>
+        </svg>
+      </div>
+    );
+  };
+
+  /* Month calendar with phase coloring */
+  const CycleCalendar = ({ cycle, onTapDay }) => {
+    const now = new Date();
+    const year = now.getFullYear(), month = now.getMonth();
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    const startWeekday = (first.getDay() + 6) % 7; // Mon-first
+    const daysInMonth = last.getDate();
+    const cells = [];
+    for (let i = 0; i < startWeekday; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+    const lastPeriodStart = cycle.periodStarts[cycle.periodStarts.length - 1];
+    const lastPSDate = new Date(lastPeriodStart + "T00:00:00");
+
+    const cellInfo = (d) => {
+      const iso = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const tDate = new Date(iso + "T00:00:00");
+      // find closest past period start
+      let baseStart = null;
+      let diff = Infinity;
+      cycle.periodStarts.forEach(ps => {
+        const psDate = new Date(ps + "T00:00:00");
+        const dd = Math.floor((tDate - psDate) / 86400000);
+        if (dd >= 0 && dd < diff) { diff = dd; baseStart = psDate; }
+      });
+      let dayInCycle;
+      if (baseStart) {
+        dayInCycle = Math.floor((tDate - baseStart) / 86400000) + 1;
+        // If beyond cycle length, project forward
+        if (dayInCycle > cycle.avgCycle) {
+          dayInCycle = ((dayInCycle - 1) % cycle.avgCycle) + 1;
+        }
+      } else {
+        // future from last period: project
+        const dd = Math.floor((tDate - lastPSDate) / 86400000);
+        dayInCycle = ((dd % cycle.avgCycle) + cycle.avgCycle) % cycle.avgCycle + 1;
+      }
+      const phase = phaseForDay(cycle, dayInCycle);
+      return {
+        iso, dayInCycle, phase,
+        isToday: iso === todayISO,
+        isPeriodStart: cycle.periodStarts.includes(iso),
+        entry: cycle.entries[iso],
+      };
+    };
+
+    return (
+      <div>
+        <div className="text-[12px] font-semibold text-[var(--ink-soft)] mb-1.5 flex items-center justify-between">
+          <span>{first.toLocaleDateString("de-DE", { month: "long", year: "numeric" })}</span>
+          <span className="text-[10px] font-normal text-[var(--muted)] uppercase tracking-wider">Prognose</span>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-[var(--muted)] mb-1">
+          {["Mo","Di","Mi","Do","Fr","Sa","So"].map(d => <div key={d}>{d}</div>)}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((d, i) => {
+            if (!d) return <div key={i}/>;
+            const info = cellInfo(d);
+            const phaseCol = PHASE_COLORS[info.phase];
+            const isOvulation = info.dayInCycle === cycle.avgCycle - 14;
+            return (
+              <button key={i} onClick={() => onTapDay && onTapDay(info.iso)}
+                className="aspect-square rounded-lg flex items-center justify-center text-[12px] font-medium relative tap"
+                style={{
+                  background: info.isToday
+                    ? phaseCol
+                    : `${phaseCol}22`,
+                  color: info.isToday ? "white" : "var(--ink)",
+                  boxShadow: info.isToday ? `0 0 0 1.5px var(--paper) inset, 0 0 0 2px ${phaseCol}` : "none",
+                }}>
+                <span className="relative z-10">{d}</span>
+                {info.isPeriodStart && !info.isToday && (
+                  <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ background: PHASE_COLORS.menstruation }}/>
+                )}
+                {isOvulation && !info.isToday && (
+                  <span className="absolute bottom-0.5 w-1 h-1 rounded-full" style={{ background: PHASE_COLORS.fertil }}/>
+                )}
+                {info.entry && !info.isPeriodStart && !info.isToday && (
+                  <span className="absolute bottom-0.5 left-0.5 w-1 h-1 rounded-full" style={{ background: "var(--ink-soft)" }}/>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const PhaseHint = ({ phase }) => {
+    const HINTS = {
+      menstruation: "Ruhe, Wärme, weniger Reize. Wenig Plan, viel Spielraum.",
+      follikel:     "Energie steigt. Gut für neue Projekte und längere Spaziergänge.",
+      fertil:       "Sozial, kreativ, klar im Kopf. Termine ruhig vollpacken.",
+      luteal:       "Innere Phase. Routinen helfen. Auf Schlaf achten.",
+      ueberfaellig: "Periode ist überfällig. Wenn unsicher, Termin checken.",
+    };
+    return (
+      <div className="text-[12.5px] text-[var(--ink-soft)] leading-relaxed">{HINTS[phase] || ""}</div>
+    );
+  };
+
+  const CycleSheet = ({ open, cycle, setCycle, onClose, currentUser }) => {
+    if (!open) return null;
+    const a = cycleAnalysis(cycle);
+    const canEdit = currentUser === cycle.owner;
+    const todayEntry = cycle.entries[todayISO] || {};
+
+    const updateEntry = (patch) => {
+      if (!canEdit) return;
+      const newEntries = { ...cycle.entries, [todayISO]: { ...todayEntry, ...patch } };
+      setCycle({ ...cycle, entries: newEntries });
+    };
+    const toggleSymptom = (s) => {
+      if (!canEdit) return;
+      const cur = todayEntry.symptoms || [];
+      const next = cur.includes(s) ? cur.filter(x => x !== s) : [...cur, s];
+      updateEntry({ symptoms: next });
+    };
+    const markPeriodToday = () => {
+      if (!canEdit) return;
+      if (cycle.periodStarts.includes(todayISO)) return;
+      setCycle({
+        ...cycle,
+        periodStarts: [...cycle.periodStarts, todayISO].sort(),
+        entries: { ...cycle.entries, [todayISO]: { ...todayEntry, flow: todayEntry.flow || 2 } },
+      });
+    };
+    const setAvgCycle = (n) => canEdit && setCycle({ ...cycle, avgCycle: Math.max(20, Math.min(45, n)) });
+    const setAvgPeriod = (n) => canEdit && setCycle({ ...cycle, avgPeriod: Math.max(2, Math.min(10, n)) });
+
+    return (
+      <Sheet open={open} onClose={onClose} title={`Zyklus · ${USERS[cycle.owner].name}`}>
+        {!canEdit && (
+          <div className="bg-[var(--cream-deep)]/80 rounded-2xl p-2.5 mb-3 text-[12.5px] text-[var(--ink-soft)] inline-flex items-center gap-2">
+            <IconLock size={13} strokeWidth={2}/> Nur Ambar kann bearbeiten — du siehst Phase und Stimmung
+          </div>
+        )}
+
+        <CycleRing cycle={cycle} analysis={a}/>
+
+        <div className="text-center mt-1 mb-2">
+          <div className="serif-i text-[26px] leading-tight" style={{ color: a.color }}>{a.phaseLabel}</div>
+          <div className="text-[12.5px] text-[var(--ink-soft)] mt-0.5">
+            {a.daysUntilOvulation > 0 ? `Eisprung in ${a.daysUntilOvulation} T.` : a.daysUntilOvulation === 0 ? "Eisprung heute" : `${-a.daysUntilOvulation} T. nach Eisprung`}
+            {" · "}
+            {a.daysUntilPeriod > 0 ? `Periode in ${a.daysUntilPeriod} T.` : a.daysUntilPeriod === 0 ? "Periode heute" : `${-a.daysUntilPeriod} T. überfällig`}
+          </div>
+        </div>
+
+        <div className="bg-[var(--cream-deep)]/60 rounded-2xl p-3 mt-1">
+          <PhaseHint phase={a.phase}/>
+        </div>
+
+        {canEdit && (
+          <button onClick={markPeriodToday}
+            disabled={cycle.periodStarts.includes(todayISO)}
+            className={`w-full mt-3 py-2.5 rounded-2xl text-[13.5px] font-semibold tap ${
+              cycle.periodStarts.includes(todayISO)
+                ? "bg-[var(--cream-deep)] text-[var(--muted)]"
+                : "bg-[#A8484E] text-white"
+            }`}>
+            {cycle.periodStarts.includes(todayISO) ? "Periode heute eingetragen ✓" : "Periode hat heute begonnen"}
+          </button>
+        )}
+
+        {/* Today log */}
+        {canEdit && (
+          <div className="mt-3 bg-[var(--cream-deep)]/60 rounded-2xl p-3">
+            <div className="text-[11.5px] uppercase tracking-[0.14em] text-[var(--muted)] mb-2">Heute eintragen</div>
+
+            <div className="mb-3">
+              <div className="text-[11px] text-[var(--ink-soft)] mb-1.5">Blutung</div>
+              <div className="flex gap-1">
+                {FLOW.map(f => (
+                  <button key={f.v} onClick={() => updateEntry({ flow: f.v })}
+                    className={`flex-1 py-1.5 rounded-xl text-[12px] font-medium tap ${todayEntry.flow === f.v ? "text-white" : "bg-[var(--paper)] text-[var(--ink-soft)]"}`}
+                    style={todayEntry.flow === f.v ? { background: PHASE_COLORS.menstruation } : {}}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <div className="text-[11px] text-[var(--ink-soft)] mb-1.5">Stimmung</div>
+              <div className="flex gap-1 flex-wrap">
+                {MOODS.map(m => (
+                  <button key={m.id} onClick={() => updateEntry({ mood: m.id })}
+                    className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium tap inline-flex items-center gap-1 ${todayEntry.mood === m.id ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--paper)] text-[var(--ink-soft)]"}`}>
+                    <span>{m.emoji}</span> {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <div className="text-[11px] text-[var(--ink-soft)] mb-1.5">Energie</div>
+              <div className="flex gap-1">
+                {[1,2,3,4,5].map(n => (
+                  <button key={n} onClick={() => updateEntry({ energy: n })}
+                    className={`flex-1 py-1.5 rounded-xl text-[12px] font-medium tap ${(todayEntry.energy||0) >= n ? "bg-[var(--sage)] text-white" : "bg-[var(--paper)] text-[var(--ink-soft)]"}`}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-2">
+              <div className="text-[11px] text-[var(--ink-soft)] mb-1.5">Symptome</div>
+              <div className="flex gap-1 flex-wrap">
+                {SYMPTOMS.map(s => {
+                  const on = (todayEntry.symptoms || []).includes(s);
+                  return (
+                    <button key={s} onClick={() => toggleSymptom(s)}
+                      className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium tap ${on ? "bg-[var(--terra)] text-white" : "bg-[var(--paper)] text-[var(--ink-soft)]"}`}>
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[11px] text-[var(--ink-soft)] mb-1.5">Notiz</div>
+              <textarea value={todayEntry.note || ""}
+                onChange={e => updateEntry({ note: e.target.value })}
+                rows={2}
+                placeholder="Wie geht's dir heute?"
+                className="w-full bg-[var(--paper)] rounded-xl p-2.5 text-[13px] placeholder:text-[var(--muted)] resize-none"/>
+            </div>
+          </div>
+        )}
+
+        {/* Calendar */}
+        <div className="mt-4">
+          <CycleCalendar cycle={cycle}/>
+        </div>
+
+        {/* Stats */}
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Card className="p-2.5">
+            <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">Ø Zyklus</div>
+            <div className="flex items-center gap-2 mt-0.5">
+              {canEdit && <button onClick={() => setAvgCycle(cycle.avgCycle - 1)} className="w-6 h-6 rounded-full bg-[var(--cream-deep)] text-[var(--ink-soft)] tap text-[14px]">−</button>}
+              <div className="text-[15px] font-semibold">{cycle.avgCycle} T.</div>
+              {canEdit && <button onClick={() => setAvgCycle(cycle.avgCycle + 1)} className="w-6 h-6 rounded-full bg-[var(--cream-deep)] text-[var(--ink-soft)] tap text-[14px]">+</button>}
+            </div>
+          </Card>
+          <Card className="p-2.5">
+            <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">Ø Periode</div>
+            <div className="flex items-center gap-2 mt-0.5">
+              {canEdit && <button onClick={() => setAvgPeriod(cycle.avgPeriod - 1)} className="w-6 h-6 rounded-full bg-[var(--cream-deep)] text-[var(--ink-soft)] tap text-[14px]">−</button>}
+              <div className="text-[15px] font-semibold">{cycle.avgPeriod} T.</div>
+              {canEdit && <button onClick={() => setAvgPeriod(cycle.avgPeriod + 1)} className="w-6 h-6 rounded-full bg-[var(--cream-deep)] text-[var(--ink-soft)] tap text-[14px]">+</button>}
+            </div>
+          </Card>
+          <Card className="p-2.5">
+            <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">Nächste Periode</div>
+            <div className="text-[14px] font-medium mt-0.5">{shortDate(a.nextPeriod)}</div>
+          </Card>
+          <Card className="p-2.5">
+            <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">Eisprung</div>
+            <div className="text-[14px] font-medium mt-0.5">{shortDate(a.ovulationDate)}</div>
+          </Card>
+        </div>
+
+        <div className="text-[11px] text-[var(--muted)] mt-3 text-center">
+          Vorhersage basiert auf {cycle.periodStarts.length} aufgezeichneten Zyklen.
+        </div>
+      </Sheet>
+    );
+  };
+
+  /* ============================================================
+     USER SWITCHER (small, top-right of phone outside-ish)
+     ============================================================ */
+  const UserSwitcher = ({ user, setUser }) => (
+    <div className="absolute top-[12px] right-7 z-50 flex items-center gap-1 bg-[var(--paper)]/90 backdrop-blur rounded-full p-0.5 shadow-card"
+      style={{ display: "none" }} /* hidden — switcher lives elsewhere */>
+    </div>
+  );
+
+  /* ============================================================
+     ROOT APP
+     ============================================================ */
+  function App() {
+    const [tab, setTab] = useState("heute");
+    const [currentUser, setCurrentUser] = useState("D"); // who is using the phone right now
+
+    const [activities, setActivities] = useState(SEED_ACTIVITIES);
+    const [shopping,   setShopping]   = useState(SEED_SHOPPING);
+    const [todos,      setTodos]      = useState(SEED_TODOS);
+    const [goals,      setGoals]      = useState(SEED_GOALS);
+    const [cycle,      setCycle]      = useState(SEED_CYCLE);
+
+    const [openAct,  setOpenAct]  = useState(null);
+    const [openShop, setOpenShop] = useState(null);
+    const [openTodo, setOpenTodo] = useState(null);
+    const [openGoal, setOpenGoal] = useState(null);
+    const [cycleOpen, setCycleOpen] = useState(false);
+    const [addActOpen,  setAddActOpen]  = useState(false);
+    const [addTodoOpen, setAddTodoOpen] = useState(false);
+    const [addGoalOpen, setAddGoalOpen] = useState(false);
+
+    const updateActivity = (a) => setActivities(activities.map(x => x.id===a.id?a:x));
+    const deleteActivity = (id) => setActivities(activities.filter(x => x.id!==id));
+
+    const toggleShopping = (id) => setShopping(shopping.map(s => s.id===id ? {...s, done: !s.done} : s));
+    const updateShopping = (item) => setShopping(shopping.map(s => s.id===item.id ? item : s));
+    const deleteShopping = (id) => setShopping(shopping.filter(s => s.id!==id));
+    const quickAddShopping = (text) => {
+      if (!text.trim()) return;
+      setShopping([{
+        id: uid(), text: text.trim(), spinnerei: false,
+        done: false, by: currentUser, scope: "geteilt", qty: "", added: "gerade eben",
+      }, ...shopping]);
+    };
+
+    const toggleTodo = (id) => setTodos(todos.map(t => t.id===id ? {...t, done: !t.done} : t));
+    const updateTodo = (t) => setTodos(todos.map(x => x.id===t.id?t:x));
+    const deleteTodo = (id) => setTodos(todos.filter(x => x.id!==id));
+
+    const updateGoal = (g) => setGoals(goals.map(x => x.id===g.id?g:x));
+    const deleteGoal = (id) => setGoals(goals.filter(x => x.id!==id));
+
+    return (
+      <div className="relative">
+        <div className="phone relative">
+          <div className="screen">
+            <Atmosphere/>
+            <div className="notch"/>
+            <StatusBar/>
+
+
+
+            {tab === "heute" && (
+              <HeuteScreen currentUser={currentUser}
+                activities={activities} shopping={shopping} todos={todos} goals={goals}
+                cycle={cycle} onOpenCycle={() => setCycleOpen(true)}
+                toggleShopping={toggleShopping} quickAddShopping={quickAddShopping}
+                toggleTodo={toggleTodo}
+                openActivity={setOpenAct} openShopping={setOpenShop}
+                openTodo={setOpenTodo} openGoal={setOpenGoal}
+                goTab={setTab}/>
+            )}
+            {tab === "akt" && (
+              <AktScreen currentUser={currentUser}
+                activities={activities} openActivity={setOpenAct}
+                addActivity={() => setAddActOpen(true)}/>
+            )}
+            {tab === "shop" && (
+              <ShopScreen shopping={shopping} setShopping={setShopping}
+                openShopping={setOpenShop} currentUser={currentUser}/>
+            )}
+            {tab === "todo" && (
+              <TodoScreen currentUser={currentUser}
+                todos={todos} openTodo={setOpenTodo}
+                toggleTodo={toggleTodo}
+                addTodo={() => setAddTodoOpen(true)}/>
+            )}
+            {tab === "ziel" && (
+              <GoalScreen currentUser={currentUser}
+                goals={goals} openGoal={setOpenGoal}
+                addGoal={() => setAddGoalOpen(true)}/>
+            )}
+
+            <TabBar tab={tab} setTab={setTab}/>
+
+            {/* Sheets */}
+            <ActivityDetail activity={openAct} onClose={()=>setOpenAct(null)}
+              onChange={updateActivity} onDelete={deleteActivity} currentUser={currentUser}/>
+            <ShoppingDetail item={openShop} onClose={()=>setOpenShop(null)}
+              onToggle={toggleShopping} onChange={updateShopping} onDelete={deleteShopping} currentUser={currentUser}/>
+            <TodoDetail todo={openTodo} onClose={()=>setOpenTodo(null)}
+              onChange={updateTodo} onDelete={deleteTodo} currentUser={currentUser}/>
+            <GoalDetail goal={openGoal} onClose={()=>setOpenGoal(null)}
+              onChange={updateGoal} onDelete={deleteGoal} currentUser={currentUser}/>
+
+            <CycleSheet open={cycleOpen} cycle={cycle} setCycle={setCycle}
+              onClose={()=>setCycleOpen(false)} currentUser={currentUser}/>
+
+            <ActivityAddSheet open={addActOpen} onClose={()=>setAddActOpen(false)}
+              onAdd={(a)=>setActivities([a, ...activities])} currentUser={currentUser}/>
+            <TodoAddSheet open={addTodoOpen} onClose={()=>setAddTodoOpen(false)}
+              onAdd={(t)=>setTodos([t, ...todos])} currentUser={currentUser}/>
+            <GoalAddSheet open={addGoalOpen} onClose={()=>setAddGoalOpen(false)}
+              onAdd={(g)=>setGoals([g, ...goals])} currentUser={currentUser}/>
+          </div>
+        </div>
+
+        {/* Prototype-only user switcher — sits outside the phone */}
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <div className="uplabel text-[10px] text-[#4F4338]/55">Du bist gerade</div>
+          <div className="inline-flex p-1 rounded-full shadow-card" style={{ background: "#FBF6E8" }}>
+            {["A","D"].map(uid => {
+              const u = USERS[uid];
+              const active = currentUser === uid;
+              return (
+                <button key={uid}
+                  onClick={() => setCurrentUser(uid)}
+                  className="tap inline-flex items-center gap-2 pl-1 pr-3.5 py-1 rounded-full"
+                  style={{
+                    background: active ? u.soft : "transparent",
+                    color: active ? u.color : "#4F4338",
+                  }}>
+                  <Avatar id={uid} size={22}/>
+                  <span className="text-[13px] font-semibold">{u.name}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="text-center text-[11.5px] text-[#4F4338]/55 max-w-[320px] mt-1 serif-i">
+            Neue Einträge werden dem aktiven Nutzer zugeschrieben
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>
