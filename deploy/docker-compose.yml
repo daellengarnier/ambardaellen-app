@@ -1,0 +1,43 @@
+# docker-compose.yml — lives on the VPS at /opt/ambardaellen/docker-compose.yml
+#
+# The image is pulled from GitHub Container Registry; the GitHub Actions
+# workflow pushes a new tag on every commit to main.
+
+services:
+  app:
+    image: ghcr.io/daellengarnier/ambardaellen-app:latest
+    container_name: ambardaellen-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    networks:
+      - web
+    # The app port is NOT exposed on the host; Caddy reverse-proxies to it
+    # via the internal Docker network.
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: ambardaellen-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+    depends_on:
+      - app
+
+networks:
+  web:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

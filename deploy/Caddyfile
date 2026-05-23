@@ -1,0 +1,27 @@
+# Caddyfile — lives on the VPS at /opt/ambardaellen/Caddyfile
+#
+# Caddy automatically obtains and renews Let's Encrypt certificates for
+# the domain below, and reverse-proxies all traffic to the `app` service
+# on its internal port 3000.
+#
+# ⚠️  Replace DOMAIN_PLACEHOLDER below before first start.
+
+DOMAIN_PLACEHOLDER {
+	encode zstd gzip
+
+	# Security headers
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+	}
+
+	# Static asset caching — Next.js fingerprints these, so we can cache long
+	@nextStatic path /_next/static/*
+	header @nextStatic Cache-Control "public, max-age=31536000, immutable"
+
+	# Reverse-proxy everything to Next.js
+	reverse_proxy app:3000
+}
