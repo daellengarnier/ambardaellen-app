@@ -18,11 +18,20 @@ export function BottomTabs() {
   return (
     <nav
       aria-label="Hauptnavigation"
-      className="absolute bottom-3 left-3 right-3 z-40"
+      className="absolute left-0 right-0 z-40 px-2.5 pt-1"
+      style={{
+        bottom: 0,
+        paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)",
+        background:
+          "linear-gradient(to top, rgba(239,230,211,0.98) 55%, rgba(239,230,211,0))",
+      }}
     >
       <div
-        className="flex items-stretch justify-between px-1.5 py-1.5 rounded-[26px] backdrop-blur-md shadow-card"
-        style={{ background: "rgba(251,246,232,0.85)" }}
+        className="flex items-stretch justify-between px-1 py-1 rounded-[26px] backdrop-blur-md shadow-card"
+        style={{
+          background: "rgba(251,246,232,0.85)",
+          border: "1px solid rgba(218,201,168,0.5)",
+        }}
       >
         {TABS.map(({ href, label, Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -30,12 +39,12 @@ export function BottomTabs() {
             <Link
               key={href}
               href={href}
-              className="tap relative flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-2xl"
+              className="tap relative flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-2xl"
               style={
                 active
                   ? {
                       background:
-                        "linear-gradient(180deg, rgba(197,99,75,0.10), rgba(75,48,80,0.06))",
+                        "linear-gradient(135deg, rgba(197,99,75,0.16), rgba(75,48,80,0.10))",
                     }
                   : undefined
               }
@@ -43,14 +52,15 @@ export function BottomTabs() {
             >
               <Icon
                 size={20}
-                strokeWidth={active ? 2 : 1.75}
+                strokeWidth={active ? 2 : 1.6}
                 color={active ? "var(--terra-deep)" : "var(--ink-soft)"}
               />
               <span
-                className="text-[10px] tracking-wide"
+                className="text-[10px]"
                 style={{
                   color: active ? "var(--terra-deep)" : "var(--ink-soft)",
                   fontWeight: active ? 600 : 500,
+                  letterSpacing: 0.1,
                 }}
               >
                 {label}

@@ -3,6 +3,64 @@ import { addDays, diffDays, todayISO } from "./date";
 
 export type Phase = "menstruation" | "follikel" | "fertil" | "ovulation" | "luteal" | "ueberfaellig";
 
+export const MOODS: Array<{ id: string; label: string; emoji: string }> = [
+  { id: "weich", label: "weich", emoji: "🌧" },
+  { id: "okay", label: "okay", emoji: "·" },
+  { id: "klar", label: "klar", emoji: "☁︎" },
+  { id: "fokussiert", label: "fokussiert", emoji: "◐" },
+  { id: "energisch", label: "energisch", emoji: "✦" },
+  { id: "dunkel", label: "dunkel", emoji: "▢" },
+  { id: "aufgewühlt", label: "aufgewühlt", emoji: "≋" },
+];
+
+export const SYMPTOMS = [
+  "krämpfe",
+  "müde",
+  "kopfweh",
+  "blähbauch",
+  "brustempfindlich",
+  "libido",
+  "akne",
+  "schlaflos",
+  "rückenschmerz",
+  "weinerlich",
+] as const;
+
+export const FLOW: Array<{ v: 0 | 1 | 2 | 3; label: string }> = [
+  { v: 0, label: "—" },
+  { v: 1, label: "leicht" },
+  { v: 2, label: "mittel" },
+  { v: 3, label: "stark" },
+];
+
+export const PHASE_HINTS: Record<Phase, string> = {
+  menstruation: "Ruhe, Wärme, weniger Reize. Wenig Plan, viel Spielraum.",
+  follikel: "Energie steigt. Gut für neue Projekte und längere Spaziergänge.",
+  fertil: "Sozial, kreativ, klar im Kopf. Termine ruhig vollpacken.",
+  ovulation: "Sozial, kreativ, klar im Kopf. Termine ruhig vollpacken.",
+  luteal: "Innere Phase. Routinen helfen. Auf Schlaf achten.",
+  ueberfaellig: "Periode ist überfällig. Wenn unsicher, Termin checken.",
+};
+
+export function phaseForDay(cycle: { avgCycle: number; avgPeriod: number }, dayInCycle: number): Phase {
+  if (dayInCycle <= cycle.avgPeriod) return "menstruation";
+  const ov = cycle.avgCycle - 14;
+  if (dayInCycle < ov - 3) return "follikel";
+  if (dayInCycle === ov) return "ovulation";
+  if (dayInCycle <= ov + 1) return "fertil";
+  if (dayInCycle <= cycle.avgCycle) return "luteal";
+  return "ueberfaellig";
+}
+
+export const PHASE_COLOR_MAP: Record<Phase, string> = {
+  menstruation: "#A8484E",
+  follikel: "#D4A86A",
+  fertil: "#E07A5F",
+  ovulation: "#E07A5F",
+  luteal: "#8DA888",
+  ueberfaellig: "#A8484E",
+};
+
 export type CycleAnalysis = {
   day: number;
   cycLen: number;

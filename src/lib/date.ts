@@ -41,12 +41,31 @@ export function dayMonth(iso: ISODate): { d: number; mShort: string; mLong: stri
 }
 
 export function shortDate(iso: ISODate): string {
-  const { d, mShort } = dayMonth(iso);
-  return `${d}. ${mShort}`;
+  if (!iso) return "—";
+  const t = todayISO();
+  const d = diffDays(iso, t);
+  if (d === 0) return "Heute";
+  if (d === 1) return "Morgen";
+  if (d === -1) return "Gestern";
+  const { d: day, mShort } = dayMonth(iso);
+  return `${day}. ${mShort}`;
 }
 
 export function longDate(iso: ISODate): string {
   return `${weekdayLong(iso)}, ${shortDate(iso)}`;
+}
+
+export function formatDate(iso: ISODate): string {
+  if (!iso) return "";
+  const t = todayISO();
+  const d = diffDays(iso, t);
+  const { d: day, mLong } = dayMonth(iso);
+  const dayStr = `${day}. ${mLong}`;
+  if (d === 0) return `Heute · ${dayStr}`;
+  if (d === 1) return `Morgen · ${dayStr}`;
+  if (d === -1) return `Gestern · ${dayStr}`;
+  if (d > 1 && d < 7) return `${weekdayLong(iso)} · ${dayStr}`;
+  return `${weekdayLong(iso)}, ${dayStr}`;
 }
 
 export function greetingFor(date: Date = new Date()): string {

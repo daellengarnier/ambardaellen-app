@@ -1,34 +1,29 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { Clock, MapPin, ShoppingCart, ChevronRight, Plus, Lock } from "lucide-react";
+import {
+  ShoppingCart as CartIcon,
+  Plus,
+  Lock,
+} from "lucide-react";
 import { useStore } from "@/lib/store";
 import { visibleTo, isPrivate } from "@/lib/scope";
 import { USERS } from "@/lib/types";
-import {
-  todayISO,
-  greetingFor,
-  longDate,
-  shortDate,
-  dayMonth,
-  diffDays,
-} from "@/lib/date";
+import { todayISO, greetingFor, shortDate } from "@/lib/date";
+import { BUCKET_LABEL, PRIO, dueBucket } from "@/lib/todo";
 import { Card } from "@/components/Card";
-import { ScreenHeader } from "@/components/ScreenHeader";
 import { AvatarPair, AvatarWithScope } from "@/components/Avatar";
-import { ActivityIcon } from "@/components/ActivityIcon";
 import { GoalProgress } from "@/components/GoalProgress";
 import { RoundCheck } from "@/components/RoundCheck";
 import { CycleTile } from "@/components/CycleTile";
 import { ClientOnly } from "@/components/ClientOnly";
-import type { Activity, Todo } from "@/lib/types";
-
-const PRIO_COLOR = {
-  hoch: "var(--terra)",
-  normal: "var(--sage)",
-  tief: "var(--muted)",
-} as const;
+import { UserSwitcher } from "@/components/UserSwitcher";
+import { ActivitySheet } from "@/components/sheets/ActivitySheet";
+import { ShoppingSheet } from "@/components/sheets/ShoppingSheet";
+import { TodoSheet } from "@/components/sheets/TodoSheet";
+import { GoalSheet } from "@/components/sheets/GoalSheet";
+import { CycleSheet } from "@/components/sheets/CycleSheet";
+import type { Activity, Goal, ShoppingItem, Todo } from "@/lib/types";
 
 export default function HeutePage() {
   return (
@@ -39,11 +34,7 @@ export default function HeutePage() {
 }
 
 function HeuteSkeleton() {
-  return (
-    <div className="phone-scroll overflow-y-auto h-full pt-[48px] pb-[120px]">
-      <div className="px-4 pt-1 pb-3 h-32" />
-    </div>
-  );
+  return <div className="px-4 pt-4" />;
 }
 
 function HeuteContent() {
@@ -52,246 +43,313 @@ function HeuteContent() {
   const shopping = useStore((s) => s.shopping);
   const todos = useStore((s) => s.todos);
   const goals = useStore((s) => s.goals);
+
   const addShopping = useStore((s) => s.addShopping);
   const toggleShopping = useStore((s) => s.toggleShopping);
+  const updateShopping = useStore((s) => s.updateShopping);
+  const removeShopping = useStore((s) => s.removeShopping);
+
   const toggleTodo = useStore((s) => s.toggleTodo);
+  const updateTodo = useStore((s) => s.updateTodo);
+  const removeTodo = useStore((s) => s.removeTodo);
+
+  const updateActivity = useStore((s) => s.updateActivity);
+  const removeActivity = useStore((s) => s.removeActivity);
+
+  const updateGoal = useStore((s) => s.updateGoal);
+  const removeGoal = useStore((s) => s.removeGoal);
+  const addGoalStep = useStore((s) => s.addGoalStep);
+  const toggleGoalStep = useStore((s) => s.toggleGoalStep);
+  const removeGoalStep = useStore((s) => s.removeGoalStep);
+
+  const [openAct, setOpenAct] = useState<Activity | null>(null);
+  const [openShop, setOpenShop] = useState<ShoppingItem | null>(null);
+  const [openTodo, setOpenTodo] = useState<Todo | null>(null);
+  const [openGoal, setOpenGoal] = useState<Goal | null>(null);
+  const [cycleOpen, setCycleOpen] = useState(false);
 
   const today = todayISO();
   const greeting = greetingFor();
+  const dateLine = new Date().toLocaleDateString("de-DE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 
-  const visibleActs = useMemo(() => visibleTo(activities, currentUser), [activities, currentUser]);
-  const visibleShop = useMemo(() => visibleTo(shopping, currentUser), [shopping, currentUser]);
-  const visibleTodos = useMemo(() => visibleTo(todos, currentUser), [todos, currentUser]);
-  const visibleGoals = useMemo(() => visibleTo(goals, currentUser), [goals, currentUser]);
+  const myActivities = useMemo(() => visibleTo(activities, currentUser), [activities, currentUser]);
+  const myShopping = useMemo(() => visibleTo(shopping, currentUser), [shopping, currentUser]);
+  const myTodos = useMemo(() => visibleTo(todos, currentUser), [todos, currentUser]);
+  const myGoals = useMemo(() => visibleTo(goals, currentUser), [goals, currentUser]);
 
-  const todayActs = visibleActs
-    .filter((a) => a.date === today && a.status !== "erledigt")
-    .sort((a, b) => a.time.localeCompare(b.time));
-  const upcomingActs = visibleActs
-    .filter((a) => a.status === "geplant" && a.date && a.date > today)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, 2);
-  const nextAct = todayActs[0] ?? upcomingActs[0];
+  const todayActs = myActivities.filter((a) => a.date === today && a.status !== "erledigt");
+  const nextAct =
+    todayActs[0] ??
+    myActivities
+      .filter((a) => a.status === "geplant" && a.date && a.date > today)
+      .sort((a, b) => a.date.localeCompare(b.date))[0];
 
-  const topGoal =
-    visibleGoals.find((g) => g.scope === "geteilt") ?? visibleGoals[0];
+  const openShopItems = myShopping.filter((s) => !s.done && !s.spinnerei);
 
-  const openShopping = visibleShop.filter((s) => !s.done && !s.spinnerei);
-  const shopPreview = openShopping.slice(0, 4);
-
-  const urgentTodos = visibleTodos
+  const urgentTodos = myTodos
     .filter((t) => !t.done)
-    .filter((t) => !t.due || diffDays(t.due, today) <= 7)
     .sort((a, b) => {
-      const rank = { hoch: 0, normal: 1, tief: 2 };
-      if (rank[a.prio] !== rank[b.prio]) return rank[a.prio] - rank[b.prio];
-      if (!a.due) return 1;
-      if (!b.due) return -1;
-      return a.due.localeCompare(b.due);
+      const ba = dueBucket(a.due);
+      const bb = dueBucket(b.due);
+      const order: Record<string, number> = { ueber: 0, heute: 1, morgen: 2, woche: 3, spaeter: 4, kein: 5 };
+      if (order[ba] !== order[bb]) return order[ba] - order[bb];
+      return PRIO[a.prio].rank - PRIO[b.prio].rank;
     })
     .slice(0, 4);
 
+  const topGoal = myGoals.find((g) => g.scope === "geteilt") ?? myGoals[0];
+
+  // Sync currently-open goal with store
+  const currentOpenGoal = openGoal ? goals.find((g) => g.id === openGoal.id) ?? null : null;
+
   return (
-    <div className="phone-scroll overflow-y-auto h-full pt-[48px] pb-[120px]">
-      {/* Greeting */}
-      <ScreenHeader
-        title={greeting}
-        subtitle={longDate(today)}
-        right={<AvatarPair size={28} />}
-      />
-
-      {/* Today's activity (if any) */}
-      {todayActs[0] && (
-        <div className="px-4 mb-2">
-          <ActivityCard activity={todayActs[0]} />
+    <>
+      <div className="px-4 pt-1 pb-3">
+        <div className="uplabel text-[10.5px]" style={{ color: "var(--muted)" }}>
+          {dateLine}
         </div>
-      )}
+        <div className="flex items-end justify-between gap-3 mt-1">
+          <h1 className="text-[30px] font-semibold leading-tight tracking-tight flex-1 min-w-0">
+            {greeting}
+          </h1>
+          <AvatarPair size={28} />
+        </div>
+      </div>
 
-      {/* Cycle tile */}
-      <CycleTile />
+      <div className="px-4 mb-2">
+        <CycleTile onClick={() => setCycleOpen(true)} />
+      </div>
 
-      {/* Upcoming activities */}
-      {upcomingActs.length > 0 && (
-        <section className="px-4 mt-3 mb-3">
-          <SectionHeader title="Demnächst" actionHref="/aktivitaeten" actionLabel="Alle" />
-          <div className="space-y-2">
-            {upcomingActs.map((a) => (
-              <UpcomingActivityCard key={a.id} activity={a} />
-            ))}
+      <div className="px-4 mb-3 grid grid-cols-2 gap-2 items-stretch">
+        <div className="flex flex-col gap-2">
+          <Card
+            onClick={() => nextAct && setOpenAct(nextAct)}
+            className="p-3 flex-1"
+          >
+            <div
+              className="uplabel text-[10px] mb-1.5 flex items-center justify-between gap-1"
+              style={{ color: "var(--muted)" }}
+            >
+              <span>Termine</span>
+              {nextAct && (
+                <span
+                  className="text-[10px] normal-case tracking-normal font-medium"
+                  style={{ color: USERS[nextAct.by].color }}
+                >
+                  {shortDate(nextAct.date)}
+                </span>
+              )}
+            </div>
+            {nextAct ? (
+              <>
+                <div className="text-[14px] font-semibold leading-snug line-clamp-2 mb-0.5 flex items-start gap-1.5">
+                  {isPrivate(nextAct) && (
+                    <Lock size={10} strokeWidth={2} color="var(--muted)" className="shrink-0 mt-1" />
+                  )}
+                  <span>{nextAct.title}</span>
+                </div>
+                <div
+                  className="text-[11.5px] truncate"
+                  style={{ color: "var(--ink-soft)" }}
+                >
+                  {nextAct.time && <span>{nextAct.time}</span>}
+                  {nextAct.place && ` · ${nextAct.place}`}
+                </div>
+              </>
+            ) : (
+              <div className="text-[12.5px] italic" style={{ color: "var(--muted)" }}>
+                nichts geplant
+              </div>
+            )}
+          </Card>
+
+          {topGoal && (
+            <Card onClick={() => setOpenGoal(topGoal)} className="p-3 flex-1">
+              <div
+                className="uplabel text-[10px] mb-1.5 flex items-center gap-1"
+                style={{ color: "var(--muted)" }}
+              >
+                Im Blick {isPrivate(topGoal) && <Lock size={9} strokeWidth={2} />}
+              </div>
+              <div className="text-[12.5px] font-semibold leading-snug line-clamp-2 mb-2">
+                {topGoal.title}
+              </div>
+              <GoalProgress goal={topGoal} />
+            </Card>
+          )}
+        </div>
+
+        <Card className="p-0 overflow-hidden flex flex-col">
+          <div className="px-3 pt-2.5 pb-1.5 flex items-center justify-between">
+            <div
+              className="uplabel text-[10px] inline-flex items-center gap-1.5"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              <CartIcon size={11} strokeWidth={1.75} /> Einkauf
+            </div>
+            <span className="uplabel text-[9.5px]" style={{ color: "var(--muted)" }}>
+              {openShopItems.length} offen
+            </span>
           </div>
-        </section>
-      )}
-
-      {/* Einkauf snippet */}
-      <section className="px-4 mb-3">
-        <SectionHeader
-          title="Einkauf"
-          actionHref="/einkauf"
-          actionLabel={`${openShopping.length} offen`}
-        />
-        <Card className="p-2">
-          <div className="space-y-0">
-            {shopPreview.length === 0 ? (
-              <div className="px-3 py-4 text-[13px] text-[var(--muted)] italic text-center">
-                Keine offenen Einkäufe.
+          <div className="flex-1 overflow-hidden">
+            {openShopItems.length === 0 ? (
+              <div className="px-3 py-3 text-[12px] italic" style={{ color: "var(--ink-soft)" }}>
+                leer ✓
               </div>
             ) : (
-              shopPreview.map((it, i) => (
-                <div
-                  key={it.id}
-                  className={`flex items-center gap-2.5 px-2.5 py-2.5 ${
-                    i < shopPreview.length - 1 ? "border-b border-[var(--line)]/60" : ""
-                  }`}
-                >
-                  <RoundCheck
-                    checked={false}
-                    onClick={() => toggleShopping(it.id)}
-                    color="var(--sage)"
-                    size={20}
-                    ariaLabel={`${it.text} erledigen`}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[14px] text-[var(--ink)] truncate">{it.text}</div>
-                    {(it.qty || it.category) && (
-                      <div className="text-[12px] text-[var(--muted)] truncate capitalize">
-                        {it.category}
-                        {it.qty ? ` · ${it.qty}` : ""}
-                      </div>
+              <div className="phone-scroll overflow-y-auto h-full">
+                {openShopItems.map((s) => (
+                  <div
+                    key={s.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenShop(s);
+                    }}
+                    className="flex items-center gap-2 px-2.5 py-1.5 tap cursor-pointer"
+                    style={{ borderBottom: "1px solid rgba(218,201,168,0.3)" }}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <RoundCheck
+                      checked={false}
+                      onClick={() => toggleShopping(s.id)}
+                      size={16}
+                      color="var(--sage)"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] truncate">{s.text}</div>
+                    </div>
+                    {isPrivate(s) && (
+                      <Lock size={8} strokeWidth={2} color="var(--muted)" />
                     )}
                   </div>
-                  <AvatarWithScope by={it.by} scope={it.scope} size={20} />
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
-          <QuickAddShop onAdd={(text) => addShopping({ text, scope: "geteilt", spinnerei: false })} />
+          <QuickAddShop
+            onAdd={(text) =>
+              addShopping({ text, scope: "geteilt", spinnerei: false })
+            }
+          />
         </Card>
-      </section>
+      </div>
 
-      {/* Im Blick (top goal) */}
-      {topGoal && (
-        <section className="px-4 mb-3">
-          <SectionHeader title="Im Blick" actionHref="/ziele" actionLabel="Ziele" />
-          <Card className="p-3.5">
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="text-[14.5px] font-medium text-[var(--ink)] line-clamp-2">
-                  {topGoal.title}
-                </div>
-              </div>
-              <AvatarWithScope by={topGoal.by} scope={topGoal.scope} size={20} />
-            </div>
-            <div className="mt-2.5">
-              <GoalProgress goal={topGoal} />
-            </div>
-          </Card>
-        </section>
-      )}
-
-      {/* Aufgaben Pinnwand */}
-      <section className="px-4 mb-2">
-        <SectionHeader title="Aufgaben" actionHref="/todo" actionLabel="Alle" />
+      <div className="px-4 mb-2">
+        <div className="flex items-center justify-between mb-1.5 gap-2">
+          <h2 className="uplabel text-[10.5px]" style={{ color: "var(--ink-soft)" }}>
+            Aufgaben
+          </h2>
+        </div>
         {urgentTodos.length === 0 ? (
-          <Card className="p-4">
-            <p className="text-[13.5px] italic text-[var(--ink-soft)] text-center">
+          <Card className="p-3">
+            <div className="text-[13px] italic" style={{ color: "var(--ink-soft)" }}>
               Keine offenen Aufgaben für die kommenden Tage.
-            </p>
+            </div>
           </Card>
         ) : (
           <div className="grid grid-cols-2 gap-2">
-            {urgentTodos.map((t) => (
-              <TodoPinCard key={t.id} todo={t} onToggle={() => toggleTodo(t.id)} />
-            ))}
+            {urgentTodos.map((t) => {
+              const p = PRIO[t.prio];
+              const bucket = dueBucket(t.due);
+              const isOver = bucket === "ueber";
+              const bucketLabel = bucket === "kein" ? "Offen" : BUCKET_LABEL[bucket];
+              return (
+                <Card
+                  key={t.id}
+                  onClick={() => setOpenTodo(t)}
+                  className="p-2.5 relative"
+                >
+                  <div
+                    className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r"
+                    style={{ background: p.color, opacity: p.dot ? 1 : 0.35 }}
+                  />
+                  <div className="pl-1.5">
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span
+                        className="uplabel text-[9px] whitespace-nowrap"
+                        style={{ color: isOver ? "#C5634B" : "var(--muted)" }}
+                      >
+                        {bucketLabel}
+                      </span>
+                      <AvatarWithScope by={t.by} scope={t.scope} size={14} />
+                    </div>
+                    <div className="text-[12.5px] font-semibold leading-snug line-clamp-3 mb-1">
+                      {t.text}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-[10.5px]"
+                        style={{ color: "var(--ink-soft)" }}
+                      >
+                        <RoundCheck
+                          checked={false}
+                          onClick={() => toggleTodo(t.id)}
+                          size={14}
+                          color={p.color}
+                        />
+                        erledigen
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
-      </section>
-    </div>
-  );
-}
-
-function SectionHeader({
-  title,
-  actionLabel,
-  actionHref,
-}: {
-  title: string;
-  actionLabel?: string;
-  actionHref?: string;
-}) {
-  return (
-    <div className="flex items-end justify-between mb-1.5 px-0.5">
-      <span className="uplabel text-[10px] text-[var(--muted)]">{title}</span>
-      {actionLabel && actionHref && (
-        <Link
-          href={actionHref}
-          className="text-[12px] font-medium text-[var(--terra-deep)] tap"
-        >
-          {actionLabel}
-        </Link>
-      )}
-    </div>
-  );
-}
-
-function ActivityCard({ activity }: { activity: Activity }) {
-  return (
-    <Card className="p-3 flex items-center gap-3">
-      <ActivityIcon kind={activity.icon} size={36} />
-      <div className="min-w-0 flex-1">
-        <div className="text-[14.5px] font-medium text-[var(--ink)] truncate flex items-center gap-1.5">
-          {isPrivate({ scope: activity.scope }) && (
-            <Lock size={12} strokeWidth={2} color="var(--muted)" />
-          )}
-          {activity.title}
-        </div>
-        <div className="flex items-center gap-1.5 text-[12.5px] text-[var(--muted)] mt-0.5">
-          {activity.time && (
-            <>
-              <Clock size={12} strokeWidth={1.75} />
-              <span>{activity.time}</span>
-            </>
-          )}
-          {activity.place && (
-            <>
-              <span>·</span>
-              <span className="truncate">{activity.place}</span>
-            </>
-          )}
-        </div>
       </div>
-      <AvatarWithScope by={activity.by} scope={activity.scope} size={22} />
-    </Card>
-  );
-}
 
-function UpcomingActivityCard({ activity }: { activity: Activity }) {
-  const { d, mShort } = activity.date ? dayMonth(activity.date) : { d: 0, mShort: "" };
-  return (
-    <Link href="/aktivitaeten" className="block tap">
-      <Card className="p-3 flex items-center gap-3">
-        <div
-          className="flex flex-col items-center justify-center rounded-xl shrink-0"
-          style={{ width: 44, height: 44, background: "var(--cream-deep)" }}
-        >
-          <span className="uplabel text-[9px] text-[var(--ink-soft)] leading-none">{mShort}</span>
-          <span className="serif text-[18px] leading-none mt-1 text-[var(--ink)]">{d}</span>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[14.5px] font-medium text-[var(--ink)] truncate flex items-center gap-1.5">
-            {isPrivate({ scope: activity.scope }) && (
-              <Lock size={11} strokeWidth={2} color="var(--muted)" />
-            )}
-            {activity.title}
-          </div>
-          <div className="text-[12.5px] text-[var(--muted)] truncate mt-0.5">
-            {shortDate(activity.date)}
-            {activity.time ? ` · ${activity.time}` : ""}
-            {activity.place ? ` · ${activity.place}` : ""}
-          </div>
-        </div>
-        <ChevronRight size={18} color="var(--muted)" strokeWidth={1.75} />
-      </Card>
-    </Link>
+      <UserSwitcher />
+
+      {/* Sheets */}
+      <ActivitySheet
+        activity={openAct}
+        onClose={() => setOpenAct(null)}
+        onChange={(id, patch) => {
+          updateActivity(id, patch);
+          if (openAct && openAct.id === id) setOpenAct({ ...openAct, ...patch });
+        }}
+        onDelete={removeActivity}
+        currentUser={currentUser}
+      />
+      <ShoppingSheet
+        item={openShop}
+        onClose={() => setOpenShop(null)}
+        onToggle={toggleShopping}
+        onChange={(id, patch) => {
+          updateShopping(id, patch);
+          if (openShop && openShop.id === id) setOpenShop({ ...openShop, ...patch });
+        }}
+        onDelete={removeShopping}
+        currentUser={currentUser}
+      />
+      <TodoSheet
+        todo={openTodo}
+        onClose={() => setOpenTodo(null)}
+        onChange={(id, patch) => {
+          updateTodo(id, patch);
+          if (openTodo && openTodo.id === id) setOpenTodo({ ...openTodo, ...patch });
+        }}
+        onDelete={removeTodo}
+        currentUser={currentUser}
+      />
+      <GoalSheet
+        goal={currentOpenGoal}
+        onClose={() => setOpenGoal(null)}
+        onChange={updateGoal}
+        onDelete={removeGoal}
+        onAddStep={addGoalStep}
+        onToggleStep={toggleGoalStep}
+        onRemoveStep={removeGoalStep}
+        currentUser={currentUser}
+      />
+      <CycleSheet open={cycleOpen} onClose={() => setCycleOpen(false)} />
+    </>
   );
 }
 
@@ -304,87 +362,31 @@ function QuickAddShop({ onAdd }: { onAdd: (text: string) => void }) {
     setText("");
   }
   return (
-    <div className="flex items-center gap-2 pt-2 px-1 pb-1">
-      <span
-        className="inline-flex items-center justify-center rounded-full shrink-0"
-        style={{ width: 28, height: 28, background: "var(--cream-deep)", color: "var(--terra)" }}
-      >
-        <ShoppingCart size={14} strokeWidth={2} />
-      </span>
+    <div
+      className="px-1.5 py-1 flex items-center gap-1"
+      style={{
+        borderTop: "1px solid rgba(218,201,168,0.5)",
+        background: "rgba(228,217,191,0.25)",
+      }}
+    >
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && submit()}
-        placeholder="Was fehlt?"
-        className="min-w-0 flex-1 bg-transparent text-[14px] text-[var(--ink)] placeholder:text-[var(--muted)]"
+        placeholder="+ hinzufügen"
+        className="flex-1 bg-transparent text-[12px] py-1 px-1.5 min-w-0"
+        style={{ color: "var(--ink)" }}
       />
       <button
         type="button"
         onClick={submit}
         disabled={!can}
-        className="tap inline-flex items-center justify-center rounded-full shrink-0"
-        style={{
-          width: 28,
-          height: 28,
-          background: can ? "var(--terra)" : "var(--terra-soft)",
-          color: "white",
-        }}
+        className="tap w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-white"
+        style={{ background: can ? "var(--terra)" : "var(--terra-soft)" }}
         aria-label="Hinzufügen"
       >
-        <Plus size={16} strokeWidth={2.25} />
+        <Plus size={12} strokeWidth={2.25} />
       </button>
     </div>
-  );
-}
-
-function TodoPinCard({ todo, onToggle }: { todo: Todo; onToggle: () => void }) {
-  const today = todayISO();
-  const bucket = !todo.due
-    ? "Ohne Datum"
-    : diffDays(todo.due, today) < 0
-      ? "Überfällig"
-      : todo.due === today
-        ? "Heute"
-        : diffDays(todo.due, today) === 1
-          ? "Morgen"
-          : "Diese Woche";
-
-  return (
-    <Card className="p-2.5 relative overflow-hidden">
-      <div
-        className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full"
-        style={{ background: PRIO_COLOR[todo.prio] }}
-      />
-      <div className="pl-1.5">
-        <div className="flex items-center justify-between gap-1.5 mb-1">
-          <span className="uplabel text-[9.5px] text-[var(--muted)]">{bucket}</span>
-          <AvatarWithScope by={todo.by} scope={todo.scope} size={16} />
-        </div>
-        <div className="text-[13px] text-[var(--ink)] line-clamp-3 leading-snug mb-2">
-          {todo.prio === "hoch" && (
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle"
-              style={{ background: PRIO_COLOR.hoch }}
-            />
-          )}
-          {todo.text}
-        </div>
-        <div className="inline-flex items-center gap-1.5 text-[11.5px] text-[var(--ink-soft)]">
-          <RoundCheck
-            checked={false}
-            onClick={onToggle}
-            color={PRIO_COLOR[todo.prio]}
-            size={16}
-          />
-          <button
-            type="button"
-            onClick={onToggle}
-            className="tap"
-          >
-            erledigen
-          </button>
-        </div>
-      </div>
-    </Card>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import { Card } from "./Card";
 import { Lock } from "lucide-react";
+import { Card } from "./Card";
 import { useStore } from "@/lib/store";
-import { cycleAnalysis } from "@/lib/cycle";
+import { cycleAnalysis, PHASE_COLOR_MAP } from "@/lib/cycle";
+import { USERS } from "@/lib/types";
 
 export function CycleTile({ onClick }: { onClick?: () => void }) {
   const cycle = useStore((s) => s.cycle);
@@ -12,56 +13,89 @@ export function CycleTile({ onClick }: { onClick?: () => void }) {
   if (!analysis) return null;
   const canEdit = cycle.owner === currentUser;
 
-  const progressPct = Math.min(100, Math.round((analysis.day / analysis.cycLen) * 100));
-
-  const nextEventLabel =
-    analysis.daysUntilPeriod <= analysis.daysUntilOvulation && analysis.daysUntilPeriod >= 0
-      ? `${analysis.daysUntilPeriod} ${analysis.daysUntilPeriod === 1 ? "Tag" : "Tage"} bis Periode`
-      : analysis.daysUntilOvulation >= 0
-        ? `${analysis.daysUntilOvulation} ${analysis.daysUntilOvulation === 1 ? "Tag" : "Tage"} bis Eisprung`
-        : `Tag ${analysis.day} von ${analysis.cycLen}`;
+  const ovD = cycle.avgCycle - 14;
+  const phases = [
+    { from: 1, to: cycle.avgPeriod, color: PHASE_COLOR_MAP.menstruation },
+    { from: cycle.avgPeriod, to: ovD - 3, color: PHASE_COLOR_MAP.follikel },
+    { from: ovD - 3, to: ovD + 1, color: PHASE_COLOR_MAP.fertil },
+    { from: ovD + 1, to: cycle.avgCycle, color: PHASE_COLOR_MAP.luteal },
+  ];
 
   return (
-    <div className="px-4 mb-2">
-      <Card
-        onClick={canEdit ? onClick : undefined}
-        className="p-3.5 relative overflow-hidden"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="uplabel text-[10px] text-[var(--muted)] mb-1.5 flex items-center gap-1.5">
-              <span>Zyklus · Ambar</span>
-              {!canEdit && <Lock size={10} strokeWidth={2} color="var(--muted)" />}
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="serif text-[22px] leading-none" style={{ color: analysis.color }}>
-                {analysis.phaseLabel}
-              </span>
-            </div>
-            <div className="text-[12.5px] text-[var(--ink-soft)] mt-1.5 mono">
-              Tag {analysis.day} von {analysis.cycLen} · {nextEventLabel}
-            </div>
+    <Card onClick={onClick} className="p-3.5 relative overflow-hidden">
+      <div className="flex items-start gap-3">
+        <div className="shrink-0 flex flex-col items-center justify-center w-14 pt-1">
+          <div
+            className="text-[40px] leading-none font-semibold tracking-tight mono"
+            style={{ color: analysis.color }}
+          >
+            {analysis.day}
           </div>
-
-          <div
-            className="rounded-full"
-            style={{
-              width: 44,
-              height: 44,
-              background: `conic-gradient(${analysis.color} ${progressPct * 3.6}deg, var(--cream-deep) 0)`,
-              boxShadow: "inset 0 0 0 6px var(--paper)",
-            }}
-            aria-hidden="true"
-          />
+          <div className="uplabel text-[9px] mt-1" style={{ color: "var(--muted)" }}>
+            Tag
+          </div>
         </div>
-
-        <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--cream-deep)" }}>
+        <div className="flex-1 min-w-0">
           <div
-            className="h-full rounded-full transition-[width] duration-500"
-            style={{ width: `${progressPct}%`, background: analysis.color }}
-          />
+            className="uplabel text-[10px] flex items-center gap-1.5 mb-1"
+            style={{ color: "var(--muted)" }}
+          >
+            Zyklus · {USERS[cycle.owner].name}
+            {!canEdit && <Lock size={9} strokeWidth={2} />}
+          </div>
+          <div className="text-[16px] font-semibold leading-tight" style={{ color: analysis.color }}>
+            {analysis.phaseLabel}
+          </div>
+          <div
+            className="mt-2 relative h-2 rounded-full overflow-hidden"
+            style={{ background: "var(--cream-deep)" }}
+          >
+            {phases.map((p, i) => (
+              <div
+                key={i}
+                className="absolute top-0 bottom-0"
+                style={{
+                  left: `${((p.from - 1) / cycle.avgCycle) * 100}%`,
+                  width: `${((p.to - (p.from - 1)) / cycle.avgCycle) * 100}%`,
+                  background: p.color,
+                  opacity: 0.6,
+                }}
+              />
+            ))}
+            <div
+              className="absolute"
+              style={{
+                top: -2,
+                bottom: -2,
+                left: `${((Math.min(analysis.day, cycle.avgCycle) - 0.5) / cycle.avgCycle) * 100}%`,
+                width: 2.5,
+                background: "var(--ink)",
+                boxShadow: "0 0 0 2px var(--paper)",
+                borderRadius: 2,
+              }}
+            />
+          </div>
+          <div
+            className="flex items-center justify-between mt-1.5 text-[11px] gap-2"
+            style={{ color: "var(--ink-soft)" }}
+          >
+            <span className="whitespace-nowrap">
+              {analysis.daysUntilOvulation > 0
+                ? `Eisprung in ${analysis.daysUntilOvulation} T.`
+                : analysis.daysUntilOvulation === 0
+                  ? "Eisprung heute"
+                  : `Eisprung vor ${-analysis.daysUntilOvulation} T.`}
+            </span>
+            <span className="whitespace-nowrap">
+              {analysis.daysUntilPeriod > 0
+                ? `Periode in ${analysis.daysUntilPeriod} T.`
+                : analysis.daysUntilPeriod === 0
+                  ? "Periode heute"
+                  : `${-analysis.daysUntilPeriod} T. überfällig`}
+            </span>
+          </div>
         </div>
-      </Card>
-    </div>
+      </div>
+    </Card>
   );
 }

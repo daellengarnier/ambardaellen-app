@@ -49,6 +49,10 @@ type State = {
   updateActivity: (id: string, patch: Partial<Activity>) => void;
   removeActivity: (id: string) => void;
 
+  // cycle
+  setCycle: (cycle: Cycle) => void;
+  updateCycle: (patch: Partial<Cycle>) => void;
+
   // goals
   addGoal: (input: Omit<Goal, "id" | "by" | "steps" | "current">) => void;
   updateGoal: (id: string, patch: Partial<Goal>) => void;
@@ -150,6 +154,9 @@ export const useStore = create<State>()(
         })),
       removeActivity: (id) =>
         set((s) => ({ activities: s.activities.filter((it) => it.id !== id) })),
+
+      setCycle: (cycle) => set({ cycle }),
+      updateCycle: (patch) => set((s) => ({ cycle: { ...s.cycle, ...patch } })),
 
       addGoal: (input) => {
         const t = input.title.trim();

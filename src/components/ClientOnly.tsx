@@ -1,6 +1,18 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
+
+function subscribe() {
+  return () => {};
+}
+
+function getSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
+}
 
 /**
  * Renders children only after client-side hydration, to avoid SSR mismatches
@@ -14,8 +26,7 @@ export function ClientOnly({
   children: ReactNode;
   fallback?: ReactNode;
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   if (!mounted) return <>{fallback}</>;
   return <>{children}</>;
 }
