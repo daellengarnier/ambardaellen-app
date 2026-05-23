@@ -2,18 +2,28 @@
 
 Einmalige Einrichtung des VPS. Danach läuft alles automatisch über GitHub Actions.
 
-> Werte die du vor der ersten Ausführung anpassen musst:
-> - **DOMAIN** — z.B. `app.example.ch`
-> - **VPS-IP** — IP deines Servers
-> - **GHCR-User** — GitHub-Username/Org, hier `daellengarnier`
+**Konkrete Werte für dieses Projekt:**
+- **Domain**: `app.felsenau.org` (löst auf `185.143.100.53` auf)
+- **SSH**: `ssh ubuntu@app.felsenau.org`
+- **GHCR-Image**: `ghcr.io/daellengarnier/ambardaellen-app`
 
 ---
 
 ## 0 · Bevor du loslegst
 
-- [ ] DNS A-Record für deine Domain zeigt auf die VPS-IP (Propagation kann bis zu 1h dauern, oft sofort)
-- [ ] SSH-Login zum VPS funktioniert: `ssh ubuntu@VPS-IP`
+- [x] DNS A-Record `app.felsenau.org` zeigt auf VPS-IP (bereits gesetzt — bestätigt)
+- [ ] SSH-Login funktioniert: `ssh ubuntu@app.felsenau.org`
 - [ ] Du hast Sudo-Rechte auf dem VPS
+- [ ] **Port 80 ist frei** — aktuell antwortet dort noch was (HTTP 403). Vermutlich der Default-Webserver des Hosters. Vor dem ersten `docker compose up` stoppen:
+  ```bash
+  # Falls Nginx oder Apache läuft:
+  sudo systemctl stop nginx 2>/dev/null || true
+  sudo systemctl disable nginx 2>/dev/null || true
+  sudo systemctl stop apache2 2>/dev/null || true
+  sudo systemctl disable apache2 2>/dev/null || true
+  # Check ob Port 80 jetzt frei:
+  sudo ss -tlnp | grep ':80 '
+  ```
 
 ---
 
@@ -65,15 +75,15 @@ VPS kopieren — am einfachsten per `scp` von deinem Laptop:
 
 ```bash
 # Von deinem lokalen Repo aus (NICHT vom VPS):
-scp deploy/docker-compose.yml deploy/Caddyfile ubuntu@VPS-IP:/opt/ambardaellen/
+scp deploy/docker-compose.yml deploy/Caddyfile ubuntu@app.felsenau.org:/opt/ambardaellen/
 ```
 
-Dann auf dem VPS die Domain im Caddyfile eintragen:
+Verifikation auf dem VPS — die Domain steht bereits im Caddyfile, nichts zu ersetzen:
 
 ```bash
 cd /opt/ambardaellen
-sed -i 's/DOMAIN_PLACEHOLDER/deine.domain.ch/' Caddyfile
-cat Caddyfile   # zur Kontrolle
+cat Caddyfile | head -3
+# → muss zeigen: "app.felsenau.org {"
 ```
 
 ---
@@ -117,7 +127,7 @@ docker compose logs -f --tail 50
 
 Caddy startet, holt das Let's-Encrypt-Zertifikat (kurz Geduld beim ersten
 Mal — du siehst "obtained certificate" in den Logs), dann ist die App auf
-`https://deine.domain.ch` erreichbar.
+**https://app.felsenau.org** erreichbar.
 
 ---
 
@@ -128,7 +138,7 @@ Im Repo: Settings → Secrets and variables → Actions → New repository secre
 
 | Secret-Name      | Wert                                                                |
 |------------------|---------------------------------------------------------------------|
-| `VPS_HOST`       | IP oder Hostname deines VPS                                        |
+| `VPS_HOST`       | `app.felsenau.org`                                                  |
 | `VPS_USER`       | `ubuntu`                                                            |
 | `VPS_SSH_KEY`    | Inhalt deines PRIVATEN SSH-Keys (das ganze File, beginnend mit `-----BEGIN OPENSSH PRIVATE KEY-----`) |
 | `VPS_PORT`       | optional, Default 22                                                |
@@ -137,7 +147,7 @@ Im Repo: Settings → Secrets and variables → Actions → New repository secre
 > nicht deinen persönlichen. Auf deinem Laptop:
 > ```bash
 > ssh-keygen -t ed25519 -f ~/.ssh/ambardaellen_deploy -C "ambardaellen-deploy" -N ""
-> ssh-copy-id -i ~/.ssh/ambardaellen_deploy.pub ubuntu@VPS-IP
+> ssh-copy-id -i ~/.ssh/ambardaellen_deploy.pub ubuntu@app.felsenau.org
 > cat ~/.ssh/ambardaellen_deploy   # ← kopieren, in VPS_SSH_KEY einfügen
 > ```
 
@@ -154,7 +164,7 @@ musst nichts mehr machen.
 Wenn etwas schiefgeht:
 
 ```bash
-ssh ubuntu@VPS-IP
+ssh ubuntu@app.felsenau.org
 cd /opt/ambardaellen
 docker compose logs --tail 200 -f
 docker compose ps
@@ -167,8 +177,9 @@ docker compose pull && docker compose up -d   # neueste Version forcieren
 ## Troubleshooting
 
 **Caddy bekommt kein Zertifikat / "challenge failed":**
-- A-Record zeigt nicht auf VPS-IP (`dig +short deine.domain.ch`)
-- Port 80 nicht offen (UFW oder Provider-Firewall)
+- A-Record zeigt nicht auf VPS-IP (`dig +short app.felsenau.org`)
+- Port 80 nicht offen (UFW oder Provider-Firewall, ODER ein anderer
+  Webserver belegt ihn noch — siehe Schritt 0)
 - Du hast Let's-Encrypt-Rate-Limit erreicht (max. 5 Zertifikate pro Domain
   pro Woche bei Fehlversuchen). Warten oder Staging-CA aktivieren.
 

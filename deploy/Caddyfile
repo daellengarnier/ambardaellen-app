@@ -4,9 +4,7 @@
 # the domain below, and reverse-proxies all traffic to the `app` service
 # on its internal port 3000.
 #
-# ⚠️  Replace DOMAIN_PLACEHOLDER below before first start.
-
-DOMAIN_PLACEHOLDER {
+app.felsenau.org {
 	encode zstd gzip
 
 	# Security headers
