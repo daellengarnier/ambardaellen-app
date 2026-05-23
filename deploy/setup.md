@@ -3,15 +3,24 @@
 Einmalige Einrichtung des VPS. Danach läuft alles automatisch über GitHub Actions.
 
 **Konkrete Werte für dieses Projekt:**
-- **Domain**: `app.felsenau.org` (löst auf `185.143.100.53` auf)
-- **SSH**: `ssh ubuntu@app.felsenau.org`
+- **App-Domain**: `ambar-daellen.felsenau.org` (löst Caddy mit Let's-Encrypt-HTTPS auf)
+- **SSH-Host**: `ssh ubuntu@app.felsenau.org` (zeigt auf VPS-IP `185.143.100.53`)
 - **GHCR-Image**: `ghcr.io/daellengarnier/ambardaellen-app`
+
+> SSH-Host und App-Domain sind verschiedene Subdomains, beide zeigen aber
+> auf den **gleichen VPS** (IP `185.143.100.53`).
 
 ---
 
 ## 0 · Bevor du loslegst
 
-- [x] DNS A-Record `app.felsenau.org` zeigt auf VPS-IP (bereits gesetzt — bestätigt)
+- [x] DNS für `app.felsenau.org` → `185.143.100.53` (bereits gesetzt)
+- [ ] **DNS-Record für `ambar-daellen.felsenau.org` setzen** — neuer `A`-Record
+  bei deinem DNS-Provider: `ambar-daellen` → `185.143.100.53`. TTL 300s.
+  Check nach 1–5 Min:
+  ```bash
+  getent ahosts ambar-daellen.felsenau.org   # muss 185.143.100.53 zeigen
+  ```
 - [ ] SSH-Login funktioniert: `ssh ubuntu@app.felsenau.org`
 - [ ] Du hast Sudo-Rechte auf dem VPS
 - [ ] **Port 80 ist frei** — aktuell antwortet dort noch was (HTTP 403). Vermutlich der Default-Webserver des Hosters. Vor dem ersten `docker compose up` stoppen:
@@ -83,7 +92,7 @@ Verifikation auf dem VPS — die Domain steht bereits im Caddyfile, nichts zu er
 ```bash
 cd /opt/ambardaellen
 cat Caddyfile | head -3
-# → muss zeigen: "app.felsenau.org {"
+# → muss zeigen: "ambar-daellen.felsenau.org {"
 ```
 
 ---
@@ -127,7 +136,7 @@ docker compose logs -f --tail 50
 
 Caddy startet, holt das Let's-Encrypt-Zertifikat (kurz Geduld beim ersten
 Mal — du siehst "obtained certificate" in den Logs), dann ist die App auf
-**https://app.felsenau.org** erreichbar.
+**https://ambar-daellen.felsenau.org** erreichbar.
 
 ---
 
@@ -177,7 +186,7 @@ docker compose pull && docker compose up -d   # neueste Version forcieren
 ## Troubleshooting
 
 **Caddy bekommt kein Zertifikat / "challenge failed":**
-- A-Record zeigt nicht auf VPS-IP (`dig +short app.felsenau.org`)
+- A-Record zeigt nicht auf VPS-IP (`getent ahosts ambar-daellen.felsenau.org`)
 - Port 80 nicht offen (UFW oder Provider-Firewall, ODER ein anderer
   Webserver belegt ihn noch — siehe Schritt 0)
 - Du hast Let's-Encrypt-Rate-Limit erreicht (max. 5 Zertifikate pro Domain
