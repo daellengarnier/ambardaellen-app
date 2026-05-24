@@ -17,9 +17,12 @@ export function LoginScreen() {
   const accounts = useStore((s) => s.accounts);
   const [mode, setMode] = useState<Mode>({ kind: "select" });
 
-  const unregistered = ALLOWED_EMAILS.filter(
-    (e) => !accounts.some((a) => a.email === e),
-  );
+  // „Ein Account pro Gerät": wenn bereits einer registriert ist,
+  // bieten wir keine weiteren Registrierungen an.
+  const unregistered =
+    accounts.length === 0
+      ? ALLOWED_EMAILS.filter((e) => !accounts.some((a) => a.email === e))
+      : [];
 
   return (
     <div className="login-shell">

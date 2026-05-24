@@ -149,9 +149,18 @@ export const useStore = create<State>()(
         if (!password || password.length < 6) {
           return { ok: false, error: "Passwort muss mindestens 6 Zeichen lang sein." };
         }
-        const existing = get().accounts.find((a) => a.email === email);
+        const accounts = get().accounts;
+        const existing = accounts.find((a) => a.email === email);
         if (existing) {
           return { ok: false, error: "Account existiert bereits — bitte anmelden." };
+        }
+        // Nur ein Account pro Gerät — verhindere zweite Registrierung.
+        if (accounts.length > 0) {
+          return {
+            ok: false,
+            error:
+              "Auf diesem Gerät ist bereits ein Account registriert. Entferne ihn zuerst im Profil.",
+          };
         }
         const salt = newSalt();
         const hash = await hashPassword(password, salt);

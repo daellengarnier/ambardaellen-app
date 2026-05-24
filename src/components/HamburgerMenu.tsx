@@ -19,7 +19,6 @@ export function HamburgerMenu() {
   const loggedInEmail = useStore((s) => s.loggedInEmail);
   const currentUser = useStore((s) => s.currentUser);
   const logout = useStore((s) => s.logout);
-  const accounts = useStore((s) => s.accounts);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -36,8 +35,6 @@ export function HamburgerMenu() {
       window.removeEventListener("keydown", onKey);
     };
   }, [menuOpen]);
-
-  const otherAccounts = accounts.filter((a) => a.email !== loggedInEmail);
 
   return (
     <div ref={ref} className="relative">
@@ -83,33 +80,6 @@ export function HamburgerMenu() {
                 </div>
               </div>
             </div>
-
-            {/* Andere Accounts auf diesem Gerät — schnell wechseln */}
-            {otherAccounts.length > 0 && (
-              <div className="my-1">
-                <div
-                  className="uplabel text-[9px] px-3 mt-1 mb-0.5"
-                  style={{ color: "var(--muted)" }}
-                >
-                  Konto wechseln
-                </div>
-                {otherAccounts.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => {
-                      logout(); // damit LoginScreen erscheint und Passwort verlangt
-                      setMenuOpen(false);
-                    }}
-                    className="tap w-full inline-flex items-center gap-2 px-3 py-2 rounded-xl text-[13px]"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
-                    <Avatar id={acc.userId} size={22} dim />
-                    {USERS[acc.userId].name}
-                  </button>
-                ))}
-              </div>
-            )}
 
             <div className="border-t my-1" style={{ borderColor: "var(--line)" }} />
 
