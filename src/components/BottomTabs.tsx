@@ -21,20 +21,22 @@ export function BottomTabs() {
   return (
     <nav
       aria-label="Hauptnavigation"
-      className="fixed left-0 right-0 z-40 mx-auto px-2.5 pt-1 pointer-events-none"
+      className="fixed left-0 right-0 z-40 mx-auto px-2 pointer-events-none"
       style={{
         bottom: 0,
         maxWidth: 480,
-        paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)",
         background:
           "linear-gradient(to top, rgba(239,230,211,0.98) 55%, rgba(239,230,211,0))",
       }}
     >
       <div
-        className="flex items-stretch justify-between px-1 py-1 rounded-[26px] backdrop-blur-md shadow-card pointer-events-auto"
+        className="flex items-stretch justify-between px-1 rounded-t-[26px] backdrop-blur-md shadow-card pointer-events-auto"
         style={{
           background: "rgba(251,246,232,0.92)",
           border: "1px solid rgba(218,201,168,0.5)",
+          borderBottom: "none",
+          paddingTop: "0.25rem",
+          paddingBottom: "max(env(safe-area-inset-bottom), 0.25rem)",
         }}
       >
         {TABS.map(({ href, label, Icon }) => {

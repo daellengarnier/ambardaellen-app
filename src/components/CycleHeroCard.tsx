@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Lock, ChevronRight } from "lucide-react";
-import { Card } from "./Card";
 import { CycleRing } from "./CycleRing";
 import { useStore } from "@/lib/store";
 import { PHASE_HINTS, cycleAnalysis, type Phase } from "@/lib/cycle";
@@ -34,7 +33,11 @@ export function CycleHeroCard({ onOpenSheet }: { onOpenSheet: () => void }) {
 
   if (!analysis) {
     return (
-      <Card onClick={onOpenSheet} className="px-4 py-5 text-center">
+      <button
+        type="button"
+        onClick={onOpenSheet}
+        className="tap w-full px-4 py-5 text-center block"
+      >
         <div
           className="uplabel text-[10px] inline-flex items-center justify-center gap-1 mb-2"
           style={{ color: "var(--muted)" }}
@@ -47,7 +50,7 @@ export function CycleHeroCard({ onOpenSheet }: { onOpenSheet: () => void }) {
             ? "Noch keine Zyklus-Daten. Tippe hier um den ersten Periode-Start einzutragen."
             : `${USERS[cycle.owner].name} hat noch keine Zyklus-Daten eingetragen.`}
         </p>
-      </Card>
+      </button>
     );
   }
 
@@ -68,7 +71,7 @@ export function CycleHeroCard({ onOpenSheet }: { onOpenSheet: () => void }) {
   const displayLabel = PHASE_LABEL[displayPhase];
 
   return (
-    <Card className="px-4 pt-3 pb-4 flex flex-col items-center relative overflow-hidden">
+    <div className="px-1 pt-1 pb-2 flex flex-col items-center relative">
       <div className="w-full flex items-center justify-between mb-1">
         <div
           className="uplabel text-[10px] inline-flex items-center gap-1"
@@ -128,6 +131,6 @@ export function CycleHeroCard({ onOpenSheet }: { onOpenSheet: () => void }) {
               : `${-analysis.daysUntilPeriod} T. überfällig`}
         </div>
       )}
-    </Card>
+    </div>
   );
 }

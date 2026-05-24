@@ -54,7 +54,7 @@ export function Sheet({ open, onClose, title, children }: Props) {
           </div>
           {title && (
             <div className="flex items-center justify-between px-5 pt-1 pb-2 shrink-0">
-              <h3 className="serif-i text-[24px] leading-tight">{title}</h3>
+              <h3 className="serif-i text-[26px] leading-tight" style={{ color: "var(--mens)" }}>{title}</h3>
               <button
                 type="button"
                 onClick={onClose}

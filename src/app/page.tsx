@@ -155,12 +155,15 @@ function HeuteContent() {
   return (
     <>
       {/* Header: Greeting + User-Switch */}
-      <div className="px-4 pt-1 pb-3 flex items-start justify-between gap-3">
+      <div className="px-4 pt-5 pb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="uplabel text-[10px]" style={{ color: "var(--muted)" }}>
             {dateLine}
           </div>
-          <h1 className="text-[30px] font-semibold leading-tight tracking-tight mt-1 truncate">
+          <h1
+            className="serif-i text-[34px] leading-[0.95] mt-1 truncate"
+            style={{ color: "var(--mens)" }}
+          >
             {greeting}
           </h1>
         </div>
@@ -494,10 +497,13 @@ function SectionTitle({
   actionHref?: string;
 }) {
   return (
-    <div className="flex items-end justify-between mb-1.5 px-0.5">
-      <span className="uplabel text-[10px]" style={{ color: "var(--muted)" }}>
+    <div className="flex items-baseline justify-between mb-2 px-0.5">
+      <h2
+        className="serif-i text-[22px] leading-tight"
+        style={{ color: "var(--mens)" }}
+      >
         {label}
-      </span>
+      </h2>
       {actionLabel && actionHref && (
         <Link
           href={actionHref}
