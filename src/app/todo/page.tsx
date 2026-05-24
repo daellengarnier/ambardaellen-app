@@ -10,6 +10,7 @@ import { Card } from "@/components/Card";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AvatarWithScope } from "@/components/Avatar";
 import { RoundCheck } from "@/components/RoundCheck";
+import { DeleteAction } from "@/components/DeleteAction";
 import { Empty } from "@/components/Empty";
 import { TagChips } from "@/components/TagChips";
 import { ClientOnly } from "@/components/ClientOnly";
@@ -231,7 +232,7 @@ function TodoContent() {
                       : undefined
                   }
                 >
-                  <TodoRow t={t} onToggle={toggleTodo} onOpen={setOpenTodo} />
+                  <TodoRow t={t} onToggle={toggleTodo} onOpen={setOpenTodo} onRemove={removeTodo} />
                 </div>
               ))}
             </Card>
@@ -267,7 +268,7 @@ function TodoContent() {
                         : undefined
                     }
                   >
-                    <TodoRow t={t} onToggle={toggleTodo} onOpen={setOpenTodo} dense />
+                    <TodoRow t={t} onToggle={toggleTodo} onOpen={setOpenTodo} onRemove={removeTodo} dense />
                   </div>
                 ))}
               </Card>
@@ -301,11 +302,13 @@ function TodoRow({
   t,
   onToggle,
   onOpen,
+  onRemove,
   dense = false,
 }: {
   t: Todo;
   onToggle: (id: string) => void;
   onOpen: (t: Todo) => void;
+  onRemove: (id: string) => void;
   dense?: boolean;
 }) {
   const p = PRIO[t.prio];
@@ -365,6 +368,12 @@ function TodoRow({
         )}
       </div>
       <AvatarWithScope by={t.by} scope={t.scope} size={dense ? 18 : 20} />
+      <DeleteAction
+        kind="Aufgabe"
+        label={t.text}
+        onConfirm={() => onRemove(t.id)}
+        size={12}
+      />
     </div>
   );
 }

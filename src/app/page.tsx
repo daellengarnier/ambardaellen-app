@@ -21,6 +21,7 @@ import { AvatarWithScope } from "@/components/Avatar";
 import { ActivityIcon } from "@/components/ActivityIcon";
 import { GoalProgress } from "@/components/GoalProgress";
 import { RoundCheck } from "@/components/RoundCheck";
+import { DeleteAction } from "@/components/DeleteAction";
 import { CycleHeroCard } from "@/components/CycleHeroCard";
 import { TagChips } from "@/components/TagChips";
 import { ClientOnly } from "@/components/ClientOnly";
@@ -188,6 +189,7 @@ function HeuteContent() {
           onAdd={(text) => addShopping({ text, scope: "geteilt", spinnerei: false })}
           onOpenItem={setOpenShop}
           onToggle={toggleShopping}
+          onRemove={removeShopping}
           onQuickAdd={() => setQuickShopOpen({ spinnerei: false })}
         />
         <ShoppingTile
@@ -198,6 +200,7 @@ function HeuteContent() {
           onAdd={(text) => addShopping({ text, scope: "geteilt", spinnerei: true })}
           onOpenItem={setOpenShop}
           onToggle={toggleShopping}
+          onRemove={removeShopping}
           onQuickAdd={() => setQuickShopOpen({ spinnerei: true })}
         />
       </div>
@@ -257,7 +260,7 @@ function HeuteContent() {
                       }}
                       role="button"
                       tabIndex={0}
-                      className="flex items-start gap-2.5 px-2.5 py-2.5 tap cursor-pointer"
+                      className="flex items-start gap-2 px-2.5 py-2.5 tap cursor-pointer"
                       style={
                         i < overdueAndTodayTodos.length - 1
                           ? { borderBottom: "1px solid rgba(218,201,168,0.4)" }
@@ -297,6 +300,11 @@ function HeuteContent() {
                         </div>
                       </div>
                       <AvatarWithScope by={t.by} scope={t.scope} size={18} />
+                      <DeleteAction
+                        kind="Aufgabe"
+                        label={t.text}
+                        onConfirm={() => removeTodo(t.id)}
+                      />
                     </div>
                   );
                 })}
@@ -382,6 +390,12 @@ function HeuteContent() {
                     </div>
                   </div>
                   <AvatarWithScope by={t.by} scope={t.scope} size={16} />
+                  <DeleteAction
+                    kind="Aufgabe"
+                    label={t.text}
+                    onConfirm={() => removeTodo(t.id)}
+                    size={12}
+                  />
                 </div>
               );
             })}
@@ -539,6 +553,7 @@ function ShoppingTile({
   onAdd,
   onOpenItem,
   onToggle,
+  onRemove,
   onQuickAdd,
 }: {
   label: string;
@@ -548,6 +563,7 @@ function ShoppingTile({
   onAdd: (text: string) => void;
   onOpenItem: (it: ShoppingItem) => void;
   onToggle: (id: string) => void;
+  onRemove: (id: string) => void;
   onQuickAdd: () => void;
 }) {
   const [input, setInput] = useState("");
@@ -595,7 +611,7 @@ function ShoppingTile({
             style={{ maxHeight: LIST_HEIGHT_MAX_6 }}
           >
             {items.map((s) => (
-              <li key={s.id} className="text-[12.5px] flex items-center gap-1.5">
+              <li key={s.id} className="text-[12.5px] flex items-center gap-1">
                 <RoundCheck
                   checked={false}
                   onClick={() => onToggle(s.id)}
@@ -614,6 +630,11 @@ function ShoppingTile({
                   <span className="truncate">{s.text}</span>
                   {isPrivate(s) && <Lock size={9} strokeWidth={2} color="var(--muted)" />}
                 </button>
+                <DeleteAction
+                  label={s.text}
+                  onConfirm={() => onRemove(s.id)}
+                  size={11}
+                />
               </li>
             ))}
           </ul>

@@ -10,6 +10,7 @@ import { Card } from "@/components/Card";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AvatarWithScope } from "@/components/Avatar";
 import { RoundCheck } from "@/components/RoundCheck";
+import { DeleteAction } from "@/components/DeleteAction";
 import { Empty } from "@/components/Empty";
 import { ClientOnly } from "@/components/ClientOnly";
 import { ShoppingSheet } from "@/components/sheets/ShoppingSheet";
@@ -213,7 +214,7 @@ function ShopContent() {
                           : undefined
                       }
                     >
-                      <ShoppingRow item={s} onToggle={toggleShopping} onOpen={setOpenItem} />
+                      <ShoppingRow item={s} onToggle={toggleShopping} onOpen={setOpenItem} onRemove={removeShopping} />
                     </div>
                   ))}
                 </Card>
@@ -254,6 +255,7 @@ function ShopContent() {
                       item={s}
                       onToggle={toggleShopping}
                       onOpen={setOpenItem}
+                      onRemove={removeShopping}
                       dense
                     />
                   </div>
@@ -291,11 +293,13 @@ function ShoppingRow({
   item,
   onToggle,
   onOpen,
+  onRemove,
   dense = false,
 }: {
   item: ShoppingItem;
   onToggle: (id: string) => void;
   onOpen: (it: ShoppingItem) => void;
+  onRemove: (id: string) => void;
   dense?: boolean;
 }) {
   return (
@@ -304,7 +308,7 @@ function ShoppingRow({
         e.stopPropagation();
         onOpen(item);
       }}
-      className={`flex items-center gap-2.5 ${dense ? "px-2.5 py-2" : "px-3 py-2.5"} tap cursor-pointer`}
+      className={`flex items-center gap-2 ${dense ? "px-2.5 py-2" : "px-3 py-2.5"} tap cursor-pointer`}
       role="button"
       tabIndex={0}
     >
@@ -331,6 +335,7 @@ function ShoppingRow({
         )}
       </div>
       <AvatarWithScope by={item.by} scope={item.scope} size={dense ? 18 : 20} />
+      <DeleteAction label={item.text} onConfirm={() => onRemove(item.id)} size={12} />
     </div>
   );
 }

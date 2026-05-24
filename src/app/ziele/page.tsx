@@ -9,6 +9,7 @@ import { Card } from "@/components/Card";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AvatarWithScope } from "@/components/Avatar";
 import { GoalProgress } from "@/components/GoalProgress";
+import { DeleteAction } from "@/components/DeleteAction";
 import { Empty } from "@/components/Empty";
 import { ClientOnly } from "@/components/ClientOnly";
 import { GoalSheet } from "@/components/sheets/GoalSheet";
@@ -145,11 +146,16 @@ function GoalContent() {
                   const doneSteps = g.steps.filter((s) => s.done).length;
                   return (
                     <Card key={g.id} onClick={() => setOpenGoal(g)} className="p-3.5">
-                      <div className="flex items-start justify-between gap-3 mb-1.5">
-                        <div className="text-[14.5px] font-medium leading-snug pr-2">
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <div className="text-[14.5px] font-medium leading-snug pr-2 flex-1 min-w-0">
                           {g.title}
                         </div>
                         <AvatarWithScope by={g.by} scope={g.scope} size={20} />
+                        <DeleteAction
+                          kind="Ziel"
+                          label={g.title}
+                          onConfirm={() => removeGoal(g.id)}
+                        />
                       </div>
                       <GoalProgress goal={g} />
                       <div

@@ -21,6 +21,7 @@ import { ActivityIcon } from "@/components/ActivityIcon";
 import { Segmented } from "@/components/Segmented";
 import { Empty } from "@/components/Empty";
 import { TagChips } from "@/components/TagChips";
+import { DeleteAction } from "@/components/DeleteAction";
 import { ClientOnly } from "@/components/ClientOnly";
 import { ActivityAddSheet } from "@/components/sheets/ActivityAddSheet";
 import type { Activity, ActivityStatus } from "@/lib/types";
@@ -73,6 +74,7 @@ function AktContent() {
   const activities = useStore((s) => s.activities);
   const currentUser = useStore((s) => s.currentUser);
   const addActivity = useStore((s) => s.addActivity);
+  const removeActivity = useStore((s) => s.removeActivity);
 
   const [filter, setFilter] = useState<ActivityStatus>("geplant");
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("alle");
@@ -289,6 +291,11 @@ function AktContent() {
                     )}
                   </div>
                   <AvatarWithScope by={a.by} scope={a.scope} size={20} />
+                  <DeleteAction
+                    kind="Aktivität"
+                    label={a.title}
+                    onConfirm={() => removeActivity(a.id)}
+                  />
                 </Card>
               ))}
             </div>

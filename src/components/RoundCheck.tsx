@@ -1,10 +1,8 @@
 "use client";
 
-import type { MouseEventHandler } from "react";
-
 type Props = {
   checked: boolean;
-  onClick?: MouseEventHandler<HTMLButtonElement>;
+  onClick?: () => void;
   color?: string;
   size?: number;
   ariaLabel?: string;
@@ -20,7 +18,12 @@ export function RoundCheck({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(e) => {
+        // Verhindert, dass ein umschliessendes Card-onClick (Sheet öffnen,
+        // Navigation o.ä.) ausgelöst wird, wenn nur abgehakt werden soll.
+        e.stopPropagation();
+        onClick?.();
+      }}
       aria-label={ariaLabel ?? (checked ? "Erledigt — wieder öffnen" : "Erledigen")}
       aria-pressed={checked}
       className="tap shrink-0 rounded-full inline-flex items-center justify-center"
