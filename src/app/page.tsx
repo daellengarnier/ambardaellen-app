@@ -188,6 +188,7 @@ function HeuteContent() {
           items={privatItems}
           onAdd={(text) => addShopping({ text, scope: "geteilt", spinnerei: false })}
           onOpenItem={setOpenShop}
+          onToggle={toggleShopping}
           onQuickAdd={() => setQuickShopOpen({ spinnerei: false })}
         />
         <ShoppingTile
@@ -197,6 +198,7 @@ function HeuteContent() {
           items={spinnereiItems}
           onAdd={(text) => addShopping({ text, scope: "geteilt", spinnerei: true })}
           onOpenItem={setOpenShop}
+          onToggle={toggleShopping}
           onQuickAdd={() => setQuickShopOpen({ spinnerei: true })}
         />
       </div>
@@ -547,6 +549,7 @@ function ShoppingTile({
   items,
   onAdd,
   onOpenItem,
+  onToggle,
   onQuickAdd,
 }: {
   label: string;
@@ -555,6 +558,7 @@ function ShoppingTile({
   items: ShoppingItem[];
   onAdd: (text: string) => void;
   onOpenItem: (it: ShoppingItem) => void;
+  onToggle: (id: string) => void;
   onQuickAdd: () => void;
 }) {
   const [input, setInput] = useState("");
@@ -597,30 +601,36 @@ function ShoppingTile({
             {isSpinnerei ? "noch keine Wünsche" : "leer ✓"}
           </div>
         ) : (
-          <ul className="space-y-1">
+          <ul className="space-y-1.5">
             {visible.map((s) => (
               <li
                 key={s.id}
-                onClick={() => onOpenItem(s)}
-                role="button"
-                tabIndex={0}
-                className="text-[12.5px] truncate flex items-center gap-1.5 tap cursor-pointer"
+                className="text-[12.5px] flex items-center gap-1.5"
               >
-                <span
-                  className="inline-block w-1 h-1 rounded-full shrink-0"
-                  style={{ background: accent }}
+                <RoundCheck
+                  checked={false}
+                  onClick={() => onToggle(s.id)}
+                  size={16}
+                  color={accent}
+                  ariaLabel={`${s.text} abhaken`}
                 />
-                {isSpinnerei && (
-                  <span style={{ color: "var(--terra)", fontSize: 10 }}>✦</span>
-                )}
-                <span className="truncate">{s.text}</span>
-                {isPrivate(s) && (
-                  <Lock size={9} strokeWidth={2} color="var(--muted)" />
-                )}
+                <button
+                  type="button"
+                  onClick={() => onOpenItem(s)}
+                  className="tap flex-1 min-w-0 inline-flex items-center gap-1 text-left"
+                >
+                  {isSpinnerei && (
+                    <span style={{ color: "var(--terra)", fontSize: 10 }}>✦</span>
+                  )}
+                  <span className="truncate">{s.text}</span>
+                  {isPrivate(s) && (
+                    <Lock size={9} strokeWidth={2} color="var(--muted)" />
+                  )}
+                </button>
               </li>
             ))}
             {rest > 0 && (
-              <li className="text-[11px]" style={{ color: "var(--muted)" }}>
+              <li className="text-[11px] pl-[22px]" style={{ color: "var(--muted)" }}>
                 + {rest} weitere
               </li>
             )}
