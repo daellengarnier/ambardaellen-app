@@ -185,6 +185,11 @@ export function PacklistSection({ activityId }: Props) {
                     knownCategories={knownCategories}
                   />
                 ))}
+                <CategoryAddRow
+                  defaultScope={newScope}
+                  currentUser={currentUser}
+                  onAdd={(text, scope) => addItem(activity.id, text, scope, cat)}
+                />
               </Card>
             </div>
           );
@@ -291,6 +296,68 @@ function ProgressMini({
         />
       </div>
     </Card>
+  );
+}
+
+function CategoryAddRow({
+  defaultScope,
+  currentUser,
+  onAdd,
+}: {
+  defaultScope: Scope;
+  currentUser: UserId;
+  onAdd: (text: string, scope: Scope) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="tap w-full inline-flex items-center gap-1.5 px-2 py-1.5 text-[12px]"
+        style={{ color: "var(--ink-soft)" }}
+      >
+        <Plus size={12} strokeWidth={2.2} color="var(--terra)" />
+        Eintrag hinzufügen
+      </button>
+    );
+  }
+
+  const submit = (close: boolean) => {
+    const t = text.trim();
+    if (t) onAdd(t, defaultScope);
+    setText("");
+    if (close) setOpen(false);
+  };
+
+  return (
+    <div
+      className="flex items-center gap-1.5 px-2 py-1.5"
+      style={{ borderTop: "1px solid rgba(218,201,168,0.4)" }}
+    >
+      <Plus size={12} strokeWidth={2.2} color="var(--terra)" />
+      <input
+        autoFocus
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit(false);
+          if (e.key === "Escape") {
+            setText("");
+            setOpen(false);
+          }
+        }}
+        onBlur={() => submit(true)}
+        placeholder="Was noch?"
+        className="flex-1 bg-transparent text-[13px] py-1"
+        style={{ color: "var(--ink)" }}
+      />
+      <span className="text-[10px]" style={{ color: "var(--muted)" }}>
+        {defaultScope === "geteilt" ? "gemeinsam" : defaultScope === currentUser ? "nur ich" : defaultScope}
+      </span>
+    </div>
   );
 }
 

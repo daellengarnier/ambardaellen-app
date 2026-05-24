@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Menu, X, UserCircle2, Bell, Layers, LogOut } from "lucide-react";
+import { Menu, X, UserCircle2, Bell, Layers, LogOut, ArrowLeftRight } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { USERS } from "@/lib/types";
+import { USERS, type UserId } from "@/lib/types";
 import { Avatar } from "./Avatar";
 import { ProfileSheet } from "./sheets/ProfileSheet";
 import { NotificationsSheet } from "./sheets/NotificationsSheet";
@@ -18,7 +18,10 @@ export function HamburgerMenu() {
 
   const loggedInEmail = useStore((s) => s.loggedInEmail);
   const currentUser = useStore((s) => s.currentUser);
+  const setCurrentUser = useStore((s) => s.setCurrentUser);
   const logout = useStore((s) => s.logout);
+
+  const otherUser: UserId = currentUser === "A" ? "D" : "A";
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -67,12 +70,12 @@ export function HamburgerMenu() {
           >
             {/* Aktueller User */}
             <div
-              className="px-3 py-2 rounded-xl mb-1 inline-flex items-center gap-2 w-full"
+              className="px-3 py-2 rounded-xl mb-1 flex items-center gap-2 w-full"
               style={{ background: "var(--cream-deep)" }}
             >
               <Avatar id={currentUser} size={28} />
-              <div className="min-w-0">
-                <div className="text-[13.5px] font-semibold">
+              <div className="min-w-0 flex-1">
+                <div className="text-[13.5px] font-semibold leading-tight">
                   {USERS[currentUser].name}
                 </div>
                 <div className="text-[10.5px] truncate" style={{ color: "var(--muted)" }}>
@@ -80,6 +83,23 @@ export function HamburgerMenu() {
                 </div>
               </div>
             </div>
+
+            {/* Profil-Switch */}
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentUser(otherUser);
+                setMenuOpen(false);
+              }}
+              className="tap w-full inline-flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px]"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              <Avatar id={otherUser} size={22} dim />
+              <span className="flex-1 text-left">
+                Als <span className="font-semibold" style={{ color: "var(--ink)" }}>{USERS[otherUser].name}</span> ansehen
+              </span>
+              <ArrowLeftRight size={13} strokeWidth={1.75} color="var(--muted)" />
+            </button>
 
             <div className="border-t my-1" style={{ borderColor: "var(--line)" }} />
 
