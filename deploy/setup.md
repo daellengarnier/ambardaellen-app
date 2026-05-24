@@ -4,26 +4,23 @@ Einmalige Einrichtung des VPS. Danach läuft alles automatisch über GitHub Acti
 
 **Konkrete Werte für dieses Projekt:**
 - **App-Domain**: `app.al-daellen.ch` (löst Caddy mit Let's-Encrypt-HTTPS auf)
-- **SSH-Host**: `ssh ubuntu@app.felsenau.org` (zeigt auf VPS-IP `185.143.100.53`)
-- **GHCR-Image**: `ghcr.io/daellengarnier/ambardaellen-app`
-
-> SSH-Host und App-Domain sind verschiedene Subdomains, beide zeigen aber
-> auf den **gleichen VPS** (IP `185.143.100.53`).
+- **VPS**: Infomaniak VPS Lite, Ubuntu 24.04 LTS
+- **VPS-IP / SSH**: `ssh ubuntu@179.237.68.22`
+- **GHCR-Image**: `ghcr.io/daellengarnier/ambardaellen-app` (public, kein Login nötig)
 
 ---
 
 ## 0 · Bevor du loslegst
 
-- [x] DNS für `app.felsenau.org` → `185.143.100.53` (bereits gesetzt, nur für SSH)
-- [ ] **DNS-Record für `app.al-daellen.ch` setzen** — neuer `A`-Record
-  bei deinem DNS-Provider: `app` (Subdomain von `al-daellen.ch`) →
-  `185.143.100.53`. TTL 300s. Check nach 1–5 Min:
+- [x] **DNS-Record für `app.al-daellen.ch`** (`A` → `179.237.68.22`,
+  bei Infomaniak DNS-Manager). Check:
   ```bash
-  getent ahosts app.al-daellen.ch   # muss 185.143.100.53 zeigen
+  getent ahosts app.al-daellen.ch   # muss 179.237.68.22 zeigen
   ```
-- [ ] SSH-Login funktioniert: `ssh ubuntu@app.felsenau.org`
-- [ ] Du hast Sudo-Rechte auf dem VPS
-- [ ] **Port 80 ist frei** — aktuell antwortet dort noch was (HTTP 403). Vermutlich der Default-Webserver des Hosters. Vor dem ersten `docker compose up` stoppen:
+- [x] SSH-Login funktioniert: `ssh ubuntu@179.237.68.22`
+- [x] Sudo-Rechte auf dem VPS
+- [x] **Port 80 ist frei** — falls bei einem Re-Setup nochmal nötig
+  (z.B. wenn der Host-Default-Webserver wieder aktiv ist):
   ```bash
   # Falls Nginx oder Apache läuft:
   sudo systemctl stop nginx 2>/dev/null || true
@@ -84,7 +81,7 @@ VPS kopieren — am einfachsten per `scp` von deinem Laptop:
 
 ```bash
 # Von deinem lokalen Repo aus (NICHT vom VPS):
-scp deploy/docker-compose.yml deploy/Caddyfile ubuntu@app.felsenau.org:/opt/ambardaellen/
+scp deploy/docker-compose.yml deploy/Caddyfile ubuntu@179.237.68.22:/opt/ambardaellen/
 ```
 
 Verifikation auf dem VPS — die Domain steht bereits im Caddyfile, nichts zu ersetzen:
@@ -119,10 +116,13 @@ cat .env   # einmal anschauen, beide Werte sollten zufällig sein
 
 ---
 
-## 4 · GHCR-Login auf dem VPS (damit `docker compose pull` funktioniert)
+## 4 · GHCR-Login auf dem VPS (nur falls Package private wird)
 
-Damit der VPS Images aus GitHub Container Registry ziehen kann, brauchst
-du ein **Personal Access Token (classic)** mit Scope `read:packages`:
+Das Package `ghcr.io/daellengarnier/ambardaellen-app` ist aktuell
+**public** — `docker compose pull` funktioniert ohne Login. Dieser
+Schritt ist nur nötig, falls du das Package später private schaltest.
+
+In dem Fall: **Personal Access Token (classic)** mit Scope `read:packages`:
 
 1. Auf GitHub: Settings → Developer settings → Personal access tokens →
    Tokens (classic) → Generate new token (classic)
@@ -175,7 +175,7 @@ Im Repo: Settings → Secrets and variables → Actions → New repository secre
 
 | Secret-Name      | Wert                                                                |
 |------------------|---------------------------------------------------------------------|
-| `VPS_HOST`       | `app.felsenau.org`                                                  |
+| `VPS_HOST`       | `179.237.68.22`                                                     |
 | `VPS_USER`       | `ubuntu`                                                            |
 | `VPS_SSH_KEY`    | Inhalt deines PRIVATEN SSH-Keys (das ganze File, beginnend mit `-----BEGIN OPENSSH PRIVATE KEY-----`) |
 | `VPS_PORT`       | optional, Default 22                                                |
@@ -184,7 +184,7 @@ Im Repo: Settings → Secrets and variables → Actions → New repository secre
 > nicht deinen persönlichen. Auf deinem Laptop:
 > ```bash
 > ssh-keygen -t ed25519 -f ~/.ssh/ambardaellen_deploy -C "ambardaellen-deploy" -N ""
-> ssh-copy-id -i ~/.ssh/ambardaellen_deploy.pub ubuntu@app.felsenau.org
+> ssh-copy-id -i ~/.ssh/ambardaellen_deploy.pub ubuntu@179.237.68.22
 > cat ~/.ssh/ambardaellen_deploy   # ← kopieren, in VPS_SSH_KEY einfügen
 > ```
 
@@ -201,7 +201,7 @@ Migrationen laufen automatisch beim Container-Start mit (idempotent).
 Wenn etwas schiefgeht:
 
 ```bash
-ssh ubuntu@app.felsenau.org
+ssh ubuntu@179.237.68.22
 cd /opt/ambardaellen
 docker compose logs --tail 200 -f
 docker compose ps
@@ -222,7 +222,7 @@ docker compose exec -T db pg_dump -U ambardaellen ambardaellen \
   | gzip > backup-$(date +%Y-%m-%d).sql.gz
 
 # Auf den Laptop ziehen:
-scp ubuntu@app.felsenau.org:/opt/ambardaellen/backup-*.sql.gz ./
+scp ubuntu@179.237.68.22:/opt/ambardaellen/backup-*.sql.gz ./
 ```
 
 Restore (wenn nötig):
