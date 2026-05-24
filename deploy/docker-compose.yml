@@ -1,9 +1,34 @@
 # docker-compose.yml — lives on the VPS at /opt/ambardaellen/docker-compose.yml
 #
-# The image is pulled from GitHub Container Registry; the GitHub Actions
-# workflow pushes a new tag on every commit to main.
+# Image wird vom GitHub Actions Workflow auf GHCR gepusht. Auf dem VPS
+# brauchst du eine .env neben dieser Datei mit:
+#   AUTH_SECRET, POSTGRES_PASSWORD
+# (siehe .env.example im Repo).
+#
+# Update-Workflow auf dem VPS:
+#   docker compose pull && docker compose up -d
+# Migrationen laufen automatisch beim App-Start (scripts/entrypoint.sh).
 
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: ambardaellen-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ambardaellen}
+      POSTGRES_USER: ${POSTGRES_USER:-ambardaellen}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD muss in .env gesetzt sein}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ambardaellen} -d ${POSTGRES_DB:-ambardaellen}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - web
+    # DB wird nur intern erreichbar — kein Port-Mapping nach aussen.
+
   app:
     image: ghcr.io/daellengarnier/ambardaellen-app:latest
     container_name: ambardaellen-app
@@ -12,10 +37,14 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
+      DATABASE_URL: postgres://${POSTGRES_USER:-ambardaellen}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ambardaellen}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET muss in .env gesetzt sein}
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - web
-    # The app port is NOT exposed on the host; Caddy reverse-proxies to it
-    # via the internal Docker network.
+    # App-Port nicht nach aussen mappen; Caddy proxied intern via Docker-Netz.
 
   caddy:
     image: caddy:2-alpine
@@ -39,5 +68,6 @@ networks:
     driver: bridge
 
 volumes:
+  db-data:
   caddy_data:
   caddy_config:

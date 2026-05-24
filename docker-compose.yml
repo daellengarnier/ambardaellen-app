@@ -27,6 +27,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Migrationen laufen automatisch über scripts/entrypoint.sh.
     # Kein Port-Mapping — Caddy ist der einzige Eingang.
 
   caddy:
