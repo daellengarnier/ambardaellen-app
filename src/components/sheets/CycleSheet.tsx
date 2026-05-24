@@ -1,6 +1,7 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { useState } from "react";
+import { Lock, X, Trash2, Droplet } from "lucide-react";
 import { Sheet } from "../Sheet";
 import { Card } from "../Card";
 import { CycleRing } from "../CycleRing";
@@ -27,6 +28,7 @@ export function CycleSheet({ open, onClose }: Props) {
   const cycle = useStore((s) => s.cycle);
   const updateCycle = useStore((s) => s.updateCycle);
   const currentUser = useStore((s) => s.currentUser);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -34,6 +36,31 @@ export function CycleSheet({ open, onClose }: Props) {
   const today = todayISO();
   const todayEntry: CycleDayEntry = cycle.entries[today] || {};
   const analysis = cycleAnalysis(cycle);
+
+  const togglePeriodStart = (iso: string) => {
+    if (!canEdit) return;
+    if (cycle.periodStarts.includes(iso)) {
+      updateCycle({
+        periodStarts: cycle.periodStarts.filter((d) => d !== iso),
+      });
+    } else {
+      const existing = cycle.entries[iso] ?? {};
+      updateCycle({
+        periodStarts: [...cycle.periodStarts, iso].sort(),
+        entries: {
+          ...cycle.entries,
+          [iso]: { ...existing, flow: (existing.flow ?? 2) as FlowLevel },
+        },
+      });
+    }
+  };
+
+  const setDayFlow = (iso: string, flow: FlowLevel | undefined) => {
+    if (!canEdit) return;
+    const existing = cycle.entries[iso] ?? {};
+    const nextEntry: CycleDayEntry = { ...existing, flow };
+    updateCycle({ entries: { ...cycle.entries, [iso]: nextEntry } });
+  };
 
   // Empty-State: noch keine Periode eingetragen — sehr reduzierter Sheet
   // damit Ambar den ersten Period-Start setzen kann.
@@ -351,8 +378,33 @@ export function CycleSheet({ open, onClose }: Props) {
       )}
 
       <div className="mt-4">
-        <CycleCalendar cycle={cycle} />
+        <CycleCalendar
+          cycle={cycle}
+          selectedDay={selectedDay}
+          onTapDay={(iso) =>
+            setSelectedDay((cur) => (cur === iso ? null : iso))
+          }
+        />
+        {!canEdit && (
+          <div
+            className="mt-2 text-[11px] text-center"
+            style={{ color: "var(--muted)" }}
+          >
+            Tippe auf einen Tag, um Details zu sehen
+          </div>
+        )}
       </div>
+
+      {canEdit && selectedDay && (
+        <DayEditor
+          iso={selectedDay}
+          entry={cycle.entries[selectedDay] ?? {}}
+          isPeriodStart={cycle.periodStarts.includes(selectedDay)}
+          onTogglePeriodStart={() => togglePeriodStart(selectedDay)}
+          onSetFlow={(f) => setDayFlow(selectedDay, f)}
+          onClose={() => setSelectedDay(null)}
+        />
+      )}
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <Card className="p-2.5">
@@ -431,5 +483,115 @@ export function CycleSheet({ open, onClose }: Props) {
         Vorhersage basiert auf {cycle.periodStarts.length} aufgezeichneten Zyklen.
       </div>
     </Sheet>
+  );
+}
+
+function DayEditor({
+  iso,
+  entry,
+  isPeriodStart,
+  onTogglePeriodStart,
+  onSetFlow,
+  onClose,
+}: {
+  iso: string;
+  entry: CycleDayEntry;
+  isPeriodStart: boolean;
+  onTogglePeriodStart: () => void;
+  onSetFlow: (f: FlowLevel | undefined) => void;
+  onClose: () => void;
+}) {
+  const dateLabel = new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <div
+      className="mt-3 rounded-2xl p-3"
+      style={{ background: "rgba(228,217,191,0.5)" }}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="min-w-0">
+          <div className="uplabel text-[10px]" style={{ color: "var(--muted)" }}>
+            Tag bearbeiten
+          </div>
+          <div className="text-[15px] font-semibold leading-tight">
+            {dateLabel}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="tap p-1 -mr-1"
+          aria-label="Schliessen"
+        >
+          <X size={14} strokeWidth={1.75} color="var(--muted)" />
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={onTogglePeriodStart}
+        className="w-full py-2.5 rounded-xl text-[13.5px] font-medium tap inline-flex items-center justify-center gap-2 mb-3"
+        style={
+          isPeriodStart
+            ? { background: PHASE_COLOR_MAP.menstruation, color: "white" }
+            : {
+                background: "var(--paper)",
+                color: "var(--ink-soft)",
+                border: `1px dashed ${PHASE_COLOR_MAP.menstruation}80`,
+              }
+        }
+      >
+        {isPeriodStart ? (
+          <>
+            <Trash2 size={13} strokeWidth={2} /> Periode-Start hier entfernen
+          </>
+        ) : (
+          <>
+            <Droplet size={13} strokeWidth={2} /> Periode hat hier begonnen
+          </>
+        )}
+      </button>
+
+      <div className="text-[11px] mb-1.5" style={{ color: "var(--ink-soft)" }}>
+        Blutung an diesem Tag
+      </div>
+      <div className="flex gap-1">
+        <button
+          type="button"
+          onClick={() => onSetFlow(undefined)}
+          className="flex-1 py-1.5 rounded-xl text-[12px] font-medium tap"
+          style={
+            entry.flow === undefined
+              ? { background: "var(--ink)", color: "var(--paper)" }
+              : { background: "var(--paper)", color: "var(--ink-soft)" }
+          }
+        >
+          keine
+        </button>
+        {FLOW.map((f) => {
+          const active = entry.flow === f.v;
+          return (
+            <button
+              key={f.v}
+              type="button"
+              onClick={() => onSetFlow(f.v)}
+              className="flex-1 py-1.5 rounded-xl text-[12px] font-medium tap"
+              style={
+                active
+                  ? { background: PHASE_COLOR_MAP.menstruation, color: "white" }
+                  : { background: "var(--paper)", color: "var(--ink-soft)" }
+              }
+            >
+              {f.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
