@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Plus, X, Trash2, Users, Lock } from "lucide-react";
 import { Sheet } from "../Sheet";
 import { ScopeToggle } from "../ScopeToggle";
+import { CategoryPicker } from "../activity/CategoryPicker";
 import { useStore } from "@/lib/store";
-import { USERS, type Scope } from "@/lib/types";
+import { PACK_CATEGORIES_DEFAULT, USERS, type Scope } from "@/lib/types";
 
 type Props = {
   templateId: string | null;
@@ -23,13 +24,18 @@ export function PacklistTemplateEditor({ templateId, onClose }: Props) {
 
   const [newItem, setNewItem] = useState("");
   const [newScope, setNewScope] = useState<Scope>("geteilt");
+  const [newCategory, setNewCategory] = useState<string>("Sonstiges");
 
   const tpl = templateId ? templates.find((t) => t.id === templateId) ?? null : null;
   if (!tpl) return null;
 
+  const knownCategories = Array.from(
+    new Set([...PACK_CATEGORIES_DEFAULT, ...tpl.items.map((i) => i.category)]),
+  );
+
   const submitItem = () => {
     if (!newItem.trim()) return;
-    addItem(tpl.id, newItem, newScope);
+    addItem(tpl.id, newItem, newScope, newCategory);
     setNewItem("");
   };
 
@@ -81,16 +87,19 @@ export function PacklistTemplateEditor({ templateId, onClose }: Props) {
             >
               <input
                 value={it.text}
-                onChange={(e) =>
-                  updateItem(tpl.id, it.id, { text: e.target.value })
-                }
+                onChange={(e) => updateItem(tpl.id, it.id, { text: e.target.value })}
                 className="flex-1 bg-transparent text-[13.5px] min-w-0"
                 style={{ color: "var(--ink)" }}
               />
+              <span
+                className="text-[10px] rounded-full px-2 py-0.5"
+                style={{ background: "var(--cream-deep)", color: "var(--ink-soft)" }}
+              >
+                {it.category}
+              </span>
               <ScopeCycle
                 value={it.scope}
                 onChange={(s) => updateItem(tpl.id, it.id, { scope: s })}
-                currentUser={currentUser}
               />
               <button
                 type="button"
@@ -106,7 +115,6 @@ export function PacklistTemplateEditor({ templateId, onClose }: Props) {
         </div>
       )}
 
-      {/* Add Item */}
       <div className="flex gap-2 items-stretch">
         <div
           className="flex-1 flex items-center rounded-2xl px-3"
@@ -133,7 +141,12 @@ export function PacklistTemplateEditor({ templateId, onClose }: Props) {
           <Plus size={16} strokeWidth={2.4} />
         </button>
       </div>
-      <div className="flex gap-1.5 mt-1.5">
+      <div className="flex flex-wrap gap-1.5 mt-2 items-center">
+        <CategoryPicker
+          value={newCategory}
+          onChange={setNewCategory}
+          knownCategories={knownCategories}
+        />
         <button
           type="button"
           onClick={() => setNewScope("geteilt")}
@@ -177,15 +190,12 @@ export function PacklistTemplateEditor({ templateId, onClose }: Props) {
   );
 }
 
-/** Kleiner inline-Toggle: rotiert durch geteilt → A → D */
 function ScopeCycle({
   value,
   onChange,
-  currentUser,
 }: {
   value: Scope;
   onChange: (s: Scope) => void;
-  currentUser: "A" | "D";
 }) {
   const next = (): Scope => {
     if (value === "geteilt") return "A";
@@ -199,7 +209,6 @@ function ScopeCycle({
       : value === "A"
         ? USERS.A.color
         : USERS.D.color;
-  void currentUser;
   return (
     <button
       type="button"

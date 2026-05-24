@@ -25,13 +25,47 @@ export type PacklistItem = {
   packed: boolean;
   scope: Scope; // gemeinsam packen vs persönlich (eigene Sachen)
   by: UserId; // wer hat das Item hinzugefügt
+  category: string; // "Dokumente", "Kleidung", "Hygiene", ... oder eigen
 };
 
 export type PacklistTemplateItem = {
   id: string;
   text: string;
   scope: Scope; // Default-Scope wenn die Vorlage angewendet wird
+  category: string;
 };
+
+export type PreTripItem = {
+  id: string;
+  text: string;
+  done: boolean;
+  by: UserId;
+  scope: Scope;
+};
+
+export type TripSegmentKind = "flight" | "train" | "bus" | "car" | "ferry" | "other";
+
+export type TripSegment = {
+  id: string;
+  kind: TripSegmentKind;
+  from: string; // "Berlin BER"
+  to: string; // "Wien VIE"
+  depart: string; // ISO datetime "2024-06-07T08:30" (datetime-local)
+  arrive: string; // ISO datetime
+  ref: string; // Flugnummer, Buchungs-Nr.
+  note: string;
+};
+
+export const PACK_CATEGORIES_DEFAULT = [
+  "Dokumente",
+  "Kleidung",
+  "Schuhe",
+  "Hygiene",
+  "Elektronik",
+  "Outdoor",
+  "Snacks",
+  "Sonstiges",
+] as const;
 
 export type PacklistTemplate = {
   id: string;
@@ -55,6 +89,8 @@ export type Activity = {
   icon: ActivityIconKind;
   tags: string[];
   packlist: PacklistItem[];
+  segments: TripSegment[];
+  preTripShopping: PreTripItem[];
 };
 
 export type ShoppingItem = {

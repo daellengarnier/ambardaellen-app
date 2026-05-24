@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Clock,
@@ -21,7 +22,6 @@ import { Segmented } from "@/components/Segmented";
 import { Empty } from "@/components/Empty";
 import { TagChips } from "@/components/TagChips";
 import { ClientOnly } from "@/components/ClientOnly";
-import { ActivitySheet } from "@/components/sheets/ActivitySheet";
 import { ActivityAddSheet } from "@/components/sheets/ActivityAddSheet";
 import type { Activity, ActivityStatus } from "@/lib/types";
 
@@ -69,17 +69,17 @@ function activityBucket(a: Activity, today: string): Bucket {
 }
 
 function AktContent() {
+  const router = useRouter();
   const activities = useStore((s) => s.activities);
   const currentUser = useStore((s) => s.currentUser);
   const addActivity = useStore((s) => s.addActivity);
-  const updateActivity = useStore((s) => s.updateActivity);
-  const removeActivity = useStore((s) => s.removeActivity);
 
   const [filter, setFilter] = useState<ActivityStatus>("geplant");
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("alle");
   const [tagFilter, setTagFilter] = useState<TagFilter>(null);
-  const [openAct, setOpenAct] = useState<Activity | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+
+  const openActivity = (a: Activity) => router.push(`/aktivitaeten/${a.id}`);
 
   const today = todayISO();
 
@@ -251,7 +251,7 @@ function AktContent() {
               {sec.items.map((a) => (
                 <Card
                   key={a.id}
-                  onClick={() => setOpenAct(a)}
+                  onClick={() => openActivity(a)}
                   className="p-3 flex items-center gap-3"
                 >
                   <ActivityIcon kind={a.icon} size={36} />
@@ -295,17 +295,6 @@ function AktContent() {
           </div>
         ))}
       </div>
-
-      <ActivitySheet
-        activity={openAct}
-        onClose={() => setOpenAct(null)}
-        onChange={(id, patch) => {
-          updateActivity(id, patch);
-          if (openAct && openAct.id === id) setOpenAct({ ...openAct, ...patch });
-        }}
-        onDelete={removeActivity}
-        currentUser={currentUser}
-      />
 
       <ActivityAddSheet
         open={addOpen}

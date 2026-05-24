@@ -9,8 +9,10 @@ import type {
   PacklistItem,
   PacklistTemplate,
   PacklistTemplateItem,
+  Scope,
   ShoppingItem,
   Todo,
+  TripSegment,
   UserId,
 } from "./types";
 import {
@@ -60,17 +62,29 @@ type State = {
   removeActivity: (id: string) => void;
 
   // packlist (per activity)
-  addPacklistItem: (activityId: string, text: string, scope: PacklistItem["scope"]) => void;
+  addPacklistItem: (activityId: string, text: string, scope: Scope, category: string) => void;
+  updatePacklistItem: (activityId: string, itemId: string, patch: Partial<PacklistItem>) => void;
   togglePacklistItem: (activityId: string, itemId: string) => void;
   removePacklistItem: (activityId: string, itemId: string) => void;
   resetPacklist: (activityId: string) => void;
   applyPacklistTemplate: (activityId: string, templateId: string) => void;
 
+  // trip segments (per activity)
+  addSegment: (activityId: string, seg: Omit<TripSegment, "id">) => void;
+  updateSegment: (activityId: string, segmentId: string, patch: Partial<TripSegment>) => void;
+  removeSegment: (activityId: string, segmentId: string) => void;
+
+  // pre-trip shopping (per activity)
+  addPreTripItem: (activityId: string, text: string, scope: Scope) => void;
+  togglePreTripItem: (activityId: string, itemId: string) => void;
+  removePreTripItem: (activityId: string, itemId: string) => void;
+  pushPreTripToShopping: (activityId: string, itemId: string) => void;
+
   // packlist templates
   addPacklistTemplate: (name: string) => string;
   updatePacklistTemplate: (id: string, patch: Partial<PacklistTemplate>) => void;
   removePacklistTemplate: (id: string) => void;
-  addTemplateItem: (templateId: string, text: string, scope: PacklistTemplateItem["scope"]) => void;
+  addTemplateItem: (templateId: string, text: string, scope: Scope, category: string) => void;
   updateTemplateItem: (templateId: string, itemId: string, patch: Partial<PacklistTemplateItem>) => void;
   removeTemplateItem: (templateId: string, itemId: string) => void;
 
@@ -189,7 +203,7 @@ export const useStore = create<State>()(
       setCycle: (cycle) => set({ cycle }),
       updateCycle: (patch) => set((s) => ({ cycle: { ...s.cycle, ...patch } })),
 
-      addPacklistItem: (activityId, text, scope) => {
+      addPacklistItem: (activityId, text, scope, category) => {
         const t = text.trim();
         if (!t) return;
         const by = get().currentUser;
@@ -200,13 +214,26 @@ export const useStore = create<State>()(
                   ...a,
                   packlist: [
                     ...a.packlist,
-                    { id: uid("pk"), text: t, packed: false, scope, by },
+                    { id: uid("pk"), text: t, packed: false, scope, by, category: category || "Sonstiges" },
                   ],
                 }
               : a,
           ),
         }));
       },
+      updatePacklistItem: (activityId, itemId, patch) =>
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? {
+                  ...a,
+                  packlist: a.packlist.map((p) =>
+                    p.id === itemId ? { ...p, ...patch } : p,
+                  ),
+                }
+              : a,
+          ),
+        })),
       togglePacklistItem: (activityId, itemId) =>
         set((s) => ({
           activities: s.activities.map((a) =>
@@ -253,11 +280,104 @@ export const useStore = create<State>()(
                       packed: false,
                       scope: it.scope,
                       by,
+                      category: it.category || "Sonstiges",
                     })),
                   ],
                 }
               : a,
           ),
+        }));
+      },
+
+      addSegment: (activityId, seg) =>
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? { ...a, segments: [...a.segments, { ...seg, id: uid("sg") }] }
+              : a,
+          ),
+        })),
+      updateSegment: (activityId, segmentId, patch) =>
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? {
+                  ...a,
+                  segments: a.segments.map((g) =>
+                    g.id === segmentId ? { ...g, ...patch } : g,
+                  ),
+                }
+              : a,
+          ),
+        })),
+      removeSegment: (activityId, segmentId) =>
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? { ...a, segments: a.segments.filter((g) => g.id !== segmentId) }
+              : a,
+          ),
+        })),
+
+      addPreTripItem: (activityId, text, scope) => {
+        const t = text.trim();
+        if (!t) return;
+        const by = get().currentUser;
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? {
+                  ...a,
+                  preTripShopping: [
+                    ...a.preTripShopping,
+                    { id: uid("pt"), text: t, done: false, scope, by },
+                  ],
+                }
+              : a,
+          ),
+        }));
+      },
+      togglePreTripItem: (activityId, itemId) =>
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? {
+                  ...a,
+                  preTripShopping: a.preTripShopping.map((p) =>
+                    p.id === itemId ? { ...p, done: !p.done } : p,
+                  ),
+                }
+              : a,
+          ),
+        })),
+      removePreTripItem: (activityId, itemId) =>
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? { ...a, preTripShopping: a.preTripShopping.filter((p) => p.id !== itemId) }
+              : a,
+          ),
+        })),
+      pushPreTripToShopping: (activityId, itemId) => {
+        const activity = get().activities.find((a) => a.id === activityId);
+        const item = activity?.preTripShopping.find((p) => p.id === itemId);
+        if (!item || !activity) return;
+        const by = get().currentUser;
+        set((s) => ({
+          shopping: [
+            {
+              id: uid("s"),
+              text: `${item.text} (für ${activity.title})`,
+              done: false,
+              by,
+              scope: item.scope,
+              spinnerei: false,
+              qty: "",
+              category: "sonstiges",
+              addedAt: Date.now(),
+            },
+            ...s.shopping,
+          ],
         }));
       },
 
@@ -282,13 +402,19 @@ export const useStore = create<State>()(
         })),
       removePacklistTemplate: (id) =>
         set((s) => ({ packlistTemplates: s.packlistTemplates.filter((t) => t.id !== id) })),
-      addTemplateItem: (templateId, text, scope) => {
+      addTemplateItem: (templateId, text, scope, category) => {
         const t = text.trim();
         if (!t) return;
         set((s) => ({
           packlistTemplates: s.packlistTemplates.map((tpl) =>
             tpl.id === templateId
-              ? { ...tpl, items: [...tpl.items, { id: uid("ti"), text: t, scope }] }
+              ? {
+                  ...tpl,
+                  items: [
+                    ...tpl.items,
+                    { id: uid("ti"), text: t, scope, category: category || "Sonstiges" },
+                  ],
+                }
               : tpl,
           ),
         }));
@@ -365,7 +491,7 @@ export const useStore = create<State>()(
     }),
     {
       name: "ambardaellen-store",
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => localStorage),
       // sheetOpen ist transient — nicht in localStorage speichern
       partialize: (state) => {
@@ -375,7 +501,7 @@ export const useStore = create<State>()(
       },
       migrate: (persisted: unknown, version: number) => {
         // Bei Schema-Bumps Seeds neu laden (lokale Daten weg, aber besser als Crash).
-        if (!persisted || version < 3) {
+        if (!persisted || version < 4) {
           return {
             currentUser: "D" as UserId,
             activities: SEED_ACTIVITIES,

@@ -149,6 +149,8 @@ function ActivityAddForm({
             icon,
             tags,
             packlist: [],
+            segments: [],
+            preTripShopping: [],
           });
           onClose();
         }}

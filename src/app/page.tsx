@@ -26,7 +26,7 @@ import { TagChips } from "@/components/TagChips";
 import { ClientOnly } from "@/components/ClientOnly";
 import { QuickAddMenu } from "@/components/QuickAddMenu";
 import { Sheet } from "@/components/Sheet";
-import { ActivitySheet } from "@/components/sheets/ActivitySheet";
+import { useRouter } from "next/navigation";
 import { ShoppingSheet } from "@/components/sheets/ShoppingSheet";
 import { TodoSheet } from "@/components/sheets/TodoSheet";
 import { GoalSheet } from "@/components/sheets/GoalSheet";
@@ -65,8 +65,6 @@ function HeuteContent() {
   const removeTodo = useStore((s) => s.removeTodo);
   const addTodo = useStore((s) => s.addTodo);
 
-  const updateActivity = useStore((s) => s.updateActivity);
-  const removeActivity = useStore((s) => s.removeActivity);
   const addActivity = useStore((s) => s.addActivity);
 
   const updateGoal = useStore((s) => s.updateGoal);
@@ -76,7 +74,8 @@ function HeuteContent() {
   const toggleGoalStep = useStore((s) => s.toggleGoalStep);
   const removeGoalStep = useStore((s) => s.removeGoalStep);
 
-  const [openAct, setOpenAct] = useState<Activity | null>(null);
+  const router = useRouter();
+  const openAct = (a: Activity) => router.push(`/aktivitaeten/${a.id}`);
   const [openShop, setOpenShop] = useState<ShoppingItem | null>(null);
   const [openTodo, setOpenTodo] = useState<Todo | null>(null);
   const [openGoal, setOpenGoal] = useState<Goal | null>(null);
@@ -215,7 +214,7 @@ function HeuteContent() {
         ) : (
           <div className="space-y-2">
             {todayActs.map((a) => (
-              <Card key={a.id} onClick={() => setOpenAct(a)} className="p-3 flex items-center gap-3">
+              <Card key={a.id} onClick={() => openAct(a)} className="p-3 flex items-center gap-3">
                 <div
                   className="shrink-0 flex flex-col items-center justify-center rounded-xl"
                   style={{ width: 44, height: 44, background: "var(--cream-deep)" }}
@@ -312,7 +311,7 @@ function HeuteContent() {
         <section className="px-4 mb-3">
           <SectionTitle label="Demnächst auf Reise" />
           <Card
-            onClick={() => setOpenAct(upcomingTrip)}
+            onClick={() => openAct(upcomingTrip)}
             className="p-3 flex items-center gap-3"
           >
             <div
@@ -340,7 +339,7 @@ function HeuteContent() {
           <SectionTitle label="Demnächst" actionHref="/aktivitaeten" actionLabel="Alle" />
           <div className="space-y-1.5">
             {upcomingActs.map((a) => (
-              <UpcomingActivityCard key={a.id} activity={a} onClick={() => setOpenAct(a)} />
+              <UpcomingActivityCard key={a.id} activity={a} onClick={() => openAct(a)} />
             ))}
           </div>
         </section>
@@ -405,16 +404,6 @@ function HeuteContent() {
       )}
 
       {/* Detail-Sheets */}
-      <ActivitySheet
-        activity={openAct}
-        onClose={() => setOpenAct(null)}
-        onChange={(id, patch) => {
-          updateActivity(id, patch);
-          if (openAct && openAct.id === id) setOpenAct({ ...openAct, ...patch });
-        }}
-        onDelete={removeActivity}
-        currentUser={currentUser}
-      />
       <ShoppingSheet
         item={openShop}
         onClose={() => setOpenShop(null)}
