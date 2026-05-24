@@ -19,7 +19,6 @@ import { Card } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 import { ActivityIcon } from "@/components/ActivityIcon";
 import { ScopeToggle } from "@/components/ScopeToggle";
-import { TagInput } from "@/components/TagInput";
 import { DetailRow } from "@/components/DetailRow";
 import { ClientOnly } from "@/components/ClientOnly";
 import { SegmentCard } from "@/components/activity/SegmentCard";
@@ -44,7 +43,6 @@ function Detail({ id }: { id: string }) {
   const updateActivity = useStore((s) => s.updateActivity);
   const removeActivity = useStore((s) => s.removeActivity);
   const currentUser = useStore((s) => s.currentUser);
-  const activities = useStore((s) => s.activities);
 
   const [segmentEditor, setSegmentEditor] = useState<
     { mode: "new" } | { mode: "edit"; segmentId: string } | null
@@ -69,9 +67,6 @@ function Detail({ id }: { id: string }) {
   }
 
   const a = activity;
-  const knownTags = Array.from(new Set(activities.flatMap((x) => x.tags ?? []))).filter(
-    (t) => !(a.tags ?? []).includes(t),
-  );
 
   const sortedSegments = [...a.segments].sort((x, y) => (x.depart || "").localeCompare(y.depart || ""));
 
@@ -174,18 +169,6 @@ function Detail({ id }: { id: string }) {
           value={a.time}
           onChange={(v) => updateActivity(a.id, { time: v })}
           type="time"
-        />
-      </div>
-
-      {/* Tags */}
-      <div className="px-4 mb-3">
-        <div className="uplabel text-[10.5px] mb-1.5" style={{ color: "var(--muted)" }}>
-          Bereiche / Tags
-        </div>
-        <TagInput
-          value={a.tags ?? []}
-          onChange={(next) => updateActivity(a.id, { tags: next })}
-          knownTags={knownTags}
         />
       </div>
 

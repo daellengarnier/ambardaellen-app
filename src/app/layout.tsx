@@ -22,7 +22,10 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "Ambar & Dällen",
-    statusBarStyle: "default",
+    // black-translucent: iOS legt die Status-Bar transparent über die
+    // App, der Atmosphere-Hintergrund läuft bis ganz an den oberen Rand.
+    // Der Status-Bar-Text bleibt schwarz und ist auf Cream gut lesbar.
+    statusBarStyle: "black-translucent",
   },
 };
 

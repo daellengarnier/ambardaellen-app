@@ -36,10 +36,10 @@ export function BottomTabs() {
           border: "1px solid rgba(218,201,168,0.5)",
           borderBottom: "none",
           paddingTop: "0.125rem",
-          // Nur die halbe Safe-Area-Höhe als Bottom-Padding — die Pille
-          // läuft so optisch näher an den Rand, der iOS-Home-Indikator
-          // bleibt aber lesbar oberhalb der Tap-Targets.
-          paddingBottom: "calc(env(safe-area-inset-bottom) * 0.55)",
+          // Sehr knapp am Rand — Inhalt sitzt fast direkt über dem
+          // iOS-Home-Indikator. 0.35 × Safe-Area reicht für die
+          // Lesbarkeit des Indikators ohne die Pille hoch zu schieben.
+          paddingBottom: "calc(env(safe-area-inset-bottom) * 0.35)",
         }}
       >
         {TABS.map(({ href, label, Icon }) => {
