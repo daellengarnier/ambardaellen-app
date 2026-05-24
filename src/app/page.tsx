@@ -26,6 +26,7 @@ import { CycleHeroCard } from "@/components/CycleHeroCard";
 import { TagChips } from "@/components/TagChips";
 import { ClientOnly } from "@/components/ClientOnly";
 import { QuickAddMenu } from "@/components/QuickAddMenu";
+import { HamburgerMenu } from "@/components/HamburgerMenu";
 import { Sheet } from "@/components/Sheet";
 import { useRouter } from "next/navigation";
 import { ShoppingSheet } from "@/components/sheets/ShoppingSheet";
@@ -162,7 +163,7 @@ function HeuteContent() {
           </h1>
         </div>
         <div className="shrink-0 pt-1 flex items-center gap-2">
-          <HeaderSwitcher />
+          <HamburgerMenu />
           <QuickAddMenu
             onPick={(key) => {
               if (key === "activity") setAddActOpen(true);
@@ -478,43 +479,6 @@ function HeuteContent() {
         currentUser={currentUser}
       />
     </>
-  );
-}
-
-function HeaderSwitcher() {
-  const currentUser = useStore((s) => s.currentUser);
-  const setCurrentUser = useStore((s) => s.setCurrentUser);
-  return (
-    <div
-      className="inline-flex items-center p-0.5 rounded-full shadow-card"
-      style={{ background: "var(--paper)" }}
-    >
-      {(["A", "D"] as const).map((id) => {
-        const u = USERS[id];
-        const active = currentUser === id;
-        return (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setCurrentUser(id)}
-            className="tap inline-flex items-center justify-center rounded-full font-semibold text-white"
-            style={{
-              width: 32,
-              height: 32,
-              fontSize: 14,
-              background: u.color,
-              opacity: active ? 1 : 0.4,
-              transform: active ? "scale(1)" : "scale(0.86)",
-              transition: "opacity 200ms, transform 200ms",
-            }}
-            aria-label={`Wechseln zu ${u.name}`}
-            aria-pressed={active}
-          >
-            {id}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

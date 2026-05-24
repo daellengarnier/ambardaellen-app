@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif } from "next/font/google";
-import { PhoneShell } from "@/components/PhoneShell";
+import { AuthGate } from "@/components/AuthGate";
 import "./globals.css";
 
 const instrumentSerif = Instrument_Serif({
@@ -41,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="de" className={`${instrumentSerif.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <PhoneShell>{children}</PhoneShell>
+        <AuthGate>{children}</AuthGate>
       </body>
     </html>
   );

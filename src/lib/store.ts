@@ -23,6 +23,15 @@ import {
   SEED_SHOPPING,
   SEED_TODOS,
 } from "./seed";
+import {
+  hashPassword,
+  isAllowedEmail,
+  newSalt,
+  normalizeEmail,
+  userIdForEmail,
+  verifyPassword,
+  type Account,
+} from "./auth";
 
 function uid(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -36,6 +45,11 @@ type State = {
   goals: Goal[];
   cycle: Cycle;
   packlistTemplates: PacklistTemplate[];
+
+  // Auth
+  accounts: Account[];
+  loggedInEmail: string | null;
+
   /** Transient: Anzahl offener Sheets (für BottomTabs-Hide). Nicht persistiert. */
   sheetOpen: number;
 
@@ -43,6 +57,13 @@ type State = {
   decSheetOpen: () => void;
 
   setCurrentUser: (id: UserId) => void;
+
+  // Auth-Aktionen — alle als Promise damit hashing async geht.
+  register: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  login: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  logout: () => void;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  removeAccount: (email: string) => void;
 
   // shopping
   addShopping: (input: Pick<ShoppingItem, "text" | "scope" | "spinnerei">) => void;
@@ -111,12 +132,88 @@ export const useStore = create<State>()(
       goals: SEED_GOALS,
       cycle: SEED_CYCLE,
       packlistTemplates: SEED_PACKLIST_TEMPLATES,
+      accounts: [],
+      loggedInEmail: null,
       sheetOpen: 0,
 
       incSheetOpen: () => set((s) => ({ sheetOpen: s.sheetOpen + 1 })),
       decSheetOpen: () => set((s) => ({ sheetOpen: Math.max(0, s.sheetOpen - 1) })),
 
       setCurrentUser: (id) => set({ currentUser: id }),
+
+      register: async (emailRaw, password) => {
+        const email = normalizeEmail(emailRaw);
+        if (!isAllowedEmail(email)) {
+          return { ok: false, error: "Diese E-Mail ist nicht zugelassen." };
+        }
+        if (!password || password.length < 6) {
+          return { ok: false, error: "Passwort muss mindestens 6 Zeichen lang sein." };
+        }
+        const existing = get().accounts.find((a) => a.email === email);
+        if (existing) {
+          return { ok: false, error: "Account existiert bereits — bitte anmelden." };
+        }
+        const salt = newSalt();
+        const hash = await hashPassword(password, salt);
+        const userId = userIdForEmail(email)!;
+        const account: Account = {
+          email,
+          userId,
+          passwordSalt: salt,
+          passwordHash: hash,
+          createdAt: Date.now(),
+        };
+        set((s) => ({
+          accounts: [...s.accounts, account],
+          loggedInEmail: email,
+          currentUser: userId,
+        }));
+        return { ok: true };
+      },
+
+      login: async (emailRaw, password) => {
+        const email = normalizeEmail(emailRaw);
+        const account = get().accounts.find((a) => a.email === email);
+        if (!account) {
+          return { ok: false, error: "Account nicht gefunden." };
+        }
+        const ok = await verifyPassword(password, account.passwordSalt, account.passwordHash);
+        if (!ok) {
+          return { ok: false, error: "Falsches Passwort." };
+        }
+        set({ loggedInEmail: email, currentUser: account.userId });
+        return { ok: true };
+      },
+
+      logout: () => set({ loggedInEmail: null }),
+
+      changePassword: async (oldPassword, newPassword) => {
+        const email = get().loggedInEmail;
+        if (!email) return { ok: false, error: "Nicht angemeldet." };
+        const account = get().accounts.find((a) => a.email === email);
+        if (!account) return { ok: false, error: "Account nicht gefunden." };
+        const ok = await verifyPassword(oldPassword, account.passwordSalt, account.passwordHash);
+        if (!ok) return { ok: false, error: "Aktuelles Passwort stimmt nicht." };
+        if (!newPassword || newPassword.length < 6) {
+          return { ok: false, error: "Neues Passwort muss mindestens 6 Zeichen lang sein." };
+        }
+        const salt = newSalt();
+        const hash = await hashPassword(newPassword, salt);
+        set((s) => ({
+          accounts: s.accounts.map((a) =>
+            a.email === email ? { ...a, passwordSalt: salt, passwordHash: hash } : a,
+          ),
+        }));
+        return { ok: true };
+      },
+
+      removeAccount: (email) => {
+        const e = normalizeEmail(email);
+        set((s) => ({
+          accounts: s.accounts.filter((a) => a.email !== e),
+          loggedInEmail: s.loggedInEmail === e ? null : s.loggedInEmail,
+        }));
+      },
 
       addShopping: ({ text, scope, spinnerei }) => {
         const t = text.trim();
@@ -491,7 +588,7 @@ export const useStore = create<State>()(
     }),
     {
       name: "ambardaellen-store",
-      version: 4,
+      version: 5,
       storage: createJSONStorage(() => localStorage),
       // sheetOpen ist transient — nicht in localStorage speichern
       partialize: (state) => {
@@ -500,8 +597,9 @@ export const useStore = create<State>()(
         return rest;
       },
       migrate: (persisted: unknown, version: number) => {
-        // Bei Schema-Bumps Seeds neu laden (lokale Daten weg, aber besser als Crash).
-        if (!persisted || version < 4) {
+        if (!persisted || version < 5) {
+          // Schema-Bump → Daten resetten, Accounts aber soweit möglich erhalten.
+          const prev = (persisted as Partial<State> | null) ?? null;
           return {
             currentUser: "D" as UserId,
             activities: SEED_ACTIVITIES,
@@ -510,6 +608,8 @@ export const useStore = create<State>()(
             goals: SEED_GOALS,
             cycle: SEED_CYCLE,
             packlistTemplates: SEED_PACKLIST_TEMPLATES,
+            accounts: prev?.accounts ?? [],
+            loggedInEmail: prev?.loggedInEmail ?? null,
           };
         }
         return persisted as State;

@@ -1,12 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { UserSwitchPair } from "./Avatar";
+import { HamburgerMenu } from "./HamburgerMenu";
 
 type Props = {
   title: string;
   subtitle?: string;
-  /** Zusätzliche Action (z. B. + Button) rechts neben dem User-Switcher. */
+  /** Zusätzliche Action (z. B. + Button) links neben dem Hamburger-Menü. */
   right?: ReactNode;
 };
 
@@ -24,8 +24,8 @@ export function ScreenHeader({ title, subtitle, right }: Props) {
         </h1>
       </div>
       <div className="shrink-0 pt-1 flex items-center gap-2">
-        <UserSwitchPair size={26} />
         {right}
+        <HamburgerMenu />
       </div>
     </header>
   );
