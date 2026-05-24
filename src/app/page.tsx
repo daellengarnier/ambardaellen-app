@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   Clock,
@@ -13,20 +13,18 @@ import {
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { visibleTo, isPrivate } from "@/lib/scope";
-import { USERS } from "@/lib/types";
+import { USERS, type ShoppingItem } from "@/lib/types";
 import { todayISO, greetingFor, shortDate } from "@/lib/date";
 import { BUCKET_LABEL, PRIO, dueBucket } from "@/lib/todo";
 import { Card } from "@/components/Card";
-import { ScreenHeader } from "@/components/ScreenHeader";
 import { AvatarWithScope } from "@/components/Avatar";
 import { ActivityIcon } from "@/components/ActivityIcon";
 import { GoalProgress } from "@/components/GoalProgress";
 import { RoundCheck } from "@/components/RoundCheck";
-import { CycleTile } from "@/components/CycleTile";
-import { CycleStrip } from "@/components/CycleStrip";
+import { CycleHeroCard } from "@/components/CycleHeroCard";
 import { TagChips } from "@/components/TagChips";
 import { ClientOnly } from "@/components/ClientOnly";
-import { QuickAddFAB } from "@/components/QuickAddFAB";
+import { QuickAddMenu } from "@/components/QuickAddMenu";
 import { Sheet } from "@/components/Sheet";
 import { ActivitySheet } from "@/components/sheets/ActivitySheet";
 import { ShoppingSheet } from "@/components/sheets/ShoppingSheet";
@@ -36,7 +34,7 @@ import { CycleSheet } from "@/components/sheets/CycleSheet";
 import { ActivityAddSheet } from "@/components/sheets/ActivityAddSheet";
 import { TodoAddSheet } from "@/components/sheets/TodoAddSheet";
 import { GoalAddSheet } from "@/components/sheets/GoalAddSheet";
-import type { Activity, Goal, ShoppingItem, Todo } from "@/lib/types";
+import type { Activity, Goal, Todo } from "@/lib/types";
 
 export default function HeutePage() {
   return (
@@ -47,16 +45,11 @@ export default function HeutePage() {
 }
 
 function HeuteSkeleton() {
-  return (
-    <div className="px-4 pt-4">
-      <ScreenHeader title="…" subtitle="Lädt" />
-    </div>
-  );
+  return <div className="px-4 pt-4 h-screen" />;
 }
 
 function HeuteContent() {
   const currentUser = useStore((s) => s.currentUser);
-  const cycleOwner = useStore((s) => s.cycle.owner);
   const activities = useStore((s) => s.activities);
   const shopping = useStore((s) => s.shopping);
   const todos = useStore((s) => s.todos);
@@ -92,55 +85,55 @@ function HeuteContent() {
   const [addActOpen, setAddActOpen] = useState(false);
   const [addTodoOpen, setAddTodoOpen] = useState(false);
   const [addGoalOpen, setAddGoalOpen] = useState(false);
-  const [quickShopOpen, setQuickShopOpen] = useState(false);
+  const [quickShopOpen, setQuickShopOpen] = useState<null | { spinnerei: boolean }>(null);
 
   const today = todayISO();
-  const greeting = greetingFor();
+  const userName = USERS[currentUser].name;
+  const greeting = greetingFor(new Date(), userName);
   const dateLine = new Date().toLocaleDateString("de-DE", {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
 
-  const myActivities = useMemo(() => visibleTo(activities, currentUser), [activities, currentUser]);
-  const myShopping = useMemo(() => visibleTo(shopping, currentUser), [shopping, currentUser]);
-  const myTodos = useMemo(() => visibleTo(todos, currentUser), [todos, currentUser]);
-  const myGoals = useMemo(() => visibleTo(goals, currentUser), [goals, currentUser]);
+  const myActivities = visibleTo(activities, currentUser);
+  const myShopping = visibleTo(shopping, currentUser);
+  const myTodos = visibleTo(todos, currentUser);
+  const myGoals = visibleTo(goals, currentUser);
 
-  // Heute = alles was heute Zeit beansprucht: heutige Termine + überfällige/heutige Todos
+  // Einkauf-Listen (offen)
+  const privatItems = myShopping.filter((s) => !s.done && !s.spinnerei);
+  const spinnereiItems = myShopping.filter((s) => !s.done && s.spinnerei);
+
+  // Heute = heutige Termine + überfällige/heutige Todos
   const todayActs = myActivities
     .filter((a) => a.date === today && a.status !== "erledigt")
     .sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
 
   const overdueAndTodayTodos = myTodos
-    .filter((t) => !t.done)
-    .filter((t) => t.due && t.due <= today)
+    .filter((t) => !t.done && t.due && t.due <= today)
     .sort((a, b) => {
-      // Überfällige zuerst, dann nach Prio
       const da = a.due ? a.due.localeCompare(today) : 0;
       const db = b.due ? b.due.localeCompare(today) : 0;
       if (da !== db) return da - db;
       return PRIO[a.prio].rank - PRIO[b.prio].rank;
     });
 
-  // Demnächst: die nächsten 3 geplanten Aktivitäten nach heute
+  // Demnächst: 3 nächste Aktivitäten
   const upcomingActs = myActivities
     .filter((a) => a.status === "geplant" && a.date && a.date > today)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 3);
 
-  // Bald-Reise mit Packliste (nächste 14 Tage, hat packlist > 0)
+  // Bald-Reise mit Packliste
   const upcomingTrip = myActivities
     .filter(
       (a) =>
-        a.packlist.length > 0 &&
-        a.status === "geplant" &&
-        a.date &&
-        a.date >= today,
+        a.packlist.length > 0 && a.status === "geplant" && a.date && a.date >= today,
     )
     .sort((a, b) => a.date.localeCompare(b.date))[0];
 
-  // Andere Aufgaben (nicht heute/überfällig): nächste 7 Tage, top 3
+  // Diese Woche Todos (nicht heute/überfällig)
   const soonTodos = myTodos
     .filter((t) => !t.done && t.due && t.due > today && dueBucket(t.due) !== "spaeter")
     .sort((a, b) => {
@@ -150,48 +143,65 @@ function HeuteContent() {
     })
     .slice(0, 3);
 
-  // Einkauf-Vorschau
-  const openShopItems = myShopping.filter((s) => !s.done && !s.spinnerei);
-  const shopPreview = openShopItems.slice(0, 4);
-
-  // Im Blick Ziel
+  // Top Goal
   const topGoal = myGoals.find((g) => g.scope === "geteilt") ?? myGoals[0];
 
-  const isCycleOwner = currentUser === cycleOwner;
-
-  // Sync open goal aus Store
   const currentOpenGoal = openGoal ? goals.find((g) => g.id === openGoal.id) ?? null : null;
-
-  // Nothing happening heute?
   const heuteEmpty = todayActs.length === 0 && overdueAndTodayTodos.length === 0;
 
   return (
     <>
-      {/* Header */}
+      {/* Header: Greeting + User-Switch */}
       <div className="px-4 pt-1 pb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="uplabel text-[10px]" style={{ color: "var(--muted)" }}>
             {dateLine}
           </div>
-          <h1 className="text-[30px] font-semibold leading-tight tracking-tight mt-1">
+          <h1 className="text-[30px] font-semibold leading-tight tracking-tight mt-1 truncate">
             {greeting}
           </h1>
         </div>
-        <div className="shrink-0 pt-1">
+        <div className="shrink-0 pt-1 flex items-center gap-2">
           <HeaderSwitcher />
+          <QuickAddMenu
+            onPick={(key) => {
+              if (key === "activity") setAddActOpen(true);
+              if (key === "todo") setAddTodoOpen(true);
+              if (key === "shopping") setQuickShopOpen({ spinnerei: false });
+              if (key === "goal") setAddGoalOpen(true);
+            }}
+          />
         </div>
       </div>
 
-      {/* Zyklus — asymmetrisch: voll für Ambar, Strip für Dällen */}
+      {/* Zyklus — Hero Ring (für beide User) */}
       <div className="px-4 mb-3">
-        {isCycleOwner ? (
-          <CycleTile onClick={() => setCycleOpen(true)} />
-        ) : (
-          <CycleStrip onClick={() => setCycleOpen(true)} />
-        )}
+        <CycleHeroCard onClick={() => setCycleOpen(true)} />
       </div>
 
-      {/* HEUTE — das einzige was wirklich heute zählt */}
+      {/* Einkauf-Kacheln: Privat | Spinnerei */}
+      <div className="px-4 mb-3 grid grid-cols-2 gap-2 items-stretch">
+        <ShoppingTile
+          label="Privat"
+          accent="var(--sage)"
+          icon={<CartIcon size={11} strokeWidth={1.75} />}
+          items={privatItems}
+          onAdd={(text) => addShopping({ text, scope: "geteilt", spinnerei: false })}
+          onOpenItem={setOpenShop}
+          onQuickAdd={() => setQuickShopOpen({ spinnerei: false })}
+        />
+        <ShoppingTile
+          label="Spinnerei"
+          accent="var(--terra)"
+          icon={<span style={{ color: "var(--terra)", fontSize: 11 }}>✦</span>}
+          items={spinnereiItems}
+          onAdd={(text) => addShopping({ text, scope: "geteilt", spinnerei: true })}
+          onOpenItem={setOpenShop}
+          onQuickAdd={() => setQuickShopOpen({ spinnerei: true })}
+        />
+      </div>
+
+      {/* HEUTE — heutige Termine + überfällige/heutige Todos */}
       <section className="px-4 mb-4">
         <SectionTitle label="Heute" />
         {heuteEmpty ? (
@@ -208,9 +218,7 @@ function HeuteContent() {
                   className="shrink-0 flex flex-col items-center justify-center rounded-xl"
                   style={{ width: 44, height: 44, background: "var(--cream-deep)" }}
                 >
-                  <span className="serif text-[14px] leading-none">
-                    {a.time || "—"}
-                  </span>
+                  <span className="serif text-[14px] leading-none">{a.time || "—"}</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[14.5px] font-medium truncate flex items-center gap-1.5">
@@ -277,14 +285,10 @@ function HeuteContent() {
                         >
                           <span
                             style={
-                              overdue
-                                ? { color: "#C5634B", fontWeight: 500 }
-                                : undefined
+                              overdue ? { color: "#C5634B", fontWeight: 500 } : undefined
                             }
                           >
-                            {overdue
-                              ? `überfällig · ${shortDate(t.due)}`
-                              : "heute"}
+                            {overdue ? `überfällig · ${shortDate(t.due)}` : "heute"}
                           </span>
                           {(t.tags ?? []).length > 0 && (
                             <TagChips tags={t.tags} size="xs" max={2} />
@@ -301,7 +305,7 @@ function HeuteContent() {
         )}
       </section>
 
-      {/* Bald-Reise mit Packliste (innovativ — wird nur gezeigt wenn relevant) */}
+      {/* Demnächst auf Reise (Packliste) */}
       {upcomingTrip && (
         <section className="px-4 mb-3">
           <SectionTitle label="Demnächst auf Reise" />
@@ -328,7 +332,7 @@ function HeuteContent() {
         </section>
       )}
 
-      {/* Demnächst — kommende Termine */}
+      {/* Demnächst */}
       {upcomingActs.length > 0 && (
         <section className="px-4 mb-3">
           <SectionTitle label="Demnächst" actionHref="/aktivitaeten" actionLabel="Alle" />
@@ -340,7 +344,7 @@ function HeuteContent() {
         </section>
       )}
 
-      {/* Aufgaben dieser Woche (kompakt) */}
+      {/* Diese Woche */}
       {soonTodos.length > 0 && (
         <section className="px-4 mb-3">
           <SectionTitle label="Diese Woche" actionHref="/todo" actionLabel="Alle" />
@@ -384,85 +388,21 @@ function HeuteContent() {
         </section>
       )}
 
-      {/* Glance row: Einkauf + Im Blick */}
-      <section className="px-4 mb-3 grid grid-cols-2 gap-2 items-stretch">
-        <Link href="/einkauf" className="block">
-          <Card className="p-3 h-full flex flex-col">
-            <div
-              className="uplabel text-[10px] flex items-center gap-1.5"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              <CartIcon size={11} strokeWidth={1.75} /> Einkauf
-              <span style={{ color: "var(--muted)" }}>· {openShopItems.length}</span>
-            </div>
-            <div className="flex-1 mt-2 min-h-[60px]">
-              {shopPreview.length === 0 ? (
-                <div className="text-[12px] italic" style={{ color: "var(--ink-soft)" }}>
-                  leer ✓
-                </div>
-              ) : (
-                <ul className="space-y-1">
-                  {shopPreview.slice(0, 3).map((s) => (
-                    <li
-                      key={s.id}
-                      className="text-[12px] truncate flex items-center gap-1"
-                    >
-                      <span
-                        className="inline-block w-1 h-1 rounded-full"
-                        style={{ background: "var(--sage)" }}
-                      />
-                      {s.text}
-                    </li>
-                  ))}
-                  {openShopItems.length > 3 && (
-                    <li className="text-[11px]" style={{ color: "var(--muted)" }}>
-                      +{openShopItems.length - 3} weitere
-                    </li>
-                  )}
-                </ul>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                setQuickShopOpen(true);
-              }}
-              className="tap mt-2 inline-flex items-center gap-1 text-[11.5px] font-medium"
-              style={{ color: "var(--terra)" }}
-            >
-              <Plus size={11} strokeWidth={2.25} /> schnell hinzufügen
-            </button>
-          </Card>
-        </Link>
-
-        {topGoal && (
-          <Card onClick={() => setOpenGoal(topGoal)} className="p-3 h-full flex flex-col">
-            <div
-              className="uplabel text-[10px] flex items-center gap-1"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              Im Blick {isPrivate(topGoal) && <Lock size={9} strokeWidth={2} />}
-            </div>
-            <div className="text-[12.5px] font-semibold leading-snug line-clamp-2 mt-1.5 mb-2 flex-1">
-              {topGoal.title}
+      {/* Im Blick */}
+      {topGoal && (
+        <section className="px-4 mb-3">
+          <SectionTitle label="Im Blick" actionHref="/ziele" actionLabel="Ziele" />
+          <Card onClick={() => setOpenGoal(topGoal)} className="p-3.5">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="text-[14px] font-medium leading-snug min-w-0">{topGoal.title}</div>
+              <AvatarWithScope by={topGoal.by} scope={topGoal.scope} size={20} />
             </div>
             <GoalProgress goal={topGoal} />
           </Card>
-        )}
-      </section>
+        </section>
+      )}
 
-      {/* Quick-Add FAB */}
-      <QuickAddFAB
-        onPick={(key) => {
-          if (key === "activity") setAddActOpen(true);
-          if (key === "todo") setAddTodoOpen(true);
-          if (key === "shopping") setQuickShopOpen(true);
-          if (key === "goal") setAddGoalOpen(true);
-        }}
-      />
-
-      {/* Sheets */}
+      {/* Detail-Sheets */}
       <ActivitySheet
         activity={openAct}
         onClose={() => setOpenAct(null)}
@@ -526,8 +466,9 @@ function HeuteContent() {
         currentUser={currentUser}
       />
       <QuickShoppingSheet
-        open={quickShopOpen}
-        onClose={() => setQuickShopOpen(false)}
+        open={quickShopOpen !== null}
+        initialSpinnerei={quickShopOpen?.spinnerei ?? false}
+        onClose={() => setQuickShopOpen(null)}
         onAdd={(text, scope, spinnerei) => addShopping({ text, scope, spinnerei })}
         currentUser={currentUser}
       />
@@ -599,6 +540,121 @@ function SectionTitle({
   );
 }
 
+function ShoppingTile({
+  label,
+  accent,
+  icon,
+  items,
+  onAdd,
+  onOpenItem,
+  onQuickAdd,
+}: {
+  label: string;
+  accent: string;
+  icon: React.ReactNode;
+  items: ShoppingItem[];
+  onAdd: (text: string) => void;
+  onOpenItem: (it: ShoppingItem) => void;
+  onQuickAdd: () => void;
+}) {
+  const [input, setInput] = useState("");
+  const submit = () => {
+    const t = input.trim();
+    if (!t) return;
+    onAdd(t);
+    setInput("");
+  };
+  const visible = items.slice(0, 3);
+  const rest = items.length - visible.length;
+  const isSpinnerei = label === "Spinnerei";
+
+  return (
+    <Card className="p-3 flex flex-col h-full overflow-hidden">
+      <div className="flex items-center justify-between mb-2">
+        <div
+          className="uplabel text-[10px] inline-flex items-center gap-1.5"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          {icon} {label}
+          <span style={{ color: "var(--muted)" }}>· {items.length}</span>
+        </div>
+        <Link
+          href="/einkauf"
+          className="tap inline-flex items-center"
+          style={{ color: "var(--muted)" }}
+          aria-label="Alle"
+        >
+          <ChevronRight size={14} strokeWidth={1.75} />
+        </Link>
+      </div>
+
+      <div className="flex-1 min-h-[80px] mb-2">
+        {items.length === 0 ? (
+          <div
+            className="text-[12px] italic flex items-center h-full"
+            style={{ color: "var(--ink-soft)" }}
+          >
+            {isSpinnerei ? "noch keine Wünsche" : "leer ✓"}
+          </div>
+        ) : (
+          <ul className="space-y-1">
+            {visible.map((s) => (
+              <li
+                key={s.id}
+                onClick={() => onOpenItem(s)}
+                role="button"
+                tabIndex={0}
+                className="text-[12.5px] truncate flex items-center gap-1.5 tap cursor-pointer"
+              >
+                <span
+                  className="inline-block w-1 h-1 rounded-full shrink-0"
+                  style={{ background: accent }}
+                />
+                {isSpinnerei && (
+                  <span style={{ color: "var(--terra)", fontSize: 10 }}>✦</span>
+                )}
+                <span className="truncate">{s.text}</span>
+                {isPrivate(s) && (
+                  <Lock size={9} strokeWidth={2} color="var(--muted)" />
+                )}
+              </li>
+            ))}
+            {rest > 0 && (
+              <li className="text-[11px]" style={{ color: "var(--muted)" }}>
+                + {rest} weitere
+              </li>
+            )}
+          </ul>
+        )}
+      </div>
+
+      <div
+        className="flex items-center gap-1 rounded-xl px-1.5 py-1"
+        style={{ background: "rgba(228,217,191,0.4)" }}
+      >
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          placeholder={isSpinnerei ? "Wunsch?" : "Was fehlt?"}
+          className="flex-1 bg-transparent text-[12px] py-1 px-1.5 min-w-0"
+          style={{ color: "var(--ink)" }}
+        />
+        <button
+          type="button"
+          onClick={submit}
+          onDoubleClick={onQuickAdd}
+          className="tap w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-white"
+          style={{ background: input.trim() ? accent : "var(--cream-deep)" }}
+          aria-label="Hinzufügen"
+        >
+          <Plus size={12} strokeWidth={2.25} />
+        </button>
+      </div>
+    </Card>
+  );
+}
+
 function UpcomingActivityCard({
   activity,
   onClick,
@@ -642,36 +698,47 @@ function UpcomingActivityCard({
 
 function QuickShoppingSheet({
   open,
+  initialSpinnerei,
   onClose,
   onAdd,
   currentUser,
 }: {
   open: boolean;
+  initialSpinnerei: boolean;
   onClose: () => void;
   onAdd: (text: string, scope: "geteilt" | "A" | "D", spinnerei: boolean) => void;
   currentUser: "A" | "D";
 }) {
   if (!open) return null;
-  return <QuickShoppingForm onClose={onClose} onAdd={onAdd} currentUser={currentUser} />;
+  return (
+    <QuickShoppingForm
+      initialSpinnerei={initialSpinnerei}
+      onClose={onClose}
+      onAdd={onAdd}
+      currentUser={currentUser}
+    />
+  );
 }
 
 function QuickShoppingForm({
+  initialSpinnerei,
   onClose,
   onAdd,
   currentUser,
 }: {
+  initialSpinnerei: boolean;
   onClose: () => void;
   onAdd: (text: string, scope: "geteilt" | "A" | "D", spinnerei: boolean) => void;
   currentUser: "A" | "D";
 }) {
   const [text, setText] = useState("");
   const [scope, setScope] = useState<"geteilt" | "A" | "D">("geteilt");
-  const [spinnerei, setSpinnerei] = useState(false);
+  const [spinnerei, setSpinnerei] = useState(initialSpinnerei);
   return (
-    <Sheet open onClose={onClose} title="Einkauf-Item">
+    <Sheet open onClose={onClose} title={spinnerei ? "Spinnerei" : "Einkauf-Item"}>
       <div className="mt-3">
         <div className="uplabel text-[10.5px] mb-1.5" style={{ color: "var(--muted)" }}>
-          Was fehlt?
+          {spinnerei ? "Was wünschst du dir?" : "Was fehlt?"}
         </div>
         <input
           autoFocus
@@ -679,38 +746,46 @@ function QuickShoppingForm({
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && text.trim()) {
-              onAdd(text.trim(), spinnerei ? scope : scope, spinnerei);
+              onAdd(text.trim(), scope, spinnerei);
               onClose();
             }
           }}
-          placeholder="z. B. Olivenöl"
+          placeholder={spinnerei ? "z. B. Plattenspieler" : "z. B. Olivenöl"}
           className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
           style={{ background: "rgba(228,217,191,0.5)" }}
         />
       </div>
       <div className="mt-3 flex gap-1.5 flex-wrap">
-        {(["geteilt", currentUser] as const).map((s) => {
-          const isShared = s === "geteilt";
-          const active = scope === s && !spinnerei;
-          return (
-            <button
-              key={s}
-              type="button"
-              onClick={() => {
-                setScope(s);
-                setSpinnerei(false);
-              }}
-              className="tap text-[12px] font-medium rounded-full px-3 py-1.5"
-              style={
-                active
-                  ? { background: "var(--ink)", color: "var(--paper)" }
-                  : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
-              }
-            >
-              {isShared ? "Gemeinsam" : "Privat"}
-            </button>
-          );
-        })}
+        <button
+          type="button"
+          onClick={() => {
+            setScope("geteilt");
+            setSpinnerei(false);
+          }}
+          className="tap text-[12px] font-medium rounded-full px-3 py-1.5"
+          style={
+            scope === "geteilt" && !spinnerei
+              ? { background: "var(--ink)", color: "var(--paper)" }
+              : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
+          }
+        >
+          Gemeinsam
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setScope(currentUser);
+            setSpinnerei(false);
+          }}
+          className="tap text-[12px] font-medium rounded-full px-3 py-1.5"
+          style={
+            scope === currentUser && !spinnerei
+              ? { background: "var(--ink)", color: "var(--paper)" }
+              : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
+          }
+        >
+          Privat
+        </button>
         <button
           type="button"
           onClick={() => setSpinnerei(true)}

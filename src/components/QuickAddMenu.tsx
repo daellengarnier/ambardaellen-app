@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, Calendar, ListTodo, ShoppingCart, Target, X } from "lucide-react";
 
+type ActionKey = "activity" | "todo" | "shopping" | "goal";
+
 type Action = {
-  key: "activity" | "todo" | "shopping" | "goal";
+  key: ActionKey;
   label: string;
   Icon: typeof Calendar;
   color: string;
@@ -18,10 +20,14 @@ const ACTIONS: Action[] = [
 ];
 
 type Props = {
-  onPick: (key: Action["key"]) => void;
+  onPick: (key: ActionKey) => void;
 };
 
-export function QuickAddFAB({ onPick }: Props) {
+/**
+ * Inline „+" Button (typischerweise im Header).
+ * Klick öffnet ein Popover-Menü mit Schnell-Optionen.
+ */
+export function QuickAddMenu({ onPick }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -42,23 +48,31 @@ export function QuickAddFAB({ onPick }: Props) {
   }, [open]);
 
   return (
-    <div
-      ref={ref}
-      className="fixed z-[80] mx-auto pointer-events-none"
-      style={{
-        left: 0,
-        right: 0,
-        bottom: "calc(env(safe-area-inset-bottom) + 118px)",
-        maxWidth: 480,
-      }}
-    >
-      <div className="relative h-0">
-        <div
-          className="absolute right-4 flex flex-col items-end gap-2 pointer-events-auto"
-          style={{ bottom: 0 }}
-        >
-          {open &&
-            ACTIONS.map(({ key, label, Icon, color }) => (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="tap w-9 h-9 rounded-full shadow-card flex items-center justify-center text-white"
+        style={{ background: open ? "var(--ink)" : "var(--terra)" }}
+        aria-label={open ? "Menü schließen" : "Schnell-Erfassung"}
+        aria-expanded={open}
+      >
+        {open ? <X size={16} strokeWidth={2.25} /> : <Plus size={18} strokeWidth={2.25} />}
+      </button>
+
+      {open && (
+        <>
+          {/* Scrim, damit Klick ausserhalb schliesst (auch via touch) */}
+          <div
+            className="fixed inset-0 z-[70]"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            className="absolute right-0 mt-2 flex flex-col gap-1.5 z-[71]"
+            style={{ minWidth: 180 }}
+          >
+            {ACTIONS.map(({ key, label, Icon, color }) => (
               <button
                 key={key}
                 type="button"
@@ -66,64 +80,52 @@ export function QuickAddFAB({ onPick }: Props) {
                   onPick(key);
                   setOpen(false);
                 }}
-                className="tap inline-flex items-center gap-2 pl-3 pr-4 py-2 rounded-full shadow-card text-[13.5px] font-medium fab-pop"
+                className="tap inline-flex items-center gap-2.5 pl-2 pr-4 py-2 rounded-full shadow-card text-[13.5px] font-medium qam-pop"
                 style={{ background: "var(--paper)", color: "var(--ink)" }}
               >
                 <span
                   className="inline-flex items-center justify-center rounded-full"
                   style={{
-                    width: 24,
-                    height: 24,
+                    width: 26,
+                    height: 26,
                     background: color,
                     color: "white",
                   }}
                 >
-                  <Icon size={13} strokeWidth={2} />
+                  <Icon size={14} strokeWidth={2} />
                 </span>
                 {label}
               </button>
             ))}
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="tap w-14 h-14 rounded-full shadow-float flex items-center justify-center"
-            style={{
-              background: open ? "var(--ink)" : "var(--terra)",
-              color: "white",
-            }}
-            aria-label={open ? "Menü schließen" : "Schnell-Erfassung"}
-            aria-expanded={open}
-          >
-            {open ? <X size={22} strokeWidth={2} /> : <Plus size={26} strokeWidth={2} />}
-          </button>
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       <style jsx>{`
-        @keyframes fabPop {
+        @keyframes qamPop {
           from {
             opacity: 0;
-            transform: translateY(8px) scale(0.92);
+            transform: translateY(-6px) scale(0.96);
           }
           to {
             opacity: 1;
             transform: translateY(0) scale(1);
           }
         }
-        :global(.fab-pop) {
-          animation: fabPop 220ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+        :global(.qam-pop) {
+          animation: qamPop 200ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
         }
-        :global(.fab-pop:nth-child(1)) {
+        :global(.qam-pop:nth-child(1)) {
           animation-delay: 0ms;
         }
-        :global(.fab-pop:nth-child(2)) {
-          animation-delay: 40ms;
+        :global(.qam-pop:nth-child(2)) {
+          animation-delay: 30ms;
         }
-        :global(.fab-pop:nth-child(3)) {
-          animation-delay: 80ms;
+        :global(.qam-pop:nth-child(3)) {
+          animation-delay: 60ms;
         }
-        :global(.fab-pop:nth-child(4)) {
-          animation-delay: 120ms;
+        :global(.qam-pop:nth-child(4)) {
+          animation-delay: 90ms;
         }
       `}</style>
     </div>

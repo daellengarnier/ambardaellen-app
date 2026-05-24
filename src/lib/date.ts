@@ -68,11 +68,15 @@ export function formatDate(iso: ISODate): string {
   return `${weekdayLong(iso)}, ${dayStr}`;
 }
 
-export function greetingFor(date: Date = new Date()): string {
+export function greetingFor(date: Date = new Date(), name?: string): string {
   const h = date.getHours();
-  if (h < 11) return "Guten Morgen";
-  if (h < 18) return "Hallo ihr zwei";
-  return "Schönen Abend";
+  let g: string;
+  if (h < 5) g = "Gute Nacht";
+  else if (h < 11) g = "Guten Morgen";
+  else if (h < 18) g = "Hallo";
+  else if (h < 23) g = "Schönen Abend";
+  else g = "Gute Nacht";
+  return name ? `${g}, ${name}` : g;
 }
 
 export function relativeWhen(addedAt: number, now: number = Date.now()): string {
