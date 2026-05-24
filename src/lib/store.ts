@@ -106,6 +106,7 @@ type State = AppData & {
   updatePacklistItem: (activityId: string, itemId: string, patch: Partial<PacklistItem>) => void;
   togglePacklistItem: (activityId: string, itemId: string) => void;
   removePacklistItem: (activityId: string, itemId: string) => void;
+  movePacklistItem: (activityId: string, itemId: string, direction: "up" | "down") => void;
   resetPacklist: (activityId: string) => void;
   applyPacklistTemplate: (activityId: string, templateId: string) => void;
 
@@ -427,6 +428,32 @@ export const useStore = create<State>()(
               ? { ...a, packlist: a.packlist.filter((p) => p.id !== itemId) }
               : a,
           ),
+          ...markDirty(),
+        })),
+      movePacklistItem: (activityId, itemId, direction) =>
+        set((s) => ({
+          activities: s.activities.map((a) => {
+            if (a.id !== activityId) return a;
+            const list = a.packlist;
+            const idx = list.findIndex((p) => p.id === itemId);
+            if (idx === -1) return a;
+            const cat = list[idx].category;
+            // Tausch-Partner suchen: nächster Nachbar in derselben Kategorie.
+            let swap = -1;
+            if (direction === "up") {
+              for (let i = idx - 1; i >= 0; i--) {
+                if (list[i].category === cat) { swap = i; break; }
+              }
+            } else {
+              for (let i = idx + 1; i < list.length; i++) {
+                if (list[i].category === cat) { swap = i; break; }
+              }
+            }
+            if (swap === -1) return a;
+            const next = list.slice();
+            [next[idx], next[swap]] = [next[swap], next[idx]];
+            return { ...a, packlist: next };
+          }),
           ...markDirty(),
         })),
       resetPacklist: (activityId) =>

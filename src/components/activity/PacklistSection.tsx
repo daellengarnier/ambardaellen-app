@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Layers, RotateCcw, X, Users, Lock, Check } from "lucide-react";
+import { Plus, Layers, RotateCcw, X, Users, Lock, Check, ChevronUp, ChevronDown, UserMinus } from "lucide-react";
 import { Card } from "../Card";
+import { Avatar } from "../Avatar";
 import { CategoryPicker } from "./CategoryPicker";
 import { PacklistTemplatePicker } from "../sheets/PacklistTemplatePicker";
 import { useStore } from "@/lib/store";
@@ -19,6 +20,7 @@ export function PacklistSection({ activityId }: Props) {
   const toggleItem = useStore((s) => s.togglePacklistItem);
   const removeItem = useStore((s) => s.removePacklistItem);
   const updateItem = useStore((s) => s.updatePacklistItem);
+  const moveItem = useStore((s) => s.movePacklistItem);
   const resetPack = useStore((s) => s.resetPacklist);
 
   const [input, setInput] = useState("");
@@ -171,6 +173,8 @@ export function PacklistSection({ activityId }: Props) {
                     key={p.id}
                     item={p}
                     last={i === items.length - 1}
+                    isFirstInCat={i === 0}
+                    isLastInCat={i === items.length - 1}
                     currentUser={currentUser}
                     onToggle={() => toggleItem(activity.id, p.id)}
                     onRemove={() => removeItem(activity.id, p.id)}
@@ -182,6 +186,14 @@ export function PacklistSection({ activityId }: Props) {
                         p.scope === "geteilt" ? "A" : p.scope === "A" ? "D" : "geteilt";
                       updateItem(activity.id, p.id, { scope: next });
                     }}
+                    onAssignCycle={() => {
+                      // undefined → A → D → undefined
+                      const next: UserId | undefined =
+                        p.assignedTo === undefined ? "A" : p.assignedTo === "A" ? "D" : undefined;
+                      updateItem(activity.id, p.id, { assignedTo: next });
+                    }}
+                    onMoveUp={() => moveItem(activity.id, p.id, "up")}
+                    onMoveDown={() => moveItem(activity.id, p.id, "down")}
                     knownCategories={knownCategories}
                   />
                 ))}
@@ -364,20 +376,30 @@ function CategoryAddRow({
 function PackRow({
   item,
   last,
+  isFirstInCat,
+  isLastInCat,
   currentUser,
   onToggle,
   onRemove,
   onCategoryChange,
   onScopeCycle,
+  onAssignCycle,
+  onMoveUp,
+  onMoveDown,
   knownCategories,
 }: {
   item: PacklistItem;
   last: boolean;
+  isFirstInCat: boolean;
+  isLastInCat: boolean;
   currentUser: UserId;
   onToggle: () => void;
   onRemove: () => void;
   onCategoryChange: (c: string) => void;
   onScopeCycle: () => void;
+  onAssignCycle: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   knownCategories: string[];
 }) {
   void currentUser;
@@ -388,10 +410,11 @@ function PackRow({
         ? USERS.A.color
         : USERS.D.color;
   const scopeLabel = item.scope === "geteilt" ? "G" : item.scope;
+  const assignedName = item.assignedTo ? USERS[item.assignedTo].name : null;
 
   return (
     <div
-      className="flex items-center gap-2 px-2 py-2"
+      className="flex items-center gap-1.5 px-2 py-2"
       style={last ? undefined : { borderBottom: "1px solid rgba(218,201,168,0.4)" }}
     >
       <button
@@ -408,7 +431,7 @@ function PackRow({
         {item.packed && <Check size={13} strokeWidth={3} />}
       </button>
       <div
-        className="flex-1 text-[13.5px] truncate"
+        className="flex-1 text-[13.5px] truncate min-w-0"
         style={
           item.packed
             ? { textDecoration: "line-through", color: "var(--muted)" }
@@ -424,19 +447,83 @@ function PackRow({
           knownCategories={knownCategories}
         />
       </div>
+
+      {/* Wer kümmert sich? Klick cycled: niemand → A → D → niemand */}
+      <button
+        type="button"
+        onClick={onAssignCycle}
+        className="tap shrink-0 inline-flex items-center justify-center rounded-full"
+        style={{ width: 22, height: 22 }}
+        aria-label={
+          assignedName
+            ? `Kümmert sich: ${assignedName}. Klick zum Wechseln.`
+            : "Niemand zugewiesen. Klick zum Zuweisen."
+        }
+        title={assignedName ? `kümmert sich: ${assignedName}` : "niemand zugewiesen"}
+      >
+        {item.assignedTo ? (
+          <Avatar id={item.assignedTo} size={22} />
+        ) : (
+          <span
+            className="w-[22px] h-[22px] rounded-full inline-flex items-center justify-center"
+            style={{
+              background: "var(--cream-deep)",
+              color: "var(--muted)",
+              border: "1px dashed rgba(151,134,117,0.45)",
+            }}
+          >
+            <UserMinus size={11} strokeWidth={1.75} />
+          </span>
+        )}
+      </button>
+
+      {/* Scope: gemeinsam / Ambar / Dällen */}
       <button
         type="button"
         onClick={onScopeCycle}
-        className="tap inline-flex items-center justify-center rounded-full text-white font-semibold text-[10px]"
+        className="tap shrink-0 inline-flex items-center justify-center rounded-full text-white font-semibold text-[10px]"
         style={{ width: 20, height: 20, background: scopeBg }}
         aria-label={`Scope: ${item.scope}`}
       >
         {scopeLabel}
       </button>
+
+      {/* Reihenfolge innerhalb der Kategorie */}
+      <div className="flex flex-col shrink-0 -my-1">
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={isFirstInCat}
+          className="tap inline-flex items-center justify-center"
+          style={{
+            width: 18,
+            height: 14,
+            color: isFirstInCat ? "rgba(151,134,117,0.25)" : "var(--muted)",
+          }}
+          aria-label="Nach oben"
+        >
+          <ChevronUp size={12} strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={isLastInCat}
+          className="tap inline-flex items-center justify-center"
+          style={{
+            width: 18,
+            height: 14,
+            color: isLastInCat ? "rgba(151,134,117,0.25)" : "var(--muted)",
+          }}
+          aria-label="Nach unten"
+        >
+          <ChevronDown size={12} strokeWidth={2} />
+        </button>
+      </div>
+
       <button
         type="button"
         onClick={onRemove}
-        className="tap p-1"
+        className="tap shrink-0 p-1"
         style={{ color: "var(--muted)" }}
         aria-label="Entfernen"
       >

@@ -26,6 +26,7 @@ export type PacklistItem = {
   scope: Scope; // gemeinsam packen vs persönlich (eigene Sachen)
   by: UserId; // wer hat das Item hinzugefügt
   category: string; // "Dokumente", "Kleidung", "Hygiene", ... oder eigen
+  assignedTo?: UserId; // optional: wer kümmert sich um Besorgen/Einpacken
 };
 
 export type PacklistTemplateItem = {
