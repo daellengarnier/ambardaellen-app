@@ -17,7 +17,7 @@ import { USERS, type ShoppingItem } from "@/lib/types";
 import { todayISO, greetingFor, shortDate } from "@/lib/date";
 import { BUCKET_LABEL, PRIO, dueBucket } from "@/lib/todo";
 import { Card } from "@/components/Card";
-import { AvatarWithScope } from "@/components/Avatar";
+import { Avatar, AvatarWithScope } from "@/components/Avatar";
 import { ActivityIcon } from "@/components/ActivityIcon";
 import { GoalProgress } from "@/components/GoalProgress";
 import { RoundCheck } from "@/components/RoundCheck";
@@ -602,6 +602,7 @@ function ShoppingTile({
                   <span className="truncate">{s.text}</span>
                   {isPrivate(s) && <Lock size={9} strokeWidth={2} color="var(--muted)" />}
                 </button>
+                <Avatar id={s.by} size={14} />
                 <DeleteAction
                   label={s.text}
                   onConfirm={() => onRemove(s.id)}
