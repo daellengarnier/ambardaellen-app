@@ -86,7 +86,7 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
       <div className="flex items-center gap-3 mb-4">
         <Avatar id={currentUser} size={56} />
         <div className="min-w-0">
-          <div className="serif-i text-[22px] leading-tight">
+          <div className="serif text-[22px] leading-tight" style={{ color: "var(--mens)" }}>
             {USERS[currentUser].name}
           </div>
           <div className="text-[12.5px]" style={{ color: "var(--muted)" }}>

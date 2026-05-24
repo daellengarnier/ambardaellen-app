@@ -161,7 +161,7 @@ function HeuteContent() {
             {dateLine}
           </div>
           <h1
-            className="serif-i text-[34px] leading-[0.95] mt-1 truncate"
+            className="serif text-[34px] leading-[0.95] mt-1 truncate"
             style={{ color: "var(--mens)" }}
           >
             {greeting}
@@ -499,7 +499,7 @@ function SectionTitle({
   return (
     <div className="flex items-baseline justify-between mb-2 px-0.5">
       <h2
-        className="serif-i text-[22px] leading-tight"
+        className="serif text-[22px] leading-tight"
         style={{ color: "var(--mens)" }}
       >
         {label}

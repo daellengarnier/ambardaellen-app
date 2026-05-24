@@ -233,7 +233,7 @@ function LoginForm({
       <div className="flex items-center gap-3 mb-5">
         <Avatar id={userId} size={48} />
         <div className="min-w-0">
-          <div className="serif-i text-[22px] leading-tight">
+          <div className="serif text-[22px] leading-tight" style={{ color: "var(--mens)" }}>
             Hallo, {USERS[userId].name}
           </div>
           <div className="text-[12px]" style={{ color: "var(--muted)" }}>
@@ -343,7 +343,7 @@ function RegisterForm({
       <div className="flex items-center gap-3 mb-5">
         <Avatar id={userId} size={48} />
         <div className="min-w-0">
-          <div className="serif-i text-[22px] leading-tight">
+          <div className="serif text-[22px] leading-tight" style={{ color: "var(--mens)" }}>
             Willkommen, {USERS[userId].name}
           </div>
           <div

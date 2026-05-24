@@ -124,7 +124,7 @@ export function PacklistSection({ activityId }: Props) {
             label="Gemeinsam"
             packed={stats.gemeinsam.packed}
             total={stats.gemeinsam.total}
-            color="var(--sage)"
+            color="var(--plum)"
           />
           <ProgressMini
             label={USERS.A.name}
@@ -405,7 +405,7 @@ function PackRow({
   void currentUser;
   const scopeBg =
     item.scope === "geteilt"
-      ? "var(--sage)"
+      ? "var(--plum)"
       : item.scope === "A"
         ? USERS.A.color
         : USERS.D.color;

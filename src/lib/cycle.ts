@@ -61,6 +61,22 @@ export const PHASE_COLOR_MAP: Record<Phase, string> = {
   ueberfaellig: "#A8484E",
 };
 
+/**
+ * Dunklere Varianten der Phasenfarben für Text auf hellem Hintergrund.
+ * Die hellen PHASE_COLOR_MAP-Töne (Folliklephase-Gold, Luteal-Grün)
+ * haben auf Cream zu wenig Kontrast, wenn sie als Textfarbe verwendet
+ * werden. Diese Map bringt jeden Ton auf ein lesbares Niveau und
+ * behält die Farbkodierung.
+ */
+export const PHASE_TEXT_COLOR_MAP: Record<Phase, string> = {
+  menstruation: "#8E3A3F",
+  follikel: "#8C6730",
+  fertil: "#A04B30",
+  ovulation: "#A04B30",
+  luteal: "#4E6A48",
+  ueberfaellig: "#8E3A3F",
+};
+
 export type CycleAnalysis = {
   day: number;
   cycLen: number;

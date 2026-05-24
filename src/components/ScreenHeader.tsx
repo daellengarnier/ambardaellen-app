@@ -19,7 +19,7 @@ export function ScreenHeader({ title, subtitle, right }: Props) {
             {subtitle}
           </div>
         )}
-        <h1 className="serif-i text-[36px] leading-[0.95]" style={{ color: "var(--mens)" }}>
+        <h1 className="serif text-[36px] leading-[0.95]" style={{ color: "var(--mens)" }}>
           {title}
         </h1>
       </div>

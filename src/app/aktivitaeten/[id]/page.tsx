@@ -110,7 +110,7 @@ function Detail({ id }: { id: string }) {
           <div className="flex items-start gap-3">
             <ActivityIcon kind={a.icon} size={48} />
             <div className="flex-1 min-w-0">
-              <h1 className="serif-i text-[26px] leading-tight">{a.title}</h1>
+              <h1 className="serif text-[26px] leading-tight" style={{ color: "var(--mens)" }}>{a.title}</h1>
               <div
                 className="text-[12.5px] mt-1 flex items-center gap-1.5"
                 style={{ color: "var(--ink-soft)" }}

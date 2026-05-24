@@ -14,6 +14,7 @@ import {
   SYMPTOMS,
   cycleAnalysis,
   PHASE_COLOR_MAP,
+  PHASE_TEXT_COLOR_MAP,
 } from "@/lib/cycle";
 import { shortDate, todayISO } from "@/lib/date";
 import { USERS } from "@/lib/types";
@@ -209,7 +210,10 @@ export function CycleSheet({ open, onClose }: Props) {
       <CycleRing cycle={cycle} analysis={analysis} />
 
       <div className="text-center mt-1 mb-2">
-        <div className="serif-i text-[26px] leading-tight" style={{ color: analysis.color }}>
+        <div
+          className="serif text-[26px] leading-tight"
+          style={{ color: PHASE_TEXT_COLOR_MAP[analysis.phase] }}
+        >
           {analysis.phaseLabel}
         </div>
         <div className="text-[12.5px] mt-0.5" style={{ color: "var(--ink-soft)" }}>

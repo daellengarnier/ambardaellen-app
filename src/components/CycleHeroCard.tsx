@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Lock, ChevronRight } from "lucide-react";
 import { CycleRing } from "./CycleRing";
 import { useStore } from "@/lib/store";
-import { PHASE_HINTS, cycleAnalysis, type Phase } from "@/lib/cycle";
+import { PHASE_HINTS, PHASE_TEXT_COLOR_MAP, cycleAnalysis, type Phase } from "@/lib/cycle";
 import { USERS } from "@/lib/types";
 
 const PHASE_LABEL: Record<Phase, string> = {
@@ -56,18 +56,7 @@ export function CycleHeroCard({ onOpenSheet }: { onOpenSheet: () => void }) {
 
   // Wenn der User einen Bogen angetippt hat, zeigen wir diese Phase. Sonst die heutige.
   const displayPhase: Phase = selectedPhase ?? analysis.phase;
-  const displayColor =
-    displayPhase === analysis.phase
-      ? analysis.color
-      : displayPhase === "menstruation"
-        ? "#A8484E"
-        : displayPhase === "follikel"
-          ? "#D4A86A"
-          : displayPhase === "fertil"
-            ? "#E07A5F"
-            : displayPhase === "luteal"
-              ? "#8DA888"
-              : "#A8484E";
+  const displayColor = PHASE_TEXT_COLOR_MAP[displayPhase];
   const displayLabel = PHASE_LABEL[displayPhase];
 
   return (
@@ -100,7 +89,7 @@ export function CycleHeroCard({ onOpenSheet }: { onOpenSheet: () => void }) {
       />
 
       <div
-        className="serif-i text-[22px] leading-tight mt-1 text-center"
+        className="serif text-[22px] leading-tight mt-1 text-center"
         style={{ color: displayColor }}
       >
         {displayLabel}
