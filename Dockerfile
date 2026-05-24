@@ -38,7 +38,20 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Migrationen + Runner für DB-Setup beim Container-Start.
+# drizzle-orm und postgres sind über Next-Standalone bereits in
+# ./node_modules, scripts/migrate.mjs holt sie sich von dort.
+# Next-Standalone trace-iert nur Imports der App. scripts/migrate.mjs
+# nutzt aber drizzle-orm/postgres-js/migrator — das Submodul ist nicht
+# Teil des Standalone-Trace. Daher drizzle-orm + postgres extra:
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/postgres ./node_modules/postgres
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+RUN chmod +x /app/scripts/entrypoint.sh
+
 USER nextjs
 EXPOSE 3000
 
+ENTRYPOINT ["/app/scripts/entrypoint.sh"]
 CMD ["node", "server.js"]
