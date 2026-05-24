@@ -409,8 +409,11 @@ function PackRow({
       : item.scope === "A"
         ? USERS.A.color
         : USERS.D.color;
-  const scopeLabel = item.scope === "geteilt" ? "G" : item.scope;
   const assignedName = item.assignedTo ? USERS[item.assignedTo].name : null;
+  const scopeAria =
+    item.scope === "geteilt"
+      ? "Gemeinsam packen"
+      : `Persönlich (${USERS[item.scope].name})`;
 
   return (
     <div
@@ -477,15 +480,20 @@ function PackRow({
         )}
       </button>
 
-      {/* Scope: gemeinsam / Ambar / Dällen */}
+      {/* Scope: gemeinsam (Users-Icon) / Ambar / Dällen */}
       <button
         type="button"
         onClick={onScopeCycle}
         className="tap shrink-0 inline-flex items-center justify-center rounded-full text-white font-semibold text-[10px]"
         style={{ width: 20, height: 20, background: scopeBg }}
-        aria-label={`Scope: ${item.scope}`}
+        aria-label={scopeAria}
+        title={scopeAria}
       >
-        {scopeLabel}
+        {item.scope === "geteilt" ? (
+          <Users size={11} strokeWidth={2.25} />
+        ) : (
+          item.scope
+        )}
       </button>
 
       {/* Reihenfolge innerhalb der Kategorie */}
