@@ -27,10 +27,25 @@ export type PacklistItem = {
   by: UserId; // wer hat das Item hinzugefügt
 };
 
+export type PacklistTemplateItem = {
+  id: string;
+  text: string;
+  scope: Scope; // Default-Scope wenn die Vorlage angewendet wird
+};
+
+export type PacklistTemplate = {
+  id: string;
+  name: string;
+  by: UserId;
+  scope: Scope; // geteilt = beide nutzen sie, sonst nur für den Eigentümer
+  items: PacklistTemplateItem[];
+};
+
 export type Activity = {
   id: string;
   title: string;
   date: ISODate | "";
+  dateEnd: ISODate | ""; // optional — bei mehrtägigen Trips
   time: HHMM | "";
   place: string;
   status: ActivityStatus;

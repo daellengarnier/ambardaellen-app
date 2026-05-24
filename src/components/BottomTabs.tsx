@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Sun, Calendar, ShoppingCart, ListTodo, Target } from "lucide-react";
+import { useStore } from "@/lib/store";
 
 const TABS = [
   { href: "/", label: "Heute", Icon: Sun },
@@ -14,6 +15,8 @@ const TABS = [
 
 export function BottomTabs() {
   const pathname = usePathname();
+  const sheetOpen = useStore((s) => s.sheetOpen);
+  if (sheetOpen > 0) return null;
 
   return (
     <nav

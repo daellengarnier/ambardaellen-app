@@ -1,57 +1,115 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Lock, ChevronRight } from "lucide-react";
 import { Card } from "./Card";
 import { CycleRing } from "./CycleRing";
 import { useStore } from "@/lib/store";
-import { cycleAnalysis } from "@/lib/cycle";
+import { PHASE_HINTS, cycleAnalysis, type Phase } from "@/lib/cycle";
 import { USERS } from "@/lib/types";
 
-export function CycleHeroCard({ onClick }: { onClick?: () => void }) {
+const PHASE_LABEL: Record<Phase, string> = {
+  menstruation: "Menstruation",
+  follikel: "Folliklephase",
+  fertil: "Fruchtbares Fenster",
+  ovulation: "Eisprung",
+  luteal: "Lutealphase",
+  ueberfaellig: "Überfällig",
+};
+
+export function CycleHeroCard({ onOpenSheet }: { onOpenSheet: () => void }) {
   const cycle = useStore((s) => s.cycle);
   const currentUser = useStore((s) => s.currentUser);
   const analysis = cycleAnalysis(cycle);
+  const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
+
+  // Tap-Auswahl nach 4 Sekunden zurücksetzen, damit der Default (heutige Phase) wieder erscheint.
+  useEffect(() => {
+    if (!selectedPhase) return;
+    const t = setTimeout(() => setSelectedPhase(null), 4500);
+    return () => clearTimeout(t);
+  }, [selectedPhase]);
+
   if (!analysis) return null;
   const canEdit = currentUser === cycle.owner;
 
+  // Wenn der User einen Bogen angetippt hat, zeigen wir diese Phase. Sonst die heutige.
+  const displayPhase: Phase = selectedPhase ?? analysis.phase;
+  const displayColor =
+    displayPhase === analysis.phase
+      ? analysis.color
+      : displayPhase === "menstruation"
+        ? "#A8484E"
+        : displayPhase === "follikel"
+          ? "#D4A86A"
+          : displayPhase === "fertil"
+            ? "#E07A5F"
+            : displayPhase === "luteal"
+              ? "#8DA888"
+              : "#A8484E";
+  const displayLabel = PHASE_LABEL[displayPhase];
+
   return (
-    <Card
-      onClick={onClick}
-      className="px-4 pt-5 pb-4 flex flex-col items-center relative overflow-hidden"
-    >
-      <div
-        className="absolute top-3 left-4 uplabel text-[10px] inline-flex items-center gap-1"
-        style={{ color: "var(--muted)" }}
-      >
-        Zyklus · {USERS[cycle.owner].name}
-        {!canEdit && <Lock size={9} strokeWidth={2} />}
+    <Card className="px-4 pt-3 pb-4 flex flex-col items-center relative overflow-hidden">
+      <div className="w-full flex items-center justify-between mb-1">
+        <div
+          className="uplabel text-[10px] inline-flex items-center gap-1"
+          style={{ color: "var(--muted)" }}
+        >
+          Zyklus · {USERS[cycle.owner].name}
+          {!canEdit && <Lock size={9} strokeWidth={2} />}
+        </div>
+        <button
+          type="button"
+          onClick={onOpenSheet}
+          className="tap inline-flex items-center"
+          style={{ color: "var(--muted)" }}
+          aria-label="Zyklus-Details öffnen"
+        >
+          <ChevronRight size={16} strokeWidth={1.75} />
+        </button>
       </div>
 
-      <CycleRing cycle={cycle} analysis={analysis} />
+      <CycleRing
+        cycle={cycle}
+        analysis={analysis}
+        size={156}
+        highlightedPhase={selectedPhase}
+        onPhaseClick={(p) => setSelectedPhase((cur) => (cur === p ? null : p))}
+      />
 
       <div
-        className="serif-i text-[24px] leading-tight mt-1 text-center"
-        style={{ color: analysis.color }}
+        className="serif-i text-[22px] leading-tight mt-1 text-center"
+        style={{ color: displayColor }}
       >
-        {analysis.phaseLabel}
+        {displayLabel}
       </div>
 
-      <div
-        className="text-[12.5px] mt-1 text-center"
-        style={{ color: "var(--ink-soft)" }}
-      >
-        {analysis.daysUntilOvulation > 0
-          ? `Eisprung in ${analysis.daysUntilOvulation} T.`
-          : analysis.daysUntilOvulation === 0
-            ? "Eisprung heute"
-            : `${-analysis.daysUntilOvulation} T. nach Eisprung`}
-        {" · "}
-        {analysis.daysUntilPeriod > 0
-          ? `Periode in ${analysis.daysUntilPeriod} T.`
-          : analysis.daysUntilPeriod === 0
-            ? "Periode heute"
-            : `${-analysis.daysUntilPeriod} T. überfällig`}
-      </div>
+      {selectedPhase ? (
+        <div
+          className="text-[11.5px] mt-1 text-center px-2 leading-relaxed"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          {PHASE_HINTS[selectedPhase]}
+        </div>
+      ) : (
+        <div
+          className="text-[12px] mt-1 text-center"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          {analysis.daysUntilOvulation > 0
+            ? `Eisprung in ${analysis.daysUntilOvulation} T.`
+            : analysis.daysUntilOvulation === 0
+              ? "Eisprung heute"
+              : `${-analysis.daysUntilOvulation} T. nach Eisprung`}
+          {" · "}
+          {analysis.daysUntilPeriod > 0
+            ? `Periode in ${analysis.daysUntilPeriod} T.`
+            : analysis.daysUntilPeriod === 0
+              ? "Periode heute"
+              : `${-analysis.daysUntilPeriod} T. überfällig`}
+        </div>
+      )}
     </Card>
   );
 }

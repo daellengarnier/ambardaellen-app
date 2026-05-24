@@ -44,6 +44,7 @@ function ActivityAddForm({
 
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
   const [time, setTime] = useState("");
   const [place, setPlace] = useState("");
   const [note, setNote] = useState("");
@@ -59,6 +60,15 @@ function ActivityAddForm({
       <div className="grid grid-cols-2 gap-2 mt-3">
         <DateField label="Datum" value={date} onChange={setDate} type="date" />
         <DateField label="Zeit" value={time} onChange={setTime} type="time" />
+      </div>
+
+      <div className="mt-3">
+        <DateField
+          label="Bis (optional, für mehrtägige Trips)"
+          value={dateEnd}
+          onChange={setDateEnd}
+          type="date"
+        />
       </div>
 
       <Field label="Ort (optional)" value={place} onChange={setPlace} placeholder="z. B. Tempelhofer Feld" />
@@ -130,6 +140,7 @@ function ActivityAddForm({
           onAdd({
             title: title.trim(),
             date,
+            dateEnd,
             time,
             place,
             status,

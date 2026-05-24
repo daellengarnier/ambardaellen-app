@@ -176,7 +176,7 @@ function HeuteContent() {
 
       {/* Zyklus — Hero Ring (für beide User) */}
       <div className="px-4 mb-3">
-        <CycleHeroCard onClick={() => setCycleOpen(true)} />
+        <CycleHeroCard onOpenSheet={() => setCycleOpen(true)} />
       </div>
 
       {/* Einkauf-Kacheln: Privat | Spinnerei */}
@@ -568,9 +568,9 @@ function ShoppingTile({
     onAdd(t);
     setInput("");
   };
-  const visible = items.slice(0, 3);
-  const rest = items.length - visible.length;
   const isSpinnerei = label === "Spinnerei";
+  // Höhe für max. 6 Items (jede Zeile ~28px inkl. Gap). Über 6 → scrollen.
+  const LIST_HEIGHT_MAX_6 = 28 * 6;
 
   return (
     <Card className="p-3 flex flex-col h-full overflow-hidden">
@@ -592,21 +592,21 @@ function ShoppingTile({
         </Link>
       </div>
 
-      <div className="flex-1 min-h-[80px] mb-2">
+      <div className="mb-2">
         {items.length === 0 ? (
           <div
-            className="text-[12px] italic flex items-center h-full"
-            style={{ color: "var(--ink-soft)" }}
+            className="text-[12px] italic"
+            style={{ color: "var(--ink-soft)", minHeight: 80 }}
           >
             {isSpinnerei ? "noch keine Wünsche" : "leer ✓"}
           </div>
         ) : (
-          <ul className="space-y-1.5">
-            {visible.map((s) => (
-              <li
-                key={s.id}
-                className="text-[12.5px] flex items-center gap-1.5"
-              >
+          <ul
+            className="space-y-1.5 phone-scroll overflow-y-auto pr-1"
+            style={{ maxHeight: LIST_HEIGHT_MAX_6 }}
+          >
+            {items.map((s) => (
+              <li key={s.id} className="text-[12.5px] flex items-center gap-1.5">
                 <RoundCheck
                   checked={false}
                   onClick={() => onToggle(s.id)}
@@ -623,17 +623,10 @@ function ShoppingTile({
                     <span style={{ color: "var(--terra)", fontSize: 10 }}>✦</span>
                   )}
                   <span className="truncate">{s.text}</span>
-                  {isPrivate(s) && (
-                    <Lock size={9} strokeWidth={2} color="var(--muted)" />
-                  )}
+                  {isPrivate(s) && <Lock size={9} strokeWidth={2} color="var(--muted)" />}
                 </button>
               </li>
             ))}
-            {rest > 0 && (
-              <li className="text-[11px] pl-[22px]" style={{ color: "var(--muted)" }}>
-                + {rest} weitere
-              </li>
-            )}
           </ul>
         )}
       </div>

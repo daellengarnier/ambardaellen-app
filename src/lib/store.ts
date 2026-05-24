@@ -7,6 +7,8 @@ import type {
   Cycle,
   Goal,
   PacklistItem,
+  PacklistTemplate,
+  PacklistTemplateItem,
   ShoppingItem,
   Todo,
   UserId,
@@ -15,6 +17,7 @@ import {
   SEED_ACTIVITIES,
   SEED_CYCLE,
   SEED_GOALS,
+  SEED_PACKLIST_TEMPLATES,
   SEED_SHOPPING,
   SEED_TODOS,
 } from "./seed";
@@ -30,6 +33,12 @@ type State = {
   todos: Todo[];
   goals: Goal[];
   cycle: Cycle;
+  packlistTemplates: PacklistTemplate[];
+  /** Transient: Anzahl offener Sheets (für BottomTabs-Hide). Nicht persistiert. */
+  sheetOpen: number;
+
+  incSheetOpen: () => void;
+  decSheetOpen: () => void;
 
   setCurrentUser: (id: UserId) => void;
 
@@ -55,6 +64,15 @@ type State = {
   togglePacklistItem: (activityId: string, itemId: string) => void;
   removePacklistItem: (activityId: string, itemId: string) => void;
   resetPacklist: (activityId: string) => void;
+  applyPacklistTemplate: (activityId: string, templateId: string) => void;
+
+  // packlist templates
+  addPacklistTemplate: (name: string) => string;
+  updatePacklistTemplate: (id: string, patch: Partial<PacklistTemplate>) => void;
+  removePacklistTemplate: (id: string) => void;
+  addTemplateItem: (templateId: string, text: string, scope: PacklistTemplateItem["scope"]) => void;
+  updateTemplateItem: (templateId: string, itemId: string, patch: Partial<PacklistTemplateItem>) => void;
+  removeTemplateItem: (templateId: string, itemId: string) => void;
 
   // cycle
   setCycle: (cycle: Cycle) => void;
@@ -78,6 +96,11 @@ export const useStore = create<State>()(
       todos: SEED_TODOS,
       goals: SEED_GOALS,
       cycle: SEED_CYCLE,
+      packlistTemplates: SEED_PACKLIST_TEMPLATES,
+      sheetOpen: 0,
+
+      incSheetOpen: () => set((s) => ({ sheetOpen: s.sheetOpen + 1 })),
+      decSheetOpen: () => set((s) => ({ sheetOpen: Math.max(0, s.sheetOpen - 1) })),
 
       setCurrentUser: (id) => set({ currentUser: id }),
 
@@ -213,6 +236,82 @@ export const useStore = create<State>()(
               : a,
           ),
         })),
+      applyPacklistTemplate: (activityId, templateId) => {
+        const tpl = get().packlistTemplates.find((t) => t.id === templateId);
+        if (!tpl) return;
+        const by = get().currentUser;
+        set((s) => ({
+          activities: s.activities.map((a) =>
+            a.id === activityId
+              ? {
+                  ...a,
+                  packlist: [
+                    ...a.packlist,
+                    ...tpl.items.map((it) => ({
+                      id: uid("pk"),
+                      text: it.text,
+                      packed: false,
+                      scope: it.scope,
+                      by,
+                    })),
+                  ],
+                }
+              : a,
+          ),
+        }));
+      },
+
+      addPacklistTemplate: (name) => {
+        const t = name.trim();
+        if (!t) return "";
+        const by = get().currentUser;
+        const id = uid("tpl");
+        set((s) => ({
+          packlistTemplates: [
+            ...s.packlistTemplates,
+            { id, name: t, by, scope: "geteilt", items: [] },
+          ],
+        }));
+        return id;
+      },
+      updatePacklistTemplate: (id, patch) =>
+        set((s) => ({
+          packlistTemplates: s.packlistTemplates.map((t) =>
+            t.id === id ? { ...t, ...patch } : t,
+          ),
+        })),
+      removePacklistTemplate: (id) =>
+        set((s) => ({ packlistTemplates: s.packlistTemplates.filter((t) => t.id !== id) })),
+      addTemplateItem: (templateId, text, scope) => {
+        const t = text.trim();
+        if (!t) return;
+        set((s) => ({
+          packlistTemplates: s.packlistTemplates.map((tpl) =>
+            tpl.id === templateId
+              ? { ...tpl, items: [...tpl.items, { id: uid("ti"), text: t, scope }] }
+              : tpl,
+          ),
+        }));
+      },
+      updateTemplateItem: (templateId, itemId, patch) =>
+        set((s) => ({
+          packlistTemplates: s.packlistTemplates.map((tpl) =>
+            tpl.id === templateId
+              ? {
+                  ...tpl,
+                  items: tpl.items.map((it) => (it.id === itemId ? { ...it, ...patch } : it)),
+                }
+              : tpl,
+          ),
+        })),
+      removeTemplateItem: (templateId, itemId) =>
+        set((s) => ({
+          packlistTemplates: s.packlistTemplates.map((tpl) =>
+            tpl.id === templateId
+              ? { ...tpl, items: tpl.items.filter((it) => it.id !== itemId) }
+              : tpl,
+          ),
+        })),
 
       addGoal: (input) => {
         const t = input.title.trim();
@@ -266,11 +365,17 @@ export const useStore = create<State>()(
     }),
     {
       name: "ambardaellen-store",
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
+      // sheetOpen ist transient — nicht in localStorage speichern
+      partialize: (state) => {
+        const { sheetOpen: _ignored, ...rest } = state;
+        void _ignored;
+        return rest;
+      },
       migrate: (persisted: unknown, version: number) => {
         // Bei Schema-Bumps Seeds neu laden (lokale Daten weg, aber besser als Crash).
-        if (!persisted || version < 2) {
+        if (!persisted || version < 3) {
           return {
             currentUser: "D" as UserId,
             activities: SEED_ACTIVITIES,
@@ -278,6 +383,7 @@ export const useStore = create<State>()(
             todos: SEED_TODOS,
             goals: SEED_GOALS,
             cycle: SEED_CYCLE,
+            packlistTemplates: SEED_PACKLIST_TEMPLATES,
           };
         }
         return persisted as State;

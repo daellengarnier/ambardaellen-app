@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Users,
   Lock,
+  Layers,
 } from "lucide-react";
 import { Sheet } from "../Sheet";
 import { DetailRow } from "../DetailRow";
@@ -18,6 +19,7 @@ import { ActivityIcon } from "../ActivityIcon";
 import { Avatar } from "../Avatar";
 import { ScopeToggle } from "../ScopeToggle";
 import { TagInput } from "../TagInput";
+import { PacklistTemplatePicker } from "./PacklistTemplatePicker";
 import { useStore } from "@/lib/store";
 import type { Activity, PacklistItem, Scope, UserId } from "@/lib/types";
 import { USERS } from "@/lib/types";
@@ -44,6 +46,7 @@ export function ActivitySheet({ activity, onClose, onChange, onDelete, currentUs
 
   const [packInput, setPackInput] = useState("");
   const [packScope, setPackScope] = useState<Scope>("geteilt");
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
   if (!live) return null;
   const a = live;
@@ -71,9 +74,41 @@ export function ActivitySheet({ activity, onClose, onChange, onDelete, currentUs
         <div className="flex-1 min-w-0">
           <div className="serif-i text-[22px] leading-tight">{a.title}</div>
           <div className="text-[13px] mt-1" style={{ color: "var(--ink-soft)" }}>
-            {a.date ? formatDate(a.date) : "Ohne Datum"}
+            {a.date
+              ? a.dateEnd && a.dateEnd !== a.date
+                ? `${formatDate(a.date)} – ${formatDate(a.dateEnd)}`
+                : formatDate(a.date)
+              : "Ohne Datum"}
             {a.time && ` · ${a.time}`}
           </div>
+        </div>
+      </div>
+
+      {/* Datums-Editor */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <div className="uplabel text-[10px] mb-1.5" style={{ color: "var(--muted)" }}>
+            Datum
+          </div>
+          <input
+            type="date"
+            value={a.date}
+            onChange={(e) => onChange(a.id, { date: e.target.value })}
+            className="w-full rounded-2xl px-3 py-2 text-[14px]"
+            style={{ background: "rgba(228,217,191,0.5)" }}
+          />
+        </div>
+        <div>
+          <div className="uplabel text-[10px] mb-1.5" style={{ color: "var(--muted)" }}>
+            Bis (optional)
+          </div>
+          <input
+            type="date"
+            value={a.dateEnd}
+            onChange={(e) => onChange(a.id, { dateEnd: e.target.value })}
+            className="w-full rounded-2xl px-3 py-2 text-[14px]"
+            style={{ background: "rgba(228,217,191,0.5)" }}
+          />
         </div>
       </div>
 
@@ -133,16 +168,26 @@ export function ActivitySheet({ activity, onClose, onChange, onDelete, currentUs
           <span>
             Packliste {a.packlist.length > 0 && `· ${packedCount}/${a.packlist.length}`}
           </span>
-          {a.packlist.length > 0 && (
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => resetPacklist(a.id)}
+              onClick={() => setTemplatePickerOpen(true)}
               className="tap inline-flex items-center gap-1 normal-case tracking-normal text-[11px] font-medium"
-              style={{ color: "var(--ink-soft)" }}
+              style={{ color: "var(--terra)" }}
             >
-              <RotateCcw size={11} strokeWidth={2} /> reset
+              <Layers size={11} strokeWidth={2} /> Vorlage
             </button>
-          )}
+            {a.packlist.length > 0 && (
+              <button
+                type="button"
+                onClick={() => resetPacklist(a.id)}
+                className="tap inline-flex items-center gap-1 normal-case tracking-normal text-[11px] font-medium"
+                style={{ color: "var(--ink-soft)" }}
+              >
+                <RotateCcw size={11} strokeWidth={2} /> reset
+              </button>
+            )}
+          </div>
         </div>
 
         {visiblePacklist.length > 0 && (
@@ -276,6 +321,12 @@ export function ActivitySheet({ activity, onClose, onChange, onDelete, currentUs
           <CalIcon size={16} strokeWidth={1.75} /> Zum iPhone Kalender hinzufügen
         </button>
       )}
+
+      <PacklistTemplatePicker
+        open={templatePickerOpen}
+        activityId={a.id}
+        onClose={() => setTemplatePickerOpen(false)}
+      />
     </Sheet>
   );
 }

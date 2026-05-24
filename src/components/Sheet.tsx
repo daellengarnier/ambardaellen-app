@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { useStore } from "@/lib/store";
 
 type Props = {
   open: boolean;
@@ -11,8 +12,12 @@ type Props = {
 };
 
 export function Sheet({ open, onClose, title, children }: Props) {
+  const incSheetOpen = useStore((s) => s.incSheetOpen);
+  const decSheetOpen = useStore((s) => s.decSheetOpen);
+
   useEffect(() => {
     if (!open) return;
+    incSheetOpen();
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
@@ -20,10 +25,11 @@ export function Sheet({ open, onClose, title, children }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => {
+      decSheetOpen();
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open, onClose, incSheetOpen, decSheetOpen]);
 
   if (!open) return null;
 
@@ -39,7 +45,7 @@ export function Sheet({ open, onClose, title, children }: Props) {
           className="rounded-t-3xl shadow-float overflow-hidden flex flex-col"
           style={{
             background: "var(--paper)",
-            maxHeight: "85dvh",
+            maxHeight: "88dvh",
             paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)",
           }}
         >
