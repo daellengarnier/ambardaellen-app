@@ -9,6 +9,9 @@ import {
   Users,
   Lock,
   Backpack,
+  CalendarPlus,
+  X as XIcon,
+  Check,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { visibleTo } from "@/lib/scope";
@@ -74,12 +77,31 @@ function AktContent() {
   const activities = useStore((s) => s.activities);
   const currentUser = useStore((s) => s.currentUser);
   const addActivity = useStore((s) => s.addActivity);
+  const updateActivity = useStore((s) => s.updateActivity);
   const removeActivity = useStore((s) => s.removeActivity);
 
   const [filter, setFilter] = useState<ActivityStatus>("geplant");
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("alle");
   const [tagFilter, setTagFilter] = useState<TagFilter>(null);
   const [addOpen, setAddOpen] = useState(false);
+  // Ideen-Tab: pro Idee inline ein Datum eintragen → automatisch zu "Geplant".
+  const [planningId, setPlanningId] = useState<string | null>(null);
+  const [planDate, setPlanDate] = useState("");
+
+  const startPlanning = (a: Activity) => {
+    setPlanningId(a.id);
+    setPlanDate(a.date || today);
+  };
+  const confirmPlanning = (a: Activity) => {
+    if (!planDate) return;
+    updateActivity(a.id, { date: planDate, status: "geplant" });
+    setPlanningId(null);
+    setPlanDate("");
+  };
+  const cancelPlanning = () => {
+    setPlanningId(null);
+    setPlanDate("");
+  };
 
   const openActivity = (a: Activity) => router.push(`/aktivitaeten/${a.id}`);
 
@@ -250,54 +272,128 @@ function AktContent() {
               </span>
             </div>
             <div className="space-y-1.5">
-              {sec.items.map((a) => (
-                <Card
-                  key={a.id}
-                  onClick={() => openActivity(a)}
-                  className="p-3 flex items-center gap-3"
-                >
-                  <ActivityIcon kind={a.icon} size={36} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[14.5px] font-medium truncate">{a.title}</div>
+              {sec.items.map((a) => {
+                const isPlanning = planningId === a.id;
+                return (
+                  <Card key={a.id} className="p-3">
                     <div
-                      className="text-[12px] mt-0.5 flex items-center gap-2 flex-wrap"
-                      style={{ color: "var(--ink-soft)" }}
+                      className="flex items-center gap-3"
+                      onClick={(e) => {
+                        if (isPlanning) return;
+                        // Click auf Buttons soll Card-Klick nicht auslösen.
+                        if ((e.target as HTMLElement).closest("button")) return;
+                        openActivity(a);
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !isPlanning) openActivity(a);
+                      }}
                     >
-                      {filter !== "geplant" && a.date && (
-                        <span>{shortDate(a.date)}</span>
-                      )}
-                      {a.time && (
-                        <span className="inline-flex items-center gap-1">
-                          <Clock size={11} strokeWidth={1.75} />
-                          {a.time}
-                        </span>
-                      )}
-                      {a.place && <span className="truncate">· {a.place}</span>}
-                      {a.packlist.length > 0 && (
-                        <span
-                          className="inline-flex items-center gap-1 text-[10.5px] font-medium"
-                          style={{ color: "var(--terra)" }}
+                      <ActivityIcon kind={a.icon} size={36} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[14.5px] font-medium truncate">{a.title}</div>
+                        <div
+                          className="text-[12px] mt-0.5 flex items-center gap-2 flex-wrap"
+                          style={{ color: "var(--ink-soft)" }}
                         >
-                          <Backpack size={10} strokeWidth={1.75} />
-                          {a.packlist.filter((p) => p.packed).length}/
-                          {a.packlist.length}
-                        </span>
+                          {filter !== "geplant" && a.date && (
+                            <span>{shortDate(a.date)}</span>
+                          )}
+                          {a.time && (
+                            <span className="inline-flex items-center gap-1">
+                              <Clock size={11} strokeWidth={1.75} />
+                              {a.time}
+                            </span>
+                          )}
+                          {a.place && <span className="truncate">· {a.place}</span>}
+                          {a.packlist.length > 0 && (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10.5px] font-medium"
+                              style={{ color: "var(--terra)" }}
+                            >
+                              <Backpack size={10} strokeWidth={1.75} />
+                              {a.packlist.filter((p) => p.packed).length}/
+                              {a.packlist.length}
+                            </span>
+                          )}
+                        </div>
+                        {(a.tags ?? []).length > 0 && (
+                          <div className="mt-1">
+                            <TagChips tags={a.tags} size="xs" max={4} />
+                          </div>
+                        )}
+                      </div>
+                      <AvatarWithScope by={a.by} scope={a.scope} size={20} />
+                      {filter === "idee" && !isPlanning && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startPlanning(a);
+                          }}
+                          className="tap w-7 h-7 rounded-full inline-flex items-center justify-center shrink-0"
+                          style={{ background: "var(--terra-soft)", color: "var(--terra-deep)" }}
+                          aria-label="Idee planen"
+                          title="Datum setzen & planen"
+                        >
+                          <CalendarPlus size={13} strokeWidth={2} />
+                        </button>
                       )}
+                      <DeleteAction
+                        kind="Aktivität"
+                        label={a.title}
+                        onConfirm={() => removeActivity(a.id)}
+                      />
                     </div>
-                    {(a.tags ?? []).length > 0 && (
-                      <div className="mt-1">
-                        <TagChips tags={a.tags} size="xs" max={4} />
+
+                    {isPlanning && (
+                      <div
+                        className="mt-3 pt-3 flex items-center gap-2"
+                        style={{ borderTop: "1px solid rgba(218,201,168,0.4)" }}
+                      >
+                        <CalendarPlus
+                          size={14}
+                          strokeWidth={1.75}
+                          color="var(--terra-deep)"
+                        />
+                        <input
+                          type="date"
+                          value={planDate}
+                          onChange={(e) => setPlanDate(e.target.value)}
+                          autoFocus
+                          className="flex-1 rounded-xl px-2.5 py-1.5 text-[13.5px]"
+                          style={{ background: "rgba(228,217,191,0.55)" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => confirmPlanning(a)}
+                          disabled={!planDate}
+                          className="tap w-8 h-8 rounded-full inline-flex items-center justify-center text-white"
+                          style={{
+                            background: planDate ? "var(--terra)" : "var(--terra-soft)",
+                          }}
+                          aria-label="Planen bestätigen"
+                        >
+                          <Check size={14} strokeWidth={2.25} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelPlanning}
+                          className="tap w-8 h-8 rounded-full inline-flex items-center justify-center"
+                          style={{
+                            background: "var(--cream-deep)",
+                            color: "var(--ink-soft)",
+                          }}
+                          aria-label="Abbrechen"
+                        >
+                          <XIcon size={14} strokeWidth={1.75} />
+                        </button>
                       </div>
                     )}
-                  </div>
-                  <AvatarWithScope by={a.by} scope={a.scope} size={20} />
-                  <DeleteAction
-                    kind="Aktivität"
-                    label={a.title}
-                    onConfirm={() => removeActivity(a.id)}
-                  />
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           </div>
         ))}

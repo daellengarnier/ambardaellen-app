@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Heart, Coffee, Leaf, Sparkles, BookOpen, Home } from "lucide-react";
+import { Heart, Coffee, Leaf, Sparkles, BookOpen, Home, Lightbulb, CalendarCheck, Archive } from "lucide-react";
 import { Sheet } from "../Sheet";
 import { Segmented } from "../Segmented";
 import { ScopeToggle } from "../ScopeToggle";
-import { TagInput } from "../TagInput";
-import { useStore } from "@/lib/store";
 import type { Activity, ActivityIconKind, ActivityStatus, Scope, UserId } from "@/lib/types";
 
 const ACT_ICONS: Array<{ v: ActivityIconKind; Icon: typeof Heart }> = [
@@ -39,9 +37,7 @@ function ActivityAddForm({
   onAdd: (input: Omit<Activity, "id" | "by">) => void;
   currentUser: UserId;
 }) {
-  const activities = useStore((s) => s.activities);
-  const knownTags = Array.from(new Set(activities.flatMap((a) => a.tags ?? [])));
-
+  const [status, setStatus] = useState<ActivityStatus>("idee");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [dateEnd, setDateEnd] = useState("");
@@ -49,47 +45,69 @@ function ActivityAddForm({
   const [place, setPlace] = useState("");
   const [note, setNote] = useState("");
   const [icon, setIcon] = useState<ActivityIconKind>("heart");
-  const [status, setStatus] = useState<ActivityStatus>("geplant");
   const [scope, setScope] = useState<Scope>("geteilt");
-  const [tags, setTags] = useState<string[]>([]);
+
+  const showDate = status !== "idee";
 
   return (
     <Sheet open onClose={onClose} title="Neue Aktivität">
-      <Field label="Was?" value={title} onChange={setTitle} placeholder="z. B. Picknick im Park" autoFocus />
-
-      <div className="grid grid-cols-2 gap-2 mt-3">
-        <DateField label="Datum" value={date} onChange={setDate} type="date" />
-        <DateField label="Zeit" value={time} onChange={setTime} type="time" />
-      </div>
-
-      <div className="mt-3">
-        <DateField
-          label="Bis (optional, für mehrtägige Trips)"
-          value={dateEnd}
-          onChange={setDateEnd}
-          type="date"
-        />
-      </div>
-
-      <Field label="Ort (optional)" value={place} onChange={setPlace} placeholder="z. B. Tempelhofer Feld" />
-
-      <div className="uplabel text-[10.5px] mt-3 mb-1.5" style={{ color: "var(--muted)" }}>
+      {/* Status zuerst — bestimmt, ob Datum-Felder gezeigt werden */}
+      <div className="uplabel text-[10.5px] mt-1 mb-1.5" style={{ color: "var(--muted)" }}>
         Status
       </div>
       <Segmented
         value={status}
         onChange={(v) => setStatus(v as ActivityStatus)}
         options={[
-          { value: "geplant", label: "Geplant" },
           { value: "idee", label: "Idee" },
+          { value: "geplant", label: "Geplant" },
           { value: "erledigt", label: "Erledigt" },
         ]}
       />
+      <p className="text-[11.5px] mt-1.5" style={{ color: "var(--muted)" }}>
+        {status === "idee" ? (
+          <span className="inline-flex items-center gap-1">
+            <Lightbulb size={11} strokeWidth={1.75} /> Sammeln ohne Datum. Du kannst sie später planen.
+          </span>
+        ) : status === "geplant" ? (
+          <span className="inline-flex items-center gap-1">
+            <CalendarCheck size={11} strokeWidth={1.75} /> Mit fixem Datum im Kalender.
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <Archive size={11} strokeWidth={1.75} /> Bereits passiert.
+          </span>
+        )}
+      </p>
 
-      <div className="uplabel text-[10.5px] mt-3 mb-1.5" style={{ color: "var(--muted)" }}>
-        Bereiche / Tags
-      </div>
-      <TagInput value={tags} onChange={setTags} knownTags={knownTags} />
+      <Field label="Was?" value={title} onChange={setTitle} placeholder={
+        status === "idee" ? "z. B. Wochenende in Genua" : "z. B. Picknick im Park"
+      } autoFocus />
+
+      {showDate && (
+        <>
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <DateField label="Datum" value={date} onChange={setDate} type="date" />
+            <DateField label="Zeit" value={time} onChange={setTime} type="time" />
+          </div>
+
+          <div className="mt-3">
+            <DateField
+              label="Bis (optional, für mehrtägige Trips)"
+              value={dateEnd}
+              onChange={setDateEnd}
+              type="date"
+            />
+          </div>
+        </>
+      )}
+
+      <Field
+        label={status === "idee" ? "Ort (optional)" : "Ort (optional)"}
+        value={place}
+        onChange={setPlace}
+        placeholder="z. B. Tempelhofer Feld"
+      />
 
       <div className="uplabel text-[10.5px] mt-3 mb-1.5" style={{ color: "var(--muted)" }}>
         Icon
@@ -123,7 +141,11 @@ function ActivityAddForm({
         value={note}
         onChange={(e) => setNote(e.target.value)}
         rows={2}
-        placeholder="Details, Reservierung, Links…"
+        placeholder={
+          status === "idee"
+            ? "Erste Gedanken, Links, was du beim Planen wissen willst…"
+            : "Details, Reservierung, Links…"
+        }
         className="w-full rounded-2xl p-3 text-[14.5px] resize-none"
         style={{ background: "rgba(228,217,191,0.5)" }}
       />
@@ -139,15 +161,15 @@ function ActivityAddForm({
           if (!title.trim()) return;
           onAdd({
             title: title.trim(),
-            date,
-            dateEnd,
-            time,
+            date: showDate ? date : "",
+            dateEnd: showDate ? dateEnd : "",
+            time: showDate ? time : "",
             place,
             status,
             scope,
             note,
             icon,
-            tags,
+            tags: [],
             packlist: [],
             segments: [],
             preTripShopping: [],
