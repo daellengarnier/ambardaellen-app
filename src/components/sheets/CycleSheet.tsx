@@ -30,12 +30,108 @@ export function CycleSheet({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const analysis = cycleAnalysis(cycle);
-  if (!analysis) return null;
-
   const canEdit = currentUser === cycle.owner;
   const today = todayISO();
   const todayEntry: CycleDayEntry = cycle.entries[today] || {};
+  const analysis = cycleAnalysis(cycle);
+
+  // Empty-State: noch keine Periode eingetragen — sehr reduzierter Sheet
+  // damit Ambar den ersten Period-Start setzen kann.
+  if (!analysis) {
+    return (
+      <Sheet open onClose={onClose} title={`Zyklus · ${USERS[cycle.owner].name}`}>
+        {!canEdit ? (
+          <div
+            className="rounded-2xl p-3 text-[13px]"
+            style={{ background: "rgba(228,217,191,0.5)", color: "var(--ink-soft)" }}
+          >
+            {USERS[cycle.owner].name} hat noch keine Zyklus-Daten eingetragen.
+          </div>
+        ) : (
+          <>
+            <p className="text-[13.5px] mb-3" style={{ color: "var(--ink-soft)" }}>
+              Trage den Start deiner letzten Periode ein. Sobald das passiert,
+              berechnet die App Phasen und Vorhersagen.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                updateCycle({
+                  periodStarts: [today],
+                  entries: {
+                    ...cycle.entries,
+                    [today]: { ...todayEntry, flow: 2 },
+                  },
+                });
+              }}
+              className="w-full py-3 rounded-2xl text-[14px] font-semibold tap text-white"
+              style={{ background: "#A8484E" }}
+            >
+              Periode hat heute begonnen
+            </button>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Card className="p-2.5">
+                <div className="uplabel text-[10px]" style={{ color: "var(--muted)" }}>
+                  Ø Zyklus
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateCycle({ avgCycle: Math.max(20, cycle.avgCycle - 1) })
+                    }
+                    className="w-6 h-6 rounded-full text-[14px] tap"
+                    style={{ background: "var(--cream-deep)", color: "var(--ink-soft)" }}
+                  >
+                    −
+                  </button>
+                  <div className="text-[15px] font-semibold">{cycle.avgCycle} T.</div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateCycle({ avgCycle: Math.min(45, cycle.avgCycle + 1) })
+                    }
+                    className="w-6 h-6 rounded-full text-[14px] tap"
+                    style={{ background: "var(--cream-deep)", color: "var(--ink-soft)" }}
+                  >
+                    +
+                  </button>
+                </div>
+              </Card>
+              <Card className="p-2.5">
+                <div className="uplabel text-[10px]" style={{ color: "var(--muted)" }}>
+                  Ø Periode
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateCycle({ avgPeriod: Math.max(2, cycle.avgPeriod - 1) })
+                    }
+                    className="w-6 h-6 rounded-full text-[14px] tap"
+                    style={{ background: "var(--cream-deep)", color: "var(--ink-soft)" }}
+                  >
+                    −
+                  </button>
+                  <div className="text-[15px] font-semibold">{cycle.avgPeriod} T.</div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateCycle({ avgPeriod: Math.min(10, cycle.avgPeriod + 1) })
+                    }
+                    className="w-6 h-6 rounded-full text-[14px] tap"
+                    style={{ background: "var(--cream-deep)", color: "var(--ink-soft)" }}
+                  >
+                    +
+                  </button>
+                </div>
+              </Card>
+            </div>
+          </>
+        )}
+      </Sheet>
+    );
+  }
 
   const updateEntry = (patch: Partial<CycleDayEntry>) => {
     if (!canEdit) return;

@@ -588,7 +588,7 @@ export const useStore = create<State>()(
     }),
     {
       name: "ambardaellen-store",
-      version: 5,
+      version: 6,
       storage: createJSONStorage(() => localStorage),
       // sheetOpen ist transient — nicht in localStorage speichern
       partialize: (state) => {
@@ -597,11 +597,12 @@ export const useStore = create<State>()(
         return rest;
       },
       migrate: (persisted: unknown, version: number) => {
-        if (!persisted || version < 5) {
-          // Schema-Bump → Daten resetten, Accounts aber soweit möglich erhalten.
+        // v6: alle App-Daten leer setzen (User trägt selbst ein). Accounts +
+        // Login bleiben erhalten, damit niemand sich neu registrieren muss.
+        if (!persisted || version < 6) {
           const prev = (persisted as Partial<State> | null) ?? null;
           return {
-            currentUser: "D" as UserId,
+            currentUser: prev?.currentUser ?? ("D" as UserId),
             activities: SEED_ACTIVITIES,
             shopping: SEED_SHOPPING,
             todos: SEED_TODOS,

@@ -30,8 +30,26 @@ export function CycleHeroCard({ onOpenSheet }: { onOpenSheet: () => void }) {
     return () => clearTimeout(t);
   }, [selectedPhase]);
 
-  if (!analysis) return null;
   const canEdit = currentUser === cycle.owner;
+
+  if (!analysis) {
+    return (
+      <Card onClick={onOpenSheet} className="px-4 py-5 text-center">
+        <div
+          className="uplabel text-[10px] inline-flex items-center justify-center gap-1 mb-2"
+          style={{ color: "var(--muted)" }}
+        >
+          Zyklus · {USERS[cycle.owner].name}
+          {!canEdit && <Lock size={9} strokeWidth={2} />}
+        </div>
+        <p className="text-[13px] leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+          {canEdit
+            ? "Noch keine Zyklus-Daten. Tippe hier um den ersten Periode-Start einzutragen."
+            : `${USERS[cycle.owner].name} hat noch keine Zyklus-Daten eingetragen.`}
+        </p>
+      </Card>
+    );
+  }
 
   // Wenn der User einen Bogen angetippt hat, zeigen wir diese Phase. Sonst die heutige.
   const displayPhase: Phase = selectedPhase ?? analysis.phase;
