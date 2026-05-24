@@ -30,13 +30,16 @@ export function BottomTabs() {
       }}
     >
       <div
-        className="flex items-stretch justify-between px-1 rounded-t-[26px] backdrop-blur-md shadow-card pointer-events-auto"
+        className="flex items-stretch justify-between px-1 rounded-t-[22px] backdrop-blur-md shadow-card pointer-events-auto"
         style={{
           background: "rgba(251,246,232,0.92)",
           border: "1px solid rgba(218,201,168,0.5)",
           borderBottom: "none",
-          paddingTop: "0.25rem",
-          paddingBottom: "max(env(safe-area-inset-bottom), 0.25rem)",
+          paddingTop: "0.125rem",
+          // Nur die halbe Safe-Area-Höhe als Bottom-Padding — die Pille
+          // läuft so optisch näher an den Rand, der iOS-Home-Indikator
+          // bleibt aber lesbar oberhalb der Tap-Targets.
+          paddingBottom: "calc(env(safe-area-inset-bottom) * 0.55)",
         }}
       >
         {TABS.map(({ href, label, Icon }) => {
@@ -46,7 +49,7 @@ export function BottomTabs() {
               key={href}
               href={href}
               prefetch
-              className="tap relative flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-2xl"
+              className="tap relative flex-1 flex flex-col items-center justify-center gap-[1px] py-1 rounded-2xl"
               style={
                 active
                   ? {
@@ -58,12 +61,12 @@ export function BottomTabs() {
               aria-current={active ? "page" : undefined}
             >
               <Icon
-                size={20}
+                size={18}
                 strokeWidth={active ? 2 : 1.6}
                 color={active ? "var(--terra-deep)" : "var(--ink-soft)"}
               />
               <span
-                className="text-[10px]"
+                className="text-[9.5px]"
                 style={{
                   color: active ? "var(--terra-deep)" : "var(--ink-soft)",
                   fontWeight: active ? 600 : 500,

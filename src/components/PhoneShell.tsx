@@ -38,7 +38,7 @@ export function PhoneShell({ children }: { children: ReactNode }) {
           z-index: 10;
           min-height: 100dvh;
           padding-top: max(env(safe-area-inset-top), 0.5rem);
-          padding-bottom: calc(env(safe-area-inset-bottom) + 110px);
+          padding-bottom: calc(env(safe-area-inset-bottom) + 90px);
         }
         @media (min-width: 481px) {
           :global(body) {

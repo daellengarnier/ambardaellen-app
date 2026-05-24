@@ -107,6 +107,7 @@ type State = AppData & {
   togglePacklistItem: (activityId: string, itemId: string) => void;
   removePacklistItem: (activityId: string, itemId: string) => void;
   movePacklistItem: (activityId: string, itemId: string, direction: "up" | "down") => void;
+  reorderPacklist: (activityId: string, fromIndex: number, toIndex: number) => void;
   resetPacklist: (activityId: string) => void;
   applyPacklistTemplate: (activityId: string, templateId: string) => void;
 
@@ -453,6 +454,20 @@ export const useStore = create<State>()(
             if (swap === -1) return a;
             const next = list.slice();
             [next[idx], next[swap]] = [next[swap], next[idx]];
+            return { ...a, packlist: next };
+          }),
+          ...markDirty(),
+        })),
+      reorderPacklist: (activityId, fromIndex, toIndex) =>
+        set((s) => ({
+          activities: s.activities.map((a) => {
+            if (a.id !== activityId) return a;
+            if (fromIndex === toIndex) return a;
+            if (fromIndex < 0 || fromIndex >= a.packlist.length) return a;
+            if (toIndex < 0 || toIndex >= a.packlist.length) return a;
+            const next = a.packlist.slice();
+            const [moved] = next.splice(fromIndex, 1);
+            next.splice(toIndex, 0, moved);
             return { ...a, packlist: next };
           }),
           ...markDirty(),
