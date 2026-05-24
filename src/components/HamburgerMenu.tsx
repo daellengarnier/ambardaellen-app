@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Menu, X, UserCircle2, Bell, Layers, LogOut, ArrowLeftRight } from "lucide-react";
+import { Menu, X, UserCircle2, Layers, LogOut, ArrowLeftRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { USERS, type UserId } from "@/lib/types";
 import { Avatar } from "./Avatar";
 import { ProfileSheet } from "./sheets/ProfileSheet";
-import { NotificationsSheet } from "./sheets/NotificationsSheet";
 import { PacklistTemplatesManagerSheet } from "./sheets/PacklistTemplatesManagerSheet";
 
-type Open = "profile" | "notifications" | "templates" | null;
+type Open = "profile" | "templates" | null;
 
 export function HamburgerMenu() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -113,14 +112,6 @@ export function HamburgerMenu() {
               }}
             />
             <MenuItem
-              icon={<Bell size={16} strokeWidth={1.75} />}
-              label="Benachrichtigungen"
-              onClick={() => {
-                setSheet("notifications");
-                setMenuOpen(false);
-              }}
-            />
-            <MenuItem
               icon={<Layers size={16} strokeWidth={1.75} />}
               label="Packlisten-Vorlagen"
               onClick={() => {
@@ -145,7 +136,6 @@ export function HamburgerMenu() {
       )}
 
       <ProfileSheet open={sheet === "profile"} onClose={() => setSheet(null)} />
-      <NotificationsSheet open={sheet === "notifications"} onClose={() => setSheet(null)} />
       <PacklistTemplatesManagerSheet
         open={sheet === "templates"}
         onClose={() => setSheet(null)}

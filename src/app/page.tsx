@@ -27,6 +27,7 @@ import { TagChips } from "@/components/TagChips";
 import { ClientOnly } from "@/components/ClientOnly";
 import { QuickAddMenu } from "@/components/QuickAddMenu";
 import { HamburgerMenu } from "@/components/HamburgerMenu";
+import { NotificationsButton } from "@/components/NotificationsButton";
 import { Sheet } from "@/components/Sheet";
 import { useRouter } from "next/navigation";
 import { ShoppingSheet } from "@/components/sheets/ShoppingSheet";
@@ -168,6 +169,7 @@ function HeuteContent() {
           </h1>
         </div>
         <div className="shrink-0 pt-1 flex items-center gap-2">
+          <NotificationsButton />
           <HamburgerMenu />
           <QuickAddMenu
             onPick={(key) => {

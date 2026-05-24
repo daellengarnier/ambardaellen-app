@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { HamburgerMenu } from "./HamburgerMenu";
+import { NotificationsButton } from "./NotificationsButton";
 
 type Props = {
   title: string;
@@ -25,6 +26,7 @@ export function ScreenHeader({ title, subtitle, right }: Props) {
       </div>
       <div className="shrink-0 pt-1 flex items-center gap-2">
         {right}
+        <NotificationsButton />
         <HamburgerMenu />
       </div>
     </header>
