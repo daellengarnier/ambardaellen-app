@@ -150,20 +150,24 @@ function Detail({ id }: { id: string }) {
         </Card>
       </div>
 
-      {/* Datum + Zeit Edit */}
-      <div className="px-4 mb-3 grid grid-cols-3 gap-2">
-        <DateInput
-          label="Datum"
-          value={a.date}
-          onChange={(v) => updateActivity(a.id, { date: v })}
-          type="date"
-        />
-        <DateInput
-          label="Bis"
-          value={a.dateEnd}
-          onChange={(v) => updateActivity(a.id, { dateEnd: v })}
-          type="date"
-        />
+      {/* Datum + Zeit Edit — Datum und Bis nebeneinander, Zeit
+          eigene Zeile, damit die nativen Picker auf iPhone-Breite
+          nicht überlappen. */}
+      <div className="px-4 mb-3 space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <DateInput
+            label="Datum"
+            value={a.date}
+            onChange={(v) => updateActivity(a.id, { date: v })}
+            type="date"
+          />
+          <DateInput
+            label="Bis"
+            value={a.dateEnd}
+            onChange={(v) => updateActivity(a.id, { dateEnd: v })}
+            type="date"
+          />
+        </div>
         <DateInput
           label="Zeit"
           value={a.time}
