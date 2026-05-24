@@ -23,47 +23,64 @@ import {
   SEED_SHOPPING,
   SEED_TODOS,
 } from "./seed";
-import {
-  hashPassword,
-  isAllowedEmail,
-  newSalt,
-  normalizeEmail,
-  userIdForEmail,
-  verifyPassword,
-  type Account,
-} from "./auth";
 
 function uid(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-type State = {
-  currentUser: UserId;
+export type AuthAccount = {
+  id: string;
+  email: string;
+  userId: UserId;
+  workspaceId: string;
+};
+
+export type CloudStatus = "idle" | "loading" | "syncing" | "error" | "offline";
+
+type AppData = {
   activities: Activity[];
   shopping: ShoppingItem[];
   todos: Todo[];
   goals: Goal[];
   cycle: Cycle;
   packlistTemplates: PacklistTemplate[];
+};
 
-  // Auth
-  accounts: Account[];
-  loggedInEmail: string | null;
+type State = AppData & {
+  currentUser: UserId;
 
-  /** Transient: Anzahl offener Sheets (für BottomTabs-Hide). Nicht persistiert. */
+  // Cloud-Auth
+  account: AuthAccount | null;
+  /** True wenn der initiale Cloud-Pull beim App-Start abgeschlossen ist. */
+  authReady: boolean;
+  cloudVersion: number;
+  cloudStatus: CloudStatus;
+  cloudError: string | null;
+  /** Lokal verändert, noch nicht zur Cloud gepusht? */
+  pendingPush: boolean;
+
+  /** Transient: Anzahl offener Sheets. Nicht persistiert. */
   sheetOpen: number;
 
+  // System
   incSheetOpen: () => void;
   decSheetOpen: () => void;
-
   setCurrentUser: (id: UserId) => void;
 
-  // Auth-Aktionen — alle als Promise damit hashing async geht.
+  // Auth (API-basiert)
   register: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   login: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<{ ok: true } | { ok: false; error: string }>;
-  removeAccount: (email: string) => void;
+
+  // Cloud-Sync
+  setAccount: (a: AuthAccount | null) => void;
+  setAuthReady: (v: boolean) => void;
+  applyCloudData: (data: Partial<AppData>, version: number) => void;
+  setCloudStatus: (s: CloudStatus, err?: string | null) => void;
+  setCloudVersion: (v: number) => void;
+  markPushed: () => void;
+  exportAppData: () => AppData;
 
   // shopping
   addShopping: (input: Pick<ShoppingItem, "text" | "scope" | "spinnerei">) => void;
@@ -72,7 +89,9 @@ type State = {
   removeShopping: (id: string) => void;
 
   // todos
-  addTodo: (input: Pick<Todo, "text" | "scope" | "prio" | "due"> & { tags?: string[]; note?: string }) => void;
+  addTodo: (
+    input: Pick<Todo, "text" | "scope" | "prio" | "due"> & { tags?: string[]; note?: string },
+  ) => void;
   toggleTodo: (id: string) => void;
   updateTodo: (id: string, patch: Partial<Todo>) => void;
   removeTodo: (id: string) => void;
@@ -82,7 +101,7 @@ type State = {
   updateActivity: (id: string, patch: Partial<Activity>) => void;
   removeActivity: (id: string) => void;
 
-  // packlist (per activity)
+  // packlist
   addPacklistItem: (activityId: string, text: string, scope: Scope, category: string) => void;
   updatePacklistItem: (activityId: string, itemId: string, patch: Partial<PacklistItem>) => void;
   togglePacklistItem: (activityId: string, itemId: string) => void;
@@ -90,18 +109,18 @@ type State = {
   resetPacklist: (activityId: string) => void;
   applyPacklistTemplate: (activityId: string, templateId: string) => void;
 
-  // trip segments (per activity)
+  // trip segments
   addSegment: (activityId: string, seg: Omit<TripSegment, "id">) => void;
   updateSegment: (activityId: string, segmentId: string, patch: Partial<TripSegment>) => void;
   removeSegment: (activityId: string, segmentId: string) => void;
 
-  // pre-trip shopping (per activity)
+  // pre-trip
   addPreTripItem: (activityId: string, text: string, scope: Scope) => void;
   togglePreTripItem: (activityId: string, itemId: string) => void;
   removePreTripItem: (activityId: string, itemId: string) => void;
   pushPreTripToShopping: (activityId: string, itemId: string) => void;
 
-  // packlist templates
+  // templates
   addPacklistTemplate: (name: string) => string;
   updatePacklistTemplate: (id: string, patch: Partial<PacklistTemplate>) => void;
   removePacklistTemplate: (id: string) => void;
@@ -122,18 +141,37 @@ type State = {
   removeGoalStep: (goalId: string, stepId: string) => void;
 };
 
+const EMPTY_APP_DATA: AppData = {
+  activities: SEED_ACTIVITIES,
+  shopping: SEED_SHOPPING,
+  todos: SEED_TODOS,
+  goals: SEED_GOALS,
+  cycle: SEED_CYCLE,
+  packlistTemplates: SEED_PACKLIST_TEMPLATES,
+};
+
+/**
+ * Markiert eine Mutation, die in die Cloud gepusht werden soll. Setzt
+ * `pendingPush: true`. Der Sync-Layer in CloudSyncProvider beobachtet
+ * dieses Flag und schickt debounced an /api/sync.
+ */
+function markDirty(): { pendingPush: true } {
+  return { pendingPush: true };
+}
+
 export const useStore = create<State>()(
   persist(
     (set, get) => ({
+      ...EMPTY_APP_DATA,
       currentUser: "D",
-      activities: SEED_ACTIVITIES,
-      shopping: SEED_SHOPPING,
-      todos: SEED_TODOS,
-      goals: SEED_GOALS,
-      cycle: SEED_CYCLE,
-      packlistTemplates: SEED_PACKLIST_TEMPLATES,
-      accounts: [],
-      loggedInEmail: null,
+
+      account: null,
+      authReady: false,
+      cloudVersion: 0,
+      cloudStatus: "idle",
+      cloudError: null,
+      pendingPush: false,
+
       sheetOpen: 0,
 
       incSheetOpen: () => set((s) => ({ sheetOpen: s.sheetOpen + 1 })),
@@ -141,89 +179,94 @@ export const useStore = create<State>()(
 
       setCurrentUser: (id) => set({ currentUser: id }),
 
-      register: async (emailRaw, password) => {
-        const email = normalizeEmail(emailRaw);
-        if (!isAllowedEmail(email)) {
-          return { ok: false, error: "Diese E-Mail ist nicht zugelassen." };
-        }
-        if (!password || password.length < 6) {
-          return { ok: false, error: "Passwort muss mindestens 6 Zeichen lang sein." };
-        }
-        const accounts = get().accounts;
-        const existing = accounts.find((a) => a.email === email);
-        if (existing) {
-          return { ok: false, error: "Account existiert bereits — bitte anmelden." };
-        }
-        // Nur ein Account pro Gerät — verhindere zweite Registrierung.
-        if (accounts.length > 0) {
-          return {
-            ok: false,
-            error:
-              "Auf diesem Gerät ist bereits ein Account registriert. Entferne ihn zuerst im Profil.",
-          };
-        }
-        const salt = newSalt();
-        const hash = await hashPassword(password, salt);
-        const userId = userIdForEmail(email)!;
-        const account: Account = {
-          email,
-          userId,
-          passwordSalt: salt,
-          passwordHash: hash,
-          createdAt: Date.now(),
+      setAccount: (a) => set({ account: a }),
+      setAuthReady: (v) => set({ authReady: v }),
+      setCloudStatus: (s, err = null) => set({ cloudStatus: s, cloudError: err }),
+      setCloudVersion: (v) => set({ cloudVersion: v }),
+      markPushed: () => set({ pendingPush: false }),
+      exportAppData: () => {
+        const s = get();
+        return {
+          activities: s.activities,
+          shopping: s.shopping,
+          todos: s.todos,
+          goals: s.goals,
+          cycle: s.cycle,
+          packlistTemplates: s.packlistTemplates,
         };
-        set((s) => ({
-          accounts: [...s.accounts, account],
-          loggedInEmail: email,
-          currentUser: userId,
-        }));
+      },
+      applyCloudData: (data, version) =>
+        set({
+          activities: data.activities ?? EMPTY_APP_DATA.activities,
+          shopping: data.shopping ?? EMPTY_APP_DATA.shopping,
+          todos: data.todos ?? EMPTY_APP_DATA.todos,
+          goals: data.goals ?? EMPTY_APP_DATA.goals,
+          cycle: data.cycle ?? EMPTY_APP_DATA.cycle,
+          packlistTemplates: data.packlistTemplates ?? EMPTY_APP_DATA.packlistTemplates,
+          cloudVersion: version,
+          pendingPush: false,
+        }),
+
+      register: async (email, password) => {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return { ok: false, error: body.error ?? `Fehler ${res.status}` };
+        }
+        const body = (await res.json()) as { account: AuthAccount };
+        set({ account: body.account, currentUser: body.account.userId });
         return { ok: true };
       },
 
-      login: async (emailRaw, password) => {
-        const email = normalizeEmail(emailRaw);
-        const account = get().accounts.find((a) => a.email === email);
-        if (!account) {
-          return { ok: false, error: "Account nicht gefunden." };
+      login: async (email, password) => {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return { ok: false, error: body.error ?? `Fehler ${res.status}` };
         }
-        const ok = await verifyPassword(password, account.passwordSalt, account.passwordHash);
-        if (!ok) {
-          return { ok: false, error: "Falsches Passwort." };
-        }
-        set({ loggedInEmail: email, currentUser: account.userId });
+        const body = (await res.json()) as { account: AuthAccount };
+        set({ account: body.account, currentUser: body.account.userId });
         return { ok: true };
       },
-
-      logout: () => set({ loggedInEmail: null }),
 
       changePassword: async (oldPassword, newPassword) => {
-        const email = get().loggedInEmail;
-        if (!email) return { ok: false, error: "Nicht angemeldet." };
-        const account = get().accounts.find((a) => a.email === email);
-        if (!account) return { ok: false, error: "Account nicht gefunden." };
-        const ok = await verifyPassword(oldPassword, account.passwordSalt, account.passwordHash);
-        if (!ok) return { ok: false, error: "Aktuelles Passwort stimmt nicht." };
-        if (!newPassword || newPassword.length < 6) {
-          return { ok: false, error: "Neues Passwort muss mindestens 6 Zeichen lang sein." };
+        const res = await fetch("/api/auth/change-password", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ oldPassword, newPassword }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return { ok: false, error: body.error ?? `Fehler ${res.status}` };
         }
-        const salt = newSalt();
-        const hash = await hashPassword(newPassword, salt);
-        set((s) => ({
-          accounts: s.accounts.map((a) =>
-            a.email === email ? { ...a, passwordSalt: salt, passwordHash: hash } : a,
-          ),
-        }));
         return { ok: true };
       },
 
-      removeAccount: (email) => {
-        const e = normalizeEmail(email);
-        set((s) => ({
-          accounts: s.accounts.filter((a) => a.email !== e),
-          loggedInEmail: s.loggedInEmail === e ? null : s.loggedInEmail,
-        }));
+      logout: async () => {
+        try {
+          await fetch("/api/auth/logout", { method: "POST" });
+        } catch {
+          // egal — Cookie wird auch vom Server abgeräumt sobald wieder online
+        }
+        set({
+          account: null,
+          cloudVersion: 0,
+          cloudStatus: "idle",
+          cloudError: null,
+          pendingPush: false,
+          ...EMPTY_APP_DATA,
+        });
       },
 
+      // ---------- shopping ----------
       addShopping: ({ text, scope, spinnerei }) => {
         const t = text.trim();
         if (!t) return;
@@ -243,21 +286,26 @@ export const useStore = create<State>()(
             },
             ...s.shopping,
           ],
+          ...markDirty(),
         }));
       },
       toggleShopping: (id) =>
         set((s) => ({
-          shopping: s.shopping.map((it) =>
-            it.id === id ? { ...it, done: !it.done } : it,
-          ),
+          shopping: s.shopping.map((it) => (it.id === id ? { ...it, done: !it.done } : it)),
+          ...markDirty(),
         })),
       updateShopping: (id, patch) =>
         set((s) => ({
           shopping: s.shopping.map((it) => (it.id === id ? { ...it, ...patch } : it)),
+          ...markDirty(),
         })),
       removeShopping: (id) =>
-        set((s) => ({ shopping: s.shopping.filter((it) => it.id !== id) })),
+        set((s) => ({
+          shopping: s.shopping.filter((it) => it.id !== id),
+          ...markDirty(),
+        })),
 
+      // ---------- todos ----------
       addTodo: ({ text, scope, prio, due, tags = [], note = "" }) => {
         const t = text.trim();
         if (!t) return;
@@ -278,37 +326,46 @@ export const useStore = create<State>()(
             },
             ...s.todos,
           ],
+          ...markDirty(),
         }));
       },
       toggleTodo: (id) =>
         set((s) => ({
           todos: s.todos.map((it) => (it.id === id ? { ...it, done: !it.done } : it)),
+          ...markDirty(),
         })),
       updateTodo: (id, patch) =>
         set((s) => ({
           todos: s.todos.map((it) => (it.id === id ? { ...it, ...patch } : it)),
+          ...markDirty(),
         })),
       removeTodo: (id) =>
-        set((s) => ({ todos: s.todos.filter((it) => it.id !== id) })),
+        set((s) => ({ todos: s.todos.filter((it) => it.id !== id), ...markDirty() })),
 
+      // ---------- activities ----------
       addActivity: (input) => {
         const t = input.title.trim();
         if (!t) return;
         const by = get().currentUser;
         set((s) => ({
           activities: [{ ...input, title: t, by, id: uid("act") }, ...s.activities],
+          ...markDirty(),
         }));
       },
       updateActivity: (id, patch) =>
         set((s) => ({
           activities: s.activities.map((it) => (it.id === id ? { ...it, ...patch } : it)),
+          ...markDirty(),
         })),
       removeActivity: (id) =>
-        set((s) => ({ activities: s.activities.filter((it) => it.id !== id) })),
+        set((s) => ({ activities: s.activities.filter((it) => it.id !== id), ...markDirty() })),
 
-      setCycle: (cycle) => set({ cycle }),
-      updateCycle: (patch) => set((s) => ({ cycle: { ...s.cycle, ...patch } })),
+      // ---------- cycle ----------
+      setCycle: (cycle) => set({ cycle, ...markDirty() }),
+      updateCycle: (patch) =>
+        set((s) => ({ cycle: { ...s.cycle, ...patch }, ...markDirty() })),
 
+      // ---------- packlist ----------
       addPacklistItem: (activityId, text, scope, category) => {
         const t = text.trim();
         if (!t) return;
@@ -320,11 +377,19 @@ export const useStore = create<State>()(
                   ...a,
                   packlist: [
                     ...a.packlist,
-                    { id: uid("pk"), text: t, packed: false, scope, by, category: category || "Sonstiges" },
+                    {
+                      id: uid("pk"),
+                      text: t,
+                      packed: false,
+                      scope,
+                      by,
+                      category: category || "Sonstiges",
+                    },
                   ],
                 }
               : a,
           ),
+          ...markDirty(),
         }));
       },
       updatePacklistItem: (activityId, itemId, patch) =>
@@ -339,6 +404,7 @@ export const useStore = create<State>()(
                 }
               : a,
           ),
+          ...markDirty(),
         })),
       togglePacklistItem: (activityId, itemId) =>
         set((s) => ({
@@ -352,6 +418,7 @@ export const useStore = create<State>()(
                 }
               : a,
           ),
+          ...markDirty(),
         })),
       removePacklistItem: (activityId, itemId) =>
         set((s) => ({
@@ -360,6 +427,7 @@ export const useStore = create<State>()(
               ? { ...a, packlist: a.packlist.filter((p) => p.id !== itemId) }
               : a,
           ),
+          ...markDirty(),
         })),
       resetPacklist: (activityId) =>
         set((s) => ({
@@ -368,6 +436,7 @@ export const useStore = create<State>()(
               ? { ...a, packlist: a.packlist.map((p) => ({ ...p, packed: false })) }
               : a,
           ),
+          ...markDirty(),
         })),
       applyPacklistTemplate: (activityId, templateId) => {
         const tpl = get().packlistTemplates.find((t) => t.id === templateId);
@@ -392,9 +461,11 @@ export const useStore = create<State>()(
                 }
               : a,
           ),
+          ...markDirty(),
         }));
       },
 
+      // ---------- segments ----------
       addSegment: (activityId, seg) =>
         set((s) => ({
           activities: s.activities.map((a) =>
@@ -402,6 +473,7 @@ export const useStore = create<State>()(
               ? { ...a, segments: [...a.segments, { ...seg, id: uid("sg") }] }
               : a,
           ),
+          ...markDirty(),
         })),
       updateSegment: (activityId, segmentId, patch) =>
         set((s) => ({
@@ -415,6 +487,7 @@ export const useStore = create<State>()(
                 }
               : a,
           ),
+          ...markDirty(),
         })),
       removeSegment: (activityId, segmentId) =>
         set((s) => ({
@@ -423,8 +496,10 @@ export const useStore = create<State>()(
               ? { ...a, segments: a.segments.filter((g) => g.id !== segmentId) }
               : a,
           ),
+          ...markDirty(),
         })),
 
+      // ---------- pre-trip ----------
       addPreTripItem: (activityId, text, scope) => {
         const t = text.trim();
         if (!t) return;
@@ -441,6 +516,7 @@ export const useStore = create<State>()(
                 }
               : a,
           ),
+          ...markDirty(),
         }));
       },
       togglePreTripItem: (activityId, itemId) =>
@@ -455,6 +531,7 @@ export const useStore = create<State>()(
                 }
               : a,
           ),
+          ...markDirty(),
         })),
       removePreTripItem: (activityId, itemId) =>
         set((s) => ({
@@ -463,6 +540,7 @@ export const useStore = create<State>()(
               ? { ...a, preTripShopping: a.preTripShopping.filter((p) => p.id !== itemId) }
               : a,
           ),
+          ...markDirty(),
         })),
       pushPreTripToShopping: (activityId, itemId) => {
         const activity = get().activities.find((a) => a.id === activityId);
@@ -484,9 +562,11 @@ export const useStore = create<State>()(
             },
             ...s.shopping,
           ],
+          ...markDirty(),
         }));
       },
 
+      // ---------- templates ----------
       addPacklistTemplate: (name) => {
         const t = name.trim();
         if (!t) return "";
@@ -497,6 +577,7 @@ export const useStore = create<State>()(
             ...s.packlistTemplates,
             { id, name: t, by, scope: "geteilt", items: [] },
           ],
+          ...markDirty(),
         }));
         return id;
       },
@@ -505,9 +586,13 @@ export const useStore = create<State>()(
           packlistTemplates: s.packlistTemplates.map((t) =>
             t.id === id ? { ...t, ...patch } : t,
           ),
+          ...markDirty(),
         })),
       removePacklistTemplate: (id) =>
-        set((s) => ({ packlistTemplates: s.packlistTemplates.filter((t) => t.id !== id) })),
+        set((s) => ({
+          packlistTemplates: s.packlistTemplates.filter((t) => t.id !== id),
+          ...markDirty(),
+        })),
       addTemplateItem: (templateId, text, scope, category) => {
         const t = text.trim();
         if (!t) return;
@@ -523,6 +608,7 @@ export const useStore = create<State>()(
                 }
               : tpl,
           ),
+          ...markDirty(),
         }));
       },
       updateTemplateItem: (templateId, itemId, patch) =>
@@ -535,6 +621,7 @@ export const useStore = create<State>()(
                 }
               : tpl,
           ),
+          ...markDirty(),
         })),
       removeTemplateItem: (templateId, itemId) =>
         set((s) => ({
@@ -543,8 +630,10 @@ export const useStore = create<State>()(
               ? { ...tpl, items: tpl.items.filter((it) => it.id !== itemId) }
               : tpl,
           ),
+          ...markDirty(),
         })),
 
+      // ---------- goals ----------
       addGoal: (input) => {
         const t = input.title.trim();
         if (!t) return;
@@ -554,14 +643,16 @@ export const useStore = create<State>()(
             { ...input, title: t, by, id: uid("g"), current: 0, steps: [] },
             ...s.goals,
           ],
+          ...markDirty(),
         }));
       },
       updateGoal: (id, patch) =>
         set((s) => ({
           goals: s.goals.map((it) => (it.id === id ? { ...it, ...patch } : it)),
+          ...markDirty(),
         })),
       removeGoal: (id) =>
-        set((s) => ({ goals: s.goals.filter((it) => it.id !== id) })),
+        set((s) => ({ goals: s.goals.filter((it) => it.id !== id), ...markDirty() })),
       addGoalStep: (goalId, text) => {
         const t = text.trim();
         if (!t) return;
@@ -571,6 +662,7 @@ export const useStore = create<State>()(
               ? { ...g, steps: [...g.steps, { id: uid("gs"), text: t, done: false }] }
               : g,
           ),
+          ...markDirty(),
         }));
       },
       toggleGoalStep: (goalId, stepId) =>
@@ -585,6 +677,7 @@ export const useStore = create<State>()(
                 }
               : g,
           ),
+          ...markDirty(),
         })),
       removeGoalStep: (goalId, stepId) =>
         set((s) => ({
@@ -593,36 +686,37 @@ export const useStore = create<State>()(
               ? { ...g, steps: g.steps.filter((st) => st.id !== stepId) }
               : g,
           ),
+          ...markDirty(),
         })),
     }),
     {
       name: "ambardaellen-store",
-      version: 6,
+      version: 7,
       storage: createJSONStorage(() => localStorage),
-      // sheetOpen ist transient — nicht in localStorage speichern
-      partialize: (state) => {
-        const { sheetOpen: _ignored, ...rest } = state;
-        void _ignored;
-        return rest;
-      },
+      // Auth + Transient + Sync-Status nicht persistieren — die kommen vom Server.
+      partialize: (state) => ({
+        currentUser: state.currentUser,
+        activities: state.activities,
+        shopping: state.shopping,
+        todos: state.todos,
+        goals: state.goals,
+        cycle: state.cycle,
+        packlistTemplates: state.packlistTemplates,
+      }),
       migrate: (persisted: unknown, version: number) => {
-        // v6: alle App-Daten leer setzen (User trägt selbst ein). Accounts +
-        // Login bleiben erhalten, damit niemand sich neu registrieren muss.
-        if (!persisted || version < 6) {
-          const prev = (persisted as Partial<State> | null) ?? null;
+        if (!persisted || version < 7) {
+          const prev = (persisted as Partial<AppData & { currentUser: UserId }> | null) ?? null;
           return {
             currentUser: prev?.currentUser ?? ("D" as UserId),
-            activities: SEED_ACTIVITIES,
-            shopping: SEED_SHOPPING,
-            todos: SEED_TODOS,
-            goals: SEED_GOALS,
-            cycle: SEED_CYCLE,
-            packlistTemplates: SEED_PACKLIST_TEMPLATES,
-            accounts: prev?.accounts ?? [],
-            loggedInEmail: prev?.loggedInEmail ?? null,
+            activities: prev?.activities ?? EMPTY_APP_DATA.activities,
+            shopping: prev?.shopping ?? EMPTY_APP_DATA.shopping,
+            todos: prev?.todos ?? EMPTY_APP_DATA.todos,
+            goals: prev?.goals ?? EMPTY_APP_DATA.goals,
+            cycle: prev?.cycle ?? EMPTY_APP_DATA.cycle,
+            packlistTemplates: prev?.packlistTemplates ?? EMPTY_APP_DATA.packlistTemplates,
           };
         }
-        return persisted as State;
+        return persisted;
       },
     },
   ),

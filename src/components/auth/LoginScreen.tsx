@@ -5,7 +5,7 @@ import { ChevronLeft, Lock, Mail, Heart, LogIn, UserPlus } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { Avatar } from "../Avatar";
 import { Atmosphere } from "../Atmosphere";
-import { ALLOWED_EMAILS, userIdForEmail, type Account } from "@/lib/auth";
+import { ALLOWED_EMAILS, userIdForEmail } from "@/lib/auth";
 import { USERS } from "@/lib/types";
 
 type Mode =
@@ -14,15 +14,7 @@ type Mode =
   | { kind: "register"; email: string };
 
 export function LoginScreen() {
-  const accounts = useStore((s) => s.accounts);
   const [mode, setMode] = useState<Mode>({ kind: "select" });
-
-  // „Ein Account pro Gerät": wenn bereits einer registriert ist,
-  // bieten wir keine weiteren Registrierungen an.
-  const unregistered =
-    accounts.length === 0
-      ? ALLOWED_EMAILS.filter((e) => !accounts.some((a) => a.email === e))
-      : [];
 
   return (
     <div className="login-shell">
@@ -46,10 +38,8 @@ export function LoginScreen() {
 
         {mode.kind === "select" && (
           <SelectScreen
-            accounts={accounts}
-            onPickAccount={(email) => setMode({ kind: "login", email })}
-            onStartRegister={(email) => setMode({ kind: "register", email })}
-            unregistered={unregistered}
+            onLogin={(email) => setMode({ kind: "login", email })}
+            onRegister={(email) => setMode({ kind: "register", email })}
           />
         )}
 
@@ -57,6 +47,9 @@ export function LoginScreen() {
           <LoginForm
             email={mode.email}
             onBack={() => setMode({ kind: "select" })}
+            onSwitchToRegister={() =>
+              setMode({ kind: "register", email: mode.email })
+            }
           />
         )}
 
@@ -64,6 +57,7 @@ export function LoginScreen() {
           <RegisterForm
             email={mode.email}
             onBack={() => setMode({ kind: "select" })}
+            onSwitchToLogin={() => setMode({ kind: "login", email: mode.email })}
           />
         )}
       </div>
@@ -114,114 +108,102 @@ export function LoginScreen() {
 }
 
 function SelectScreen({
-  accounts,
-  onPickAccount,
-  onStartRegister,
-  unregistered,
+  onLogin,
+  onRegister,
 }: {
-  accounts: Account[];
-  onPickAccount: (email: string) => void;
-  onStartRegister: (email: string) => void;
-  unregistered: string[];
+  onLogin: (email: string) => void;
+  onRegister: (email: string) => void;
 }) {
-  if (accounts.length === 0) {
-    // Erste Begrüssung: noch niemand registriert
-    return (
-      <div className="px-6 flex-1 flex flex-col">
-        <p className="text-[14.5px] mb-5 text-center" style={{ color: "var(--ink-soft)" }}>
-          Willkommen. Erstelle deinen Account um zu starten.
-        </p>
-        <div className="space-y-2">
-          {ALLOWED_EMAILS.map((email) => {
-            const uid = userIdForEmail(email)!;
-            return (
-              <button
-                key={email}
-                type="button"
-                onClick={() => onStartRegister(email)}
-                className="tap w-full rounded-2xl px-4 py-3 flex items-center gap-3 shadow-card"
-                style={{ background: "var(--paper)" }}
-              >
-                <Avatar id={uid} size={36} />
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="text-[15px] font-semibold">{USERS[uid].name}</div>
-                  <div className="text-[12px]" style={{ color: "var(--muted)" }}>
-                    {email}
-                  </div>
-                </div>
-                <UserPlus size={16} strokeWidth={1.75} color="var(--terra)" />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
+  const [tab, setTab] = useState<"login" | "register">("login");
 
   return (
     <div className="px-6 flex-1 flex flex-col">
-      <p className="uplabel text-[10px] mb-2" style={{ color: "var(--muted)" }}>
-        Du bist
-      </p>
-      <div className="space-y-2">
-        {accounts.map((acc) => (
-          <button
-            key={acc.email}
-            type="button"
-            onClick={() => onPickAccount(acc.email)}
-            className="tap w-full rounded-2xl px-4 py-3 flex items-center gap-3 shadow-card"
-            style={{ background: "var(--paper)" }}
-          >
-            <Avatar id={acc.userId} size={36} />
-            <div className="flex-1 min-w-0 text-left">
-              <div className="text-[15px] font-semibold">{USERS[acc.userId].name}</div>
-              <div className="text-[12px]" style={{ color: "var(--muted)" }}>
-                {acc.email}
-              </div>
-            </div>
-            <LogIn size={16} strokeWidth={1.75} color="var(--terra)" />
-          </button>
-        ))}
+      <div
+        className="flex p-1 rounded-2xl mb-4"
+        style={{ background: "var(--cream-deep)" }}
+      >
+        <TabBtn label="Anmelden" active={tab === "login"} onClick={() => setTab("login")} />
+        <TabBtn
+          label="Neu registrieren"
+          active={tab === "register"}
+          onClick={() => setTab("register")}
+        />
       </div>
 
-      {unregistered.length > 0 && (
-        <div className="mt-6">
-          <p className="uplabel text-[10px] mb-2" style={{ color: "var(--muted)" }}>
-            Noch nicht hier?
-          </p>
-          {unregistered.map((email) => {
-            const uid = userIdForEmail(email)!;
-            return (
-              <button
-                key={email}
-                type="button"
-                onClick={() => onStartRegister(email)}
-                className="tap w-full rounded-2xl px-4 py-3 flex items-center gap-3 mt-1"
-                style={{
-                  background: "transparent",
-                  border: "1px dashed var(--line)",
-                }}
-              >
-                <Avatar id={uid} size={28} dim />
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="text-[14px] font-medium" style={{ color: "var(--ink-soft)" }}>
-                    {USERS[uid].name} registrieren
-                  </div>
-                  <div className="text-[11.5px]" style={{ color: "var(--muted)" }}>
-                    {email}
-                  </div>
+      <p
+        className="text-[13px] mb-4 text-center"
+        style={{ color: "var(--ink-soft)" }}
+      >
+        {tab === "login"
+          ? "Wer bist du?"
+          : "Erstelle deinen Account — er liegt sicher im Cloud-Konto."}
+      </p>
+
+      <div className="space-y-2">
+        {ALLOWED_EMAILS.map((email) => {
+          const uid = userIdForEmail(email)!;
+          return (
+            <button
+              key={email}
+              type="button"
+              onClick={() => (tab === "login" ? onLogin(email) : onRegister(email))}
+              className="tap w-full rounded-2xl px-4 py-3 flex items-center gap-3 shadow-card"
+              style={{ background: "var(--paper)" }}
+            >
+              <Avatar id={uid} size={36} />
+              <div className="flex-1 min-w-0 text-left">
+                <div className="text-[15px] font-semibold">{USERS[uid].name}</div>
+                <div className="text-[12px]" style={{ color: "var(--muted)" }}>
+                  {email}
                 </div>
-                <UserPlus size={14} strokeWidth={1.75} color="var(--muted)" />
-              </button>
-            );
-          })}
-        </div>
-      )}
+              </div>
+              {tab === "login" ? (
+                <LogIn size={16} strokeWidth={1.75} color="var(--terra)" />
+              ) : (
+                <UserPlus size={16} strokeWidth={1.75} color="var(--terra)" />
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function LoginForm({ email, onBack }: { email: string; onBack: () => void }) {
+function TabBtn({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="tap flex-1 py-2 rounded-xl text-[13px] font-medium transition-colors"
+      style={
+        active
+          ? { background: "var(--paper)", color: "var(--ink)" }
+          : { background: "transparent", color: "var(--ink-soft)" }
+      }
+    >
+      {label}
+    </button>
+  );
+}
+
+function LoginForm({
+  email,
+  onBack,
+  onSwitchToRegister,
+}: {
+  email: string;
+  onBack: () => void;
+  onSwitchToRegister: () => void;
+}) {
   const login = useStore((s) => s.login);
   const userId = userIdForEmail(email)!;
   const [password, setPassword] = useState("");
@@ -235,7 +217,6 @@ function LoginForm({ email, onBack }: { email: string; onBack: () => void }) {
     const res = await login(email, password);
     setBusy(false);
     if (!res.ok) setError(res.error);
-    // Bei Erfolg verschwindet der LoginScreen automatisch (AuthGate)
   };
 
   return (
@@ -261,7 +242,10 @@ function LoginForm({ email, onBack }: { email: string; onBack: () => void }) {
         </div>
       </div>
 
-      <label className="uplabel text-[10px] mb-1.5" style={{ color: "var(--muted)" }}>
+      <label
+        className="uplabel text-[10px] mb-1.5"
+        style={{ color: "var(--muted)" }}
+      >
         Passwort
       </label>
       <div
@@ -299,11 +283,28 @@ function LoginForm({ email, onBack }: { email: string; onBack: () => void }) {
       >
         {busy ? "Einen Moment…" : "Anmelden"}
       </button>
+
+      <button
+        type="button"
+        onClick={onSwitchToRegister}
+        className="tap mt-3 text-[12.5px] self-center"
+        style={{ color: "var(--ink-soft)" }}
+      >
+        Noch kein Konto? <span style={{ color: "var(--terra)" }}>Registrieren</span>
+      </button>
     </div>
   );
 }
 
-function RegisterForm({ email, onBack }: { email: string; onBack: () => void }) {
+function RegisterForm({
+  email,
+  onBack,
+  onSwitchToLogin,
+}: {
+  email: string;
+  onBack: () => void;
+  onSwitchToLogin: () => void;
+}) {
   const register = useStore((s) => s.register);
   const userId = userIdForEmail(email)!;
   const [password, setPassword] = useState("");
@@ -345,13 +346,19 @@ function RegisterForm({ email, onBack }: { email: string; onBack: () => void }) 
           <div className="serif-i text-[22px] leading-tight">
             Willkommen, {USERS[userId].name}
           </div>
-          <div className="text-[12px] inline-flex items-center gap-1" style={{ color: "var(--muted)" }}>
+          <div
+            className="text-[12px] inline-flex items-center gap-1"
+            style={{ color: "var(--muted)" }}
+          >
             <Mail size={11} strokeWidth={1.75} /> {email}
           </div>
         </div>
       </div>
 
-      <label className="uplabel text-[10px] mb-1.5" style={{ color: "var(--muted)" }}>
+      <label
+        className="uplabel text-[10px] mb-1.5"
+        style={{ color: "var(--muted)" }}
+      >
         Passwort wählen
       </label>
       <div
@@ -403,6 +410,15 @@ function RegisterForm({ email, onBack }: { email: string; onBack: () => void }) 
         }}
       >
         {busy ? "Einen Moment…" : "Account erstellen"}
+      </button>
+
+      <button
+        type="button"
+        onClick={onSwitchToLogin}
+        className="tap mt-3 text-[12.5px] self-center"
+        style={{ color: "var(--ink-soft)" }}
+      >
+        Schon registriert? <span style={{ color: "var(--terra)" }}>Anmelden</span>
       </button>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, LogOut, Trash2, Check } from "lucide-react";
+import { Lock, LogOut, Check, Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { Sheet } from "../Sheet";
 import { Avatar } from "../Avatar";
 import { useStore } from "@/lib/store";
@@ -18,14 +18,14 @@ export function ProfileSheet({ open, onClose }: Props) {
 }
 
 function ProfileInner({ onClose }: { onClose: () => void }) {
-  const loggedInEmail = useStore((s) => s.loggedInEmail);
-  const accounts = useStore((s) => s.accounts);
+  const account = useStore((s) => s.account);
   const currentUser = useStore((s) => s.currentUser);
+  const cloudStatus = useStore((s) => s.cloudStatus);
+  const cloudError = useStore((s) => s.cloudError);
+  const cloudVersion = useStore((s) => s.cloudVersion);
+  const pendingPush = useStore((s) => s.pendingPush);
   const logout = useStore((s) => s.logout);
   const changePassword = useStore((s) => s.changePassword);
-  const removeAccount = useStore((s) => s.removeAccount);
-
-  const acct = accounts.find((a) => a.email === loggedInEmail);
 
   const [showPwChange, setShowPwChange] = useState(false);
   const [oldPw, setOldPw] = useState("");
@@ -35,7 +35,7 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState(false);
 
-  if (!acct) {
+  if (!account) {
     return (
       <Sheet open onClose={onClose} title="Profil">
         <p style={{ color: "var(--ink-soft)" }}>Nicht angemeldet.</p>
@@ -64,6 +64,23 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const statusLabel =
+    cloudStatus === "syncing" || pendingPush
+      ? "synchronisiert…"
+      : cloudStatus === "loading"
+        ? "lädt…"
+        : cloudStatus === "error"
+          ? "Fehler"
+          : "synchron";
+  const StatusIcon =
+    cloudStatus === "error" ? CloudOff : cloudStatus === "syncing" ? RefreshCw : Cloud;
+  const statusColor =
+    cloudStatus === "error"
+      ? "#C5634B"
+      : cloudStatus === "syncing" || pendingPush
+        ? "var(--terra)"
+        : "var(--sage)";
+
   return (
     <Sheet open onClose={onClose} title="Profil">
       <div className="flex items-center gap-3 mb-4">
@@ -73,13 +90,12 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
             {USERS[currentUser].name}
           </div>
           <div className="text-[12.5px]" style={{ color: "var(--muted)" }}>
-            {acct.email}
+            {account.email}
           </div>
         </div>
       </div>
 
       <div className="space-y-1 mb-4">
-        <Row label="Account erstellt" value={new Date(acct.createdAt).toLocaleDateString("de-DE")} />
         <Row
           label="Sichtbar als"
           value={
@@ -92,9 +108,25 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
             </span>
           }
         />
+        <Row
+          label="Cloud"
+          value={
+            <span className="inline-flex items-center gap-1.5" style={{ color: statusColor }}>
+              <StatusIcon size={12} strokeWidth={1.75} />
+              {statusLabel}
+              <span className="text-[10px]" style={{ color: "var(--muted)" }}>
+                v{cloudVersion}
+              </span>
+            </span>
+          }
+        />
+        {cloudError && (
+          <div className="text-[11.5px] py-1.5" style={{ color: "#C5634B" }}>
+            {cloudError}
+          </div>
+        )}
       </div>
 
-      {/* Passwort ändern */}
       {!showPwChange ? (
         <button
           type="button"
@@ -175,36 +207,16 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
-      {/* Abmelden */}
       <button
         type="button"
-        onClick={() => {
-          logout();
+        onClick={async () => {
+          await logout();
           onClose();
         }}
         className="tap w-full mt-5 py-3 rounded-2xl text-[14px] font-medium inline-flex items-center justify-center gap-2"
         style={{ background: "var(--cream-deep)", color: "var(--terra-deep)" }}
       >
         <LogOut size={14} strokeWidth={1.75} /> Abmelden
-      </button>
-
-      {/* Account von diesem Gerät entfernen */}
-      <button
-        type="button"
-        onClick={() => {
-          if (
-            confirm(
-              `Account ${acct.email} wirklich von diesem Gerät entfernen? Beim nächsten Login musst du dich neu registrieren.`,
-            )
-          ) {
-            removeAccount(acct.email);
-            onClose();
-          }
-        }}
-        className="tap w-full mt-2 py-2.5 rounded-2xl text-[13px] font-medium inline-flex items-center justify-center gap-2"
-        style={{ background: "transparent", color: "var(--muted)" }}
-      >
-        <Trash2 size={13} strokeWidth={1.75} /> Account von diesem Gerät entfernen
       </button>
     </Sheet>
   );

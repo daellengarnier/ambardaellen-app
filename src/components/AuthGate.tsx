@@ -5,18 +5,26 @@ import { useStore } from "@/lib/store";
 import { LoginScreen } from "./auth/LoginScreen";
 import { PhoneShell } from "./PhoneShell";
 import { ClientOnly } from "./ClientOnly";
+import { CloudSyncProvider } from "./CloudSyncProvider";
 
 export function AuthGate({ children }: { children: ReactNode }) {
   return (
     <ClientOnly fallback={<div className="min-h-dvh" />}>
-      <Gate>{children}</Gate>
+      <CloudSyncProvider>
+        <Gate>{children}</Gate>
+      </CloudSyncProvider>
     </ClientOnly>
   );
 }
 
 function Gate({ children }: { children: ReactNode }) {
-  const loggedInEmail = useStore((s) => s.loggedInEmail);
-  if (!loggedInEmail) {
+  const account = useStore((s) => s.account);
+  const authReady = useStore((s) => s.authReady);
+
+  if (!authReady) {
+    return <div className="min-h-dvh" />;
+  }
+  if (!account) {
     return <LoginScreen />;
   }
   return <PhoneShell>{children}</PhoneShell>;

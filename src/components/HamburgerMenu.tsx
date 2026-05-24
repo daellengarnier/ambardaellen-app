@@ -16,7 +16,8 @@ export function HamburgerMenu() {
   const [sheet, setSheet] = useState<Open>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  const loggedInEmail = useStore((s) => s.loggedInEmail);
+  const account = useStore((s) => s.account);
+  const loggedInEmail = account?.email ?? "";
   const currentUser = useStore((s) => s.currentUser);
   const setCurrentUser = useStore((s) => s.setCurrentUser);
   const logout = useStore((s) => s.logout);
