@@ -120,19 +120,21 @@ function HeuteContent() {
       return PRIO[a.prio].rank - PRIO[b.prio].rank;
     });
 
-  // Demnächst: 3 nächste Aktivitäten
-  const upcomingActs = myActivities
-    .filter((a) => a.status === "geplant" && a.date && a.date > today)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, 3);
-
-  // Bald-Reise mit Packliste
+  // Bald-Reise mit Packliste (kommt prominent als „Demnächst auf Reise")
   const upcomingTrip = myActivities
     .filter(
       (a) =>
         a.packlist.length > 0 && a.status === "geplant" && a.date && a.date >= today,
     )
     .sort((a, b) => a.date.localeCompare(b.date))[0];
+
+  // Demnächst: 3 nächste Aktivitäten. Trip rausfiltern, der bekommt
+  // schon seine eigene Karte oben.
+  const upcomingActs = myActivities
+    .filter((a) => a.status === "geplant" && a.date && a.date > today)
+    .filter((a) => !upcomingTrip || a.id !== upcomingTrip.id)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 3);
 
   // Diese Woche Todos (nicht heute/überfällig)
   const soonTodos = myTodos

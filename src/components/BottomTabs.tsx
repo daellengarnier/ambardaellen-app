@@ -6,7 +6,7 @@ import { Sun, Calendar, ShoppingCart, ListTodo, Target } from "lucide-react";
 import { useStore } from "@/lib/store";
 
 const TABS = [
-  { href: "/", label: "Heute", Icon: Sun },
+  { href: "/", label: "Home", Icon: Sun },
   { href: "/aktivitaeten", label: "Aktivitäten", Icon: Calendar },
   { href: "/einkauf", label: "Einkauf", Icon: ShoppingCart },
   { href: "/todo", label: "Todo", Icon: ListTodo },

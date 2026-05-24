@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Cycle } from "@/lib/types";
 import { PHASE_COLOR_MAP, phaseForDay } from "@/lib/cycle";
 import { todayISO } from "@/lib/date";
@@ -7,12 +9,17 @@ import { todayISO } from "@/lib/date";
 type Props = {
   cycle: Cycle;
   onTapDay?: (iso: string) => void;
+  selectedDay?: string | null;
 };
 
-export function CycleCalendar({ cycle, onTapDay }: Props) {
+export function CycleCalendar({ cycle, onTapDay, selectedDay }: Props) {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  const [view, setView] = useState<{ year: number; month: number }>({
+    year: now.getFullYear(),
+    month: now.getMonth(),
+  });
+
+  const { year, month } = view;
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
   const startWeekday = (first.getDay() + 6) % 7; // Mon-first
@@ -59,10 +66,23 @@ export function CycleCalendar({ cycle, onTapDay }: Props) {
       dayInCycle,
       phase,
       isToday: iso === today,
+      isSelected: iso === selectedDay,
       isPeriodStart: cycle.periodStarts.includes(iso),
       entry: cycle.entries[iso],
     };
   };
+
+  const shiftMonth = (delta: number) => {
+    setView((v) => {
+      const d = new Date(v.year, v.month + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    });
+  };
+
+  const monthLabel = first.toLocaleDateString("de-DE", {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div>
@@ -70,9 +90,27 @@ export function CycleCalendar({ cycle, onTapDay }: Props) {
         className="text-[12px] font-semibold mb-1.5 flex items-center justify-between"
         style={{ color: "var(--ink-soft)" }}
       >
-        <span>
-          {first.toLocaleDateString("de-DE", { month: "long", year: "numeric" })}
-        </span>
+        <div className="inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => shiftMonth(-1)}
+            className="tap w-6 h-6 inline-flex items-center justify-center rounded-full"
+            style={{ background: "var(--cream-deep)", color: "var(--ink-soft)" }}
+            aria-label="Vorheriger Monat"
+          >
+            <ChevronLeft size={13} strokeWidth={2} />
+          </button>
+          <span className="px-1">{monthLabel}</span>
+          <button
+            type="button"
+            onClick={() => shiftMonth(1)}
+            className="tap w-6 h-6 inline-flex items-center justify-center rounded-full"
+            style={{ background: "var(--cream-deep)", color: "var(--ink-soft)" }}
+            aria-label="Nächster Monat"
+          >
+            <ChevronRight size={13} strokeWidth={2} />
+          </button>
+        </div>
         <span
           className="text-[10px] font-normal uppercase tracking-wider"
           style={{ color: "var(--muted)" }}
@@ -94,6 +132,11 @@ export function CycleCalendar({ cycle, onTapDay }: Props) {
           const info = cellInfo(d);
           const phaseCol = PHASE_COLOR_MAP[info.phase];
           const isOvulation = info.dayInCycle === cycle.avgCycle - 14;
+          const boxShadow = info.isSelected
+            ? `0 0 0 2px var(--paper) inset, 0 0 0 2.5px var(--ink)`
+            : info.isToday
+              ? `0 0 0 1.5px var(--paper) inset, 0 0 0 2px ${phaseCol}`
+              : "none";
           return (
             <button
               key={i}
@@ -103,9 +146,7 @@ export function CycleCalendar({ cycle, onTapDay }: Props) {
               style={{
                 background: info.isToday ? phaseCol : `${phaseCol}22`,
                 color: info.isToday ? "white" : "var(--ink)",
-                boxShadow: info.isToday
-                  ? `0 0 0 1.5px var(--paper) inset, 0 0 0 2px ${phaseCol}`
-                  : "none",
+                boxShadow,
               }}
             >
               <span className="relative z-10">{d}</span>
