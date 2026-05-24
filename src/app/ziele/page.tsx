@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Flag, ChevronRight, Users, Lock, Target } from "lucide-react";
+import { Plus, Flag, ChevronRight, Users, Lock, Target, Repeat, Minus, Flame } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { visibleTo } from "@/lib/scope";
 import { USERS } from "@/lib/types";
@@ -14,6 +14,12 @@ import { Empty } from "@/components/Empty";
 import { ClientOnly } from "@/components/ClientOnly";
 import { GoalSheet } from "@/components/sheets/GoalSheet";
 import { GoalAddSheet } from "@/components/sheets/GoalAddSheet";
+import { todayISO } from "@/lib/date";
+import {
+  currentStreak,
+  valueInPeriod,
+  PERIOD_LABEL_PER,
+} from "@/lib/recurringGoal";
 import type { Goal, Term } from "@/lib/types";
 
 const TERM_LABEL: Record<Term, string> = {
@@ -50,6 +56,7 @@ function GoalContent() {
   const addGoalStep = useStore((s) => s.addGoalStep);
   const toggleGoalStep = useStore((s) => s.toggleGoalStep);
   const removeGoalStep = useStore((s) => s.removeGoalStep);
+  const logGoalProgress = useStore((s) => s.logGoalProgress);
 
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("alle");
   const [openGoal, setOpenGoal] = useState<Goal | null>(null);
@@ -62,11 +69,23 @@ function GoalContent() {
     return arr;
   }, [goals, scopeFilter, currentUser]);
 
+  const recurringGoals = useMemo(
+    () => myGoals.filter((g) => g.kind === "wiederkehrend"),
+    [myGoals],
+  );
+  const oneTimeGoals = useMemo(
+    () => myGoals.filter((g) => g.kind !== "wiederkehrend"),
+    [myGoals],
+  );
+
   const grouped = useMemo(() => {
     const m: Record<Term, Goal[]> = { kurz: [], mittel: [], lang: [] };
-    myGoals.forEach((g) => m[g.term].push(g));
+    oneTimeGoals.forEach((g) => {
+      const t = g.term ?? "kurz";
+      m[t].push(g);
+    });
     return m;
-  }, [myGoals]);
+  }, [oneTimeGoals]);
 
   // Sync openGoal with store updates so step toggles reflect immediately.
   const currentOpenGoal = openGoal ? goals.find((g) => g.id === openGoal.id) ?? null : null;
@@ -127,6 +146,32 @@ function GoalContent() {
             body="Was willst du erreichen? Klein anfangen, einfach loslegen."
           />
         )}
+
+        {recurringGoals.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-1.5 px-1">
+              <Repeat size={12} strokeWidth={1.75} color="var(--ink-soft)" />
+              <h2
+                className="text-[11.5px] font-semibold uppercase tracking-[0.16em]"
+                style={{ color: "var(--ink-soft)" }}
+              >
+                Gewohnheiten &amp; Wiederkehrend
+              </h2>
+            </div>
+            <div className="space-y-1.5">
+              {recurringGoals.map((g) => (
+                <RecurringGoalCard
+                  key={g.id}
+                  goal={g}
+                  onOpen={() => setOpenGoal(g)}
+                  onLog={(delta) => logGoalProgress(g.id, todayISO(), delta)}
+                  onRemove={() => removeGoal(g.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {TERM_ORDER.map((term) => {
           const items = grouped[term];
           if (items.length === 0) return null;
@@ -143,7 +188,8 @@ function GoalContent() {
               </div>
               <div className="space-y-1.5">
                 {items.map((g) => {
-                  const doneSteps = g.steps.filter((s) => s.done).length;
+                  const steps = g.steps ?? [];
+                  const doneSteps = steps.filter((s) => s.done).length;
                   return (
                     <Card key={g.id} onClick={() => setOpenGoal(g)} className="p-3.5">
                       <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -163,7 +209,7 @@ function GoalContent() {
                         style={{ color: "var(--muted)" }}
                       >
                         <span>
-                          {doneSteps} / {g.steps.length} Schritte
+                          {doneSteps} / {steps.length} Schritte
                         </span>
                         <span
                           className="inline-flex items-center gap-1 font-medium"
@@ -199,5 +245,106 @@ function GoalContent() {
         currentUser={currentUser}
       />
     </>
+  );
+}
+
+function RecurringGoalCard({
+  goal,
+  onOpen,
+  onLog,
+  onRemove,
+}: {
+  goal: Goal;
+  onOpen: () => void;
+  onLog: (delta: number) => void;
+  onRemove: () => void;
+}) {
+  if (goal.kind !== "wiederkehrend" || !goal.period) return null;
+  const value = valueInPeriod(goal);
+  const pct = Math.min(100, Math.round((value / Math.max(1, goal.target)) * 100));
+  const done = value >= goal.target;
+  const streak = currentStreak(goal);
+  const unit = goal.unit || "mal";
+
+  return (
+    <Card className="p-3.5">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="tap flex-1 text-left min-w-0"
+        >
+          <div className="text-[14.5px] font-medium leading-snug pr-2 truncate">
+            {goal.title}
+          </div>
+          <div
+            className="text-[11px] mt-0.5 inline-flex items-center gap-1"
+            style={{ color: "var(--muted)" }}
+          >
+            {goal.target} {unit} {PERIOD_LABEL_PER[goal.period]}
+            {streak > 0 && (
+              <span
+                className="inline-flex items-center gap-0.5 ml-1"
+                style={{ color: "var(--terra)" }}
+              >
+                · <Flame size={10} strokeWidth={2} /> {streak}
+              </span>
+            )}
+          </div>
+        </button>
+        <AvatarWithScope by={goal.by} scope={goal.scope} size={20} />
+        <DeleteAction kind="Ziel" label={goal.title} onConfirm={onRemove} />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onLog(-1)}
+          disabled={value <= 0}
+          className="tap w-8 h-8 rounded-full inline-flex items-center justify-center shrink-0"
+          style={{
+            background: "var(--cream-deep)",
+            color: value <= 0 ? "var(--muted)" : "var(--ink-soft)",
+            opacity: value <= 0 ? 0.5 : 1,
+          }}
+          aria-label="Eintrag entfernen"
+        >
+          <Minus size={14} strokeWidth={2} />
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline justify-between mb-1">
+            <div className="text-[12.5px]" style={{ color: "var(--ink-soft)" }}>
+              {value} / {goal.target} {unit}
+            </div>
+            <div className="text-[11px]" style={{ color: "var(--muted)" }}>
+              {done ? "erfüllt ✓" : `${pct}%`}
+            </div>
+          </div>
+          <div
+            className="h-1.5 rounded-full overflow-hidden"
+            style={{ background: "var(--cream-deep)" }}
+          >
+            <div
+              className="h-full rounded-full transition-[width] duration-300"
+              style={{
+                width: `${pct}%`,
+                background: done ? "var(--sage)" : "var(--terra)",
+              }}
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onLog(1)}
+          className="tap w-9 h-9 rounded-full inline-flex items-center justify-center shrink-0 text-white shadow-card"
+          style={{ background: done ? "var(--sage)" : "var(--terra)" }}
+          aria-label="Eintrag hinzufügen"
+        >
+          <Plus size={16} strokeWidth={2.25} />
+        </button>
+      </div>
+    </Card>
   );
 }

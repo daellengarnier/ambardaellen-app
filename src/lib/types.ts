@@ -143,16 +143,31 @@ export type GoalStep = {
   done: boolean;
 };
 
+export type GoalKind = "einmalig" | "wiederkehrend";
+export type Period = "tag" | "woche" | "monat";
+
 export type Goal = {
   id: string;
   title: string;
-  term: Term;
-  target: number;
-  current: number;
-  unit: string;
   by: UserId;
   scope: Scope;
-  steps: GoalStep[];
+  kind: GoalKind;
+
+  // Einheit + Zielwert. Bei „einmalig" der Gesamtwert (z. B. 5000€),
+  // bei „wiederkehrend" der Sollwert pro Periode (z. B. 3 Sport-Sessions
+  // pro Woche). Default-Einheit "mal" für Habits.
+  target: number;
+  unit: string;
+
+  // Nur „einmalig":
+  term?: Term;
+  current?: number;
+  steps?: GoalStep[];
+
+  // Nur „wiederkehrend":
+  period?: Period;
+  /** ISO-Datum → aufaddierter Wert an diesem Tag. */
+  log?: Record<ISODate, number>;
 };
 
 export type Mood =

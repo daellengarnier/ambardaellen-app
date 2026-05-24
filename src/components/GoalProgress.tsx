@@ -4,7 +4,8 @@ import type { Goal } from "@/lib/types";
 import { USERS } from "@/lib/types";
 
 export function GoalProgress({ goal }: { goal: Goal }) {
-  const pct = Math.min(100, Math.round((goal.current / Math.max(1, goal.target)) * 100));
+  const current = goal.current ?? 0;
+  const pct = Math.min(100, Math.round((current / Math.max(1, goal.target)) * 100));
   const color = USERS[goal.by].color;
   return (
     <div className="space-y-1.5">
@@ -16,7 +17,7 @@ export function GoalProgress({ goal }: { goal: Goal }) {
       </div>
       <div className="flex justify-between text-[12.5px] text-[var(--muted)] mono">
         <span>
-          {goal.current.toLocaleString("de-DE")}
+          {current.toLocaleString("de-DE")}
           {goal.unit ? ` / ${goal.target.toLocaleString("de-DE")} ${goal.unit}` : ` / ${goal.target}`}
         </span>
         <span>{pct}%</span>

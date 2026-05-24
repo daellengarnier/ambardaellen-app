@@ -134,7 +134,8 @@ type State = AppData & {
   updateCycle: (patch: Partial<Cycle>) => void;
 
   // goals
-  addGoal: (input: Omit<Goal, "id" | "by" | "steps" | "current">) => void;
+  addGoal: (input: Omit<Goal, "id" | "by">) => void;
+  logGoalProgress: (goalId: string, iso: string, delta: number) => void;
   updateGoal: (id: string, patch: Partial<Goal>) => void;
   removeGoal: (id: string) => void;
   addGoalStep: (goalId: string, text: string) => void;
@@ -665,14 +666,30 @@ export const useStore = create<State>()(
         const t = input.title.trim();
         if (!t) return;
         const by = get().currentUser;
+        const id = uid("g");
+        const base = { ...input, title: t, by, id };
+        const goal: Goal =
+          input.kind === "wiederkehrend"
+            ? { ...base, log: input.log ?? {} }
+            : { ...base, current: input.current ?? 0, steps: input.steps ?? [] };
         set((s) => ({
-          goals: [
-            { ...input, title: t, by, id: uid("g"), current: 0, steps: [] },
-            ...s.goals,
-          ],
+          goals: [goal, ...s.goals],
           ...markDirty(),
         }));
       },
+      logGoalProgress: (goalId, iso, delta) =>
+        set((s) => ({
+          goals: s.goals.map((g) => {
+            if (g.id !== goalId || g.kind !== "wiederkehrend") return g;
+            const cur = g.log?.[iso] ?? 0;
+            const next = Math.max(0, cur + delta);
+            const log = { ...(g.log ?? {}) };
+            if (next === 0) delete log[iso];
+            else log[iso] = next;
+            return { ...g, log };
+          }),
+          ...markDirty(),
+        })),
       updateGoal: (id, patch) =>
         set((s) => ({
           goals: s.goals.map((it) => (it.id === id ? { ...it, ...patch } : it)),
@@ -686,7 +703,10 @@ export const useStore = create<State>()(
         set((s) => ({
           goals: s.goals.map((g) =>
             g.id === goalId
-              ? { ...g, steps: [...g.steps, { id: uid("gs"), text: t, done: false }] }
+              ? {
+                  ...g,
+                  steps: [...(g.steps ?? []), { id: uid("gs"), text: t, done: false }],
+                }
               : g,
           ),
           ...markDirty(),
@@ -698,7 +718,7 @@ export const useStore = create<State>()(
             g.id === goalId
               ? {
                   ...g,
-                  steps: g.steps.map((st) =>
+                  steps: (g.steps ?? []).map((st) =>
                     st.id === stepId ? { ...st, done: !st.done } : st,
                   ),
                 }
@@ -710,7 +730,7 @@ export const useStore = create<State>()(
         set((s) => ({
           goals: s.goals.map((g) =>
             g.id === goalId
-              ? { ...g, steps: g.steps.filter((st) => st.id !== stepId) }
+              ? { ...g, steps: (g.steps ?? []).filter((st) => st.id !== stepId) }
               : g,
           ),
           ...markDirty(),
@@ -718,7 +738,7 @@ export const useStore = create<State>()(
     }),
     {
       name: "ambardaellen-store",
-      version: 7,
+      version: 8,
       storage: createJSONStorage(() => localStorage),
       // Auth + Transient + Sync-Status nicht persistieren — die kommen vom Server.
       partialize: (state) => ({
@@ -731,6 +751,28 @@ export const useStore = create<State>()(
         packlistTemplates: state.packlistTemplates,
       }),
       migrate: (persisted: unknown, version: number) => {
+        type LegacyGoal = Partial<Goal> & { kind?: Goal["kind"] };
+        const upgradeGoals = (goals: LegacyGoal[] | undefined): Goal[] =>
+          (goals ?? []).map((g) => {
+            const kind: Goal["kind"] = g.kind ?? "einmalig";
+            const base = {
+              id: g.id!,
+              title: g.title ?? "",
+              by: g.by ?? "D",
+              scope: g.scope ?? "geteilt",
+              target: g.target ?? 0,
+              unit: g.unit ?? "",
+              kind,
+            };
+            return kind === "wiederkehrend"
+              ? { ...base, period: g.period ?? "woche", log: g.log ?? {} }
+              : {
+                  ...base,
+                  term: g.term ?? "kurz",
+                  current: g.current ?? 0,
+                  steps: g.steps ?? [],
+                };
+          });
         if (!persisted || version < 7) {
           const prev = (persisted as Partial<AppData & { currentUser: UserId }> | null) ?? null;
           return {
@@ -738,10 +780,15 @@ export const useStore = create<State>()(
             activities: prev?.activities ?? EMPTY_APP_DATA.activities,
             shopping: prev?.shopping ?? EMPTY_APP_DATA.shopping,
             todos: prev?.todos ?? EMPTY_APP_DATA.todos,
-            goals: prev?.goals ?? EMPTY_APP_DATA.goals,
+            goals: upgradeGoals(prev?.goals as LegacyGoal[] | undefined),
             cycle: prev?.cycle ?? EMPTY_APP_DATA.cycle,
             packlistTemplates: prev?.packlistTemplates ?? EMPTY_APP_DATA.packlistTemplates,
           };
+        }
+        // v7 → v8: nur Goal-Schema upgraden, Rest bleibt.
+        if (version < 8) {
+          const p = persisted as Partial<AppData & { goals: LegacyGoal[] }>;
+          return { ...p, goals: upgradeGoals(p.goals) };
         }
         return persisted;
       },
