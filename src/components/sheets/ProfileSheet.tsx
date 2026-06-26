@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, LogOut, Check, Cloud, CloudOff, RefreshCw } from "lucide-react";
+import { Lock, LogOut, Check, Cloud, CloudOff, RefreshCw, KeyRound } from "lucide-react";
 import { Sheet } from "../Sheet";
 import { Avatar } from "../Avatar";
 import { useStore } from "@/lib/store";
-import { USERS } from "@/lib/types";
+import { USERS, type UserId } from "@/lib/types";
 
 type Props = {
   open: boolean;
@@ -26,6 +26,43 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
   const pendingPush = useStore((s) => s.pendingPush);
   const logout = useStore((s) => s.logout);
   const changePassword = useStore((s) => s.changePassword);
+  const resetPartnerPassword = useStore((s) => s.resetPartnerPassword);
+
+  const partnerUser: UserId = currentUser === "A" ? "D" : "A";
+  const partnerName = USERS[partnerUser].name;
+
+  const [showResetPartner, setShowResetPartner] = useState(false);
+  const [partnerPw, setPartnerPw] = useState("");
+  const [partnerPw2, setPartnerPw2] = useState("");
+  const [partnerBusy, setPartnerBusy] = useState(false);
+  const [partnerError, setPartnerError] = useState<string | null>(null);
+  const [partnerSuccess, setPartnerSuccess] = useState<string | null>(null);
+
+  const submitPartner = async () => {
+    setPartnerError(null);
+    setPartnerSuccess(null);
+    if (partnerPw !== partnerPw2) {
+      setPartnerError("Passwörter stimmen nicht überein.");
+      return;
+    }
+    if (partnerPw.length < 6) {
+      setPartnerError("Mindestens 6 Zeichen.");
+      return;
+    }
+    setPartnerBusy(true);
+    const res = await resetPartnerPassword(partnerPw);
+    setPartnerBusy(false);
+    if (res.ok) {
+      setPartnerSuccess(
+        `${partnerName} kann sich jetzt mit dem neuen Passwort anmelden. Alle bisherigen Sessions wurden beendet.`,
+      );
+      setPartnerPw("");
+      setPartnerPw2("");
+      setShowResetPartner(false);
+    } else {
+      setPartnerError(res.error);
+    }
+  };
 
   const [showPwChange, setShowPwChange] = useState(false);
   const [oldPw, setOldPw] = useState("");
@@ -206,6 +243,102 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
           <Check size={13} strokeWidth={2} /> Passwort geändert.
         </div>
       )}
+
+      {/* Partner-Reset — falls Ambar/Dällen ihr eigenes Passwort vergisst,
+          kann der eingeloggte Partner es hier neu setzen. */}
+      <div className="mt-4">
+        {!showResetPartner ? (
+          <button
+            type="button"
+            onClick={() => {
+              setShowResetPartner(true);
+              setPartnerError(null);
+              setPartnerSuccess(null);
+            }}
+            className="tap w-full py-3 rounded-2xl text-[13.5px] font-medium inline-flex items-center justify-center gap-2"
+            style={{ background: "var(--cream-deep)", color: "var(--ink-soft)" }}
+          >
+            <KeyRound size={13} strokeWidth={1.75} />
+            Passwort von {partnerName} zurücksetzen
+          </button>
+        ) : (
+          <div
+            className="rounded-2xl p-3"
+            style={{ background: "rgba(228,217,191,0.5)" }}
+          >
+            <div
+              className="uplabel text-[10px] mb-1.5 inline-flex items-center gap-1.5"
+              style={{ color: "var(--muted)" }}
+            >
+              <KeyRound size={10} strokeWidth={2} />
+              Neues Passwort für {partnerName}
+            </div>
+            <p className="text-[11.5px] mb-2" style={{ color: "var(--ink-soft)" }}>
+              {partnerName} muss sich mit dem neuen Passwort neu anmelden — alle
+              bisherigen Sessions werden beendet.
+            </p>
+            <input
+              type="password"
+              placeholder="Neues Passwort (min. 6 Zeichen)"
+              value={partnerPw}
+              onChange={(e) => setPartnerPw(e.target.value)}
+              className="w-full rounded-xl px-3 py-2.5 text-[14px] mb-2"
+              style={{ background: "var(--paper)" }}
+            />
+            <input
+              type="password"
+              placeholder="Neues Passwort bestätigen"
+              value={partnerPw2}
+              onChange={(e) => setPartnerPw2(e.target.value)}
+              className="w-full rounded-xl px-3 py-2.5 text-[14px]"
+              style={{ background: "var(--paper)" }}
+            />
+            {partnerError && (
+              <p className="text-[12px] mt-2" style={{ color: "#C5634B" }}>
+                {partnerError}
+              </p>
+            )}
+            <div className="flex gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetPartner(false);
+                  setPartnerPw("");
+                  setPartnerPw2("");
+                  setPartnerError(null);
+                }}
+                className="tap flex-1 py-2.5 rounded-xl text-[13.5px] font-medium"
+                style={{ background: "var(--paper)", color: "var(--ink-soft)" }}
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={submitPartner}
+                disabled={partnerBusy || !partnerPw || !partnerPw2}
+                className="tap flex-1 py-2.5 rounded-xl text-[13.5px] font-semibold text-white"
+                style={{
+                  background:
+                    partnerBusy || !partnerPw
+                      ? "var(--terra-soft)"
+                      : "var(--terra)",
+                }}
+              >
+                {partnerBusy ? "…" : "Setzen"}
+              </button>
+            </div>
+          </div>
+        )}
+        {partnerSuccess && (
+          <div
+            className="mt-2 rounded-xl p-2.5 text-[12.5px] inline-flex items-start gap-2"
+            style={{ background: "rgba(126,151,123,0.18)", color: "#4F6B4C" }}
+          >
+            <Check size={13} strokeWidth={2} className="mt-0.5 shrink-0" />
+            <span>{partnerSuccess}</span>
+          </div>
+        )}
+      </div>
 
       <button
         type="button"

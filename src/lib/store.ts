@@ -72,6 +72,7 @@ type State = AppData & {
   login: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   logout: () => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  resetPartnerPassword: (newPassword: string) => Promise<{ ok: true; email: string } | { ok: false; error: string }>;
 
   // Cloud-Sync
   setAccount: (a: AuthAccount | null) => void;
@@ -251,6 +252,20 @@ export const useStore = create<State>()(
           return { ok: false, error: body.error ?? `Fehler ${res.status}` };
         }
         return { ok: true };
+      },
+
+      resetPartnerPassword: async (newPassword) => {
+        const res = await fetch("/api/auth/reset-partner-password", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ newPassword }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return { ok: false, error: body.error ?? `Fehler ${res.status}` };
+        }
+        const body = (await res.json()) as { email: string };
+        return { ok: true, email: body.email };
       },
 
       logout: async () => {
