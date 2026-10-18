@@ -2,42 +2,41 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Clock,
   MapPin,
   ShoppingCart as CartIcon,
   Plus,
   ChevronRight,
-  Lock,
   Backpack,
+  Inbox as InboxIcon,
+  Sparkles,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { visibleTo, isPrivate } from "@/lib/scope";
-import { USERS, type ShoppingItem } from "@/lib/types";
+import { useLife } from "@/lib/lifeStore";
+import { OWNER_NAME, type ShoppingItem } from "@/lib/types";
 import { todayISO, greetingFor, shortDate } from "@/lib/date";
-import { BUCKET_LABEL, PRIO, dueBucket } from "@/lib/todo";
+import { todayZurich, type TodoDto } from "@/lib/life";
+import { PRIO } from "@/lib/todo";
 import { Card } from "@/components/Card";
-import { Avatar, AvatarWithScope } from "@/components/Avatar";
 import { ActivityIcon } from "@/components/ActivityIcon";
 import { GoalProgress } from "@/components/GoalProgress";
 import { RoundCheck } from "@/components/RoundCheck";
 import { DeleteAction } from "@/components/DeleteAction";
-import { CycleHeroCard } from "@/components/CycleHeroCard";
 import { TagChips } from "@/components/TagChips";
+import { TodoRow } from "@/components/TodoRow";
 import { ClientOnly } from "@/components/ClientOnly";
 import { QuickAddMenu } from "@/components/QuickAddMenu";
 import { HamburgerMenu } from "@/components/HamburgerMenu";
-import { NotificationsButton } from "@/components/NotificationsButton";
 import { Sheet } from "@/components/Sheet";
-import { useRouter } from "next/navigation";
 import { ShoppingSheet } from "@/components/sheets/ShoppingSheet";
 import { TodoSheet } from "@/components/sheets/TodoSheet";
 import { GoalSheet } from "@/components/sheets/GoalSheet";
-import { CycleSheet } from "@/components/sheets/CycleSheet";
 import { ActivityAddSheet } from "@/components/sheets/ActivityAddSheet";
 import { TodoAddSheet } from "@/components/sheets/TodoAddSheet";
 import { GoalAddSheet } from "@/components/sheets/GoalAddSheet";
-import type { Activity, Goal, Todo } from "@/lib/types";
+import type { Activity, Goal } from "@/lib/types";
 
 export default function HeutePage() {
   return (
@@ -51,22 +50,18 @@ function HeuteSkeleton() {
   return <div className="px-4 pt-4 h-screen" />;
 }
 
+const byPrio = (a: TodoDto, b: TodoDto) => PRIO[a.prio].rank - PRIO[b.prio].rank;
+
 function HeuteContent() {
   const currentUser = useStore((s) => s.currentUser);
   const activities = useStore((s) => s.activities);
   const shopping = useStore((s) => s.shopping);
-  const todos = useStore((s) => s.todos);
   const goals = useStore((s) => s.goals);
 
   const addShopping = useStore((s) => s.addShopping);
   const toggleShopping = useStore((s) => s.toggleShopping);
   const updateShopping = useStore((s) => s.updateShopping);
   const removeShopping = useStore((s) => s.removeShopping);
-
-  const toggleTodo = useStore((s) => s.toggleTodo);
-  const updateTodo = useStore((s) => s.updateTodo);
-  const removeTodo = useStore((s) => s.removeTodo);
-  const addTodo = useStore((s) => s.addTodo);
 
   const addActivity = useStore((s) => s.addActivity);
 
@@ -77,104 +72,91 @@ function HeuteContent() {
   const toggleGoalStep = useStore((s) => s.toggleGoalStep);
   const removeGoalStep = useStore((s) => s.removeGoalStep);
 
+  const todos = useLife((s) => s.todos);
+  const areas = useLife((s) => s.areas);
+  const inbox = useLife((s) => s.inbox);
+  const plan = useLife((s) => s.plan);
+  const addTodo = useLife((s) => s.addTodo);
+  const toggleTodo = useLife((s) => s.toggleTodo);
+  const addInbox = useLife((s) => s.addInbox);
+
   const router = useRouter();
   const openAct = (a: Activity) => router.push(`/aktivitaeten/${a.id}`);
   const [openShop, setOpenShop] = useState<ShoppingItem | null>(null);
-  const [openTodo, setOpenTodo] = useState<Todo | null>(null);
+  const [openTodoId, setOpenTodoId] = useState<string | null>(null);
   const [openGoal, setOpenGoal] = useState<Goal | null>(null);
-  const [cycleOpen, setCycleOpen] = useState(false);
 
   const [addActOpen, setAddActOpen] = useState(false);
   const [addTodoOpen, setAddTodoOpen] = useState(false);
   const [addGoalOpen, setAddGoalOpen] = useState(false);
+  const [inboxNoteOpen, setInboxNoteOpen] = useState(false);
   const [quickShopOpen, setQuickShopOpen] = useState<null | { spinnerei: boolean }>(null);
 
   const today = todayISO();
-  const userName = USERS[currentUser].name;
-  const greeting = greetingFor(new Date(), userName);
+  const todayZ = todayZurich();
+  const greeting = greetingFor(new Date(), OWNER_NAME);
   const dateLine = new Date().toLocaleDateString("de-DE", {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
 
-  const myActivities = visibleTo(activities, currentUser);
-  const myShopping = visibleTo(shopping, currentUser);
-  const myTodos = visibleTo(todos, currentUser);
-  const myGoals = visibleTo(goals, currentUser);
-
   // Einkauf-Listen (offen)
-  const privatItems = myShopping.filter((s) => !s.done && !s.spinnerei);
-  const spinnereiItems = myShopping.filter((s) => !s.done && s.spinnerei);
+  const privatItems = shopping.filter((s) => !s.done && !s.spinnerei);
+  const spinnereiItems = shopping.filter((s) => !s.done && s.spinnerei);
 
-  // Heute = heutige Termine + überfällige/heutige Todos
-  const todayActs = myActivities
+  // Heute: von Jarvis oder mir für heute geplant, dazu Fälliges
+  const open = todos.filter((t) => t.status === "offen");
+  const planned = open.filter((t) => t.plannedFor === todayZ).sort(byPrio);
+  const dueToday = open.filter((t) => t.plannedFor !== todayZ && t.due === todayZ).sort(byPrio);
+  const overdue = open
+    .filter((t) => t.plannedFor !== todayZ && t.due && t.due < todayZ)
+    .sort((a, b) => (a.due ?? "").localeCompare(b.due ?? ""));
+  const doneToday = todos.filter(
+    (t) => t.status === "erledigt" && t.doneAt && todayZurich(new Date(t.doneAt)) === todayZ,
+  );
+  const todayList = [...planned, ...dueToday];
+
+  const todayActs = activities
     .filter((a) => a.date === today && a.status !== "erledigt")
     .sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
 
-  const overdueAndTodayTodos = myTodos
-    .filter((t) => !t.done && t.due && t.due <= today)
-    .sort((a, b) => {
-      const da = a.due ? a.due.localeCompare(today) : 0;
-      const db = b.due ? b.due.localeCompare(today) : 0;
-      if (da !== db) return da - db;
-      return PRIO[a.prio].rank - PRIO[b.prio].rank;
-    });
-
   // Bald-Reise mit Packliste (kommt prominent als „Demnächst auf Reise")
-  const upcomingTrip = myActivities
-    .filter(
-      (a) =>
-        a.packlist.length > 0 && a.status === "geplant" && a.date && a.date >= today,
-    )
+  const upcomingTrip = activities
+    .filter((a) => a.packlist.length > 0 && a.status === "geplant" && a.date && a.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date))[0];
 
   // Demnächst: 3 nächste Aktivitäten. Trip rausfiltern, der bekommt
   // schon seine eigene Karte oben.
-  const upcomingActs = myActivities
+  const upcomingActs = activities
     .filter((a) => a.status === "geplant" && a.date && a.date > today)
     .filter((a) => !upcomingTrip || a.id !== upcomingTrip.id)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 3);
 
-  // Diese Woche Todos (nicht heute/überfällig)
-  const soonTodos = myTodos
-    .filter((t) => !t.done && t.due && t.due > today && dueBucket(t.due) !== "spaeter")
-    .sort((a, b) => {
-      const pr = PRIO[a.prio].rank - PRIO[b.prio].rank;
-      if (pr !== 0) return pr;
-      return a.due.localeCompare(b.due);
-    })
-    .slice(0, 3);
-
-  // Top Goal
-  const topGoal = myGoals.find((g) => g.scope === "geteilt") ?? myGoals[0];
-
+  const topGoal = goals[0];
   const currentOpenGoal = openGoal ? goals.find((g) => g.id === openGoal.id) ?? null : null;
-  const heuteEmpty = todayActs.length === 0 && overdueAndTodayTodos.length === 0;
+  const heuteEmpty = todayActs.length === 0 && todayList.length === 0;
 
   return (
     <>
-      {/* Header: Greeting + User-Switch */}
+      {/* Header: Begrüssung */}
       <div className="px-4 pt-5 pb-3 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="uplabel text-[10px]" style={{ color: "var(--muted)" }}>
             {dateLine}
           </div>
-          <h1
-            className="serif text-[30px] leading-[1.05] mt-1 break-words"
-            style={{ color: "var(--mens)" }}
-          >
+          <h1 className="serif text-[30px] leading-[1.05] mt-1 break-words" style={{ color: "var(--mens)" }}>
             {greeting}
           </h1>
         </div>
         <div className="shrink-0 pt-1 flex items-center gap-2">
-          <NotificationsButton />
           <HamburgerMenu />
           <QuickAddMenu
             onPick={(key) => {
-              if (key === "activity") setAddActOpen(true);
+              if (key === "inbox") setInboxNoteOpen(true);
               if (key === "todo") setAddTodoOpen(true);
+              if (key === "activity") setAddActOpen(true);
               if (key === "shopping") setQuickShopOpen({ spinnerei: false });
               if (key === "goal") setAddGoalOpen(true);
             }}
@@ -182,44 +164,29 @@ function HeuteContent() {
         </div>
       </div>
 
-      {/* Zyklus — Hero Ring (für beide User) */}
-      <div className="px-4 mb-3">
-        <CycleHeroCard onOpenSheet={() => setCycleOpen(true)} />
-      </div>
+      {/* Notiz von Jarvis für den Tag */}
+      {plan?.note && (
+        <div className="px-4 mb-3">
+          <Card className="p-3.5">
+            <div className="uplabel text-[10px] mb-1.5 inline-flex items-center gap-1.5" style={{ color: "var(--plum)" }}>
+              <Sparkles size={11} strokeWidth={2} /> Jarvis für heute
+            </div>
+            <p className="text-[14px] leading-relaxed whitespace-pre-line" style={{ color: "var(--ink)" }}>
+              {plan.note}
+            </p>
+          </Card>
+        </div>
+      )}
 
-      {/* Einkauf-Kacheln: Privat | Spinnerei */}
-      <div className="px-4 mb-3 grid grid-cols-2 gap-2 items-stretch">
-        <ShoppingTile
-          label="Privat"
-          accent="var(--sage)"
-          icon={<CartIcon size={11} strokeWidth={1.75} />}
-          items={privatItems}
-          onAdd={(text) => addShopping({ text, scope: "geteilt", spinnerei: false })}
-          onOpenItem={setOpenShop}
-          onToggle={toggleShopping}
-          onRemove={removeShopping}
-          onQuickAdd={() => setQuickShopOpen({ spinnerei: false })}
-        />
-        <ShoppingTile
-          label="Spinnerei"
-          accent="var(--terra)"
-          icon={<span style={{ color: "var(--terra)", fontSize: 11 }}>✦</span>}
-          items={spinnereiItems}
-          onAdd={(text) => addShopping({ text, scope: "geteilt", spinnerei: true })}
-          onOpenItem={setOpenShop}
-          onToggle={toggleShopping}
-          onRemove={removeShopping}
-          onQuickAdd={() => setQuickShopOpen({ spinnerei: true })}
-        />
-      </div>
-
-      {/* HEUTE — heutige Termine + überfällige/heutige Todos */}
+      {/* HEUTE */}
       <section className="px-4 mb-4">
-        <SectionTitle label="Heute" />
+        <SectionTitle label="Heute" actionHref="/todo" actionLabel="Alle Todos" />
         {heuteEmpty ? (
           <Card className="p-4">
             <p className="text-[14px] italic text-center" style={{ color: "var(--ink-soft)" }}>
-              Kein fester Termin, nichts überfällig. Ein leiser Tag.
+              {doneToday.length > 0
+                ? `${doneToday.length} erledigt, nichts mehr offen für heute.`
+                : "Nichts geplant, nichts fällig. Ein leiser Tag."}
             </p>
           </Card>
         ) : (
@@ -233,14 +200,8 @@ function HeuteContent() {
                   <span className="serif text-[14px] leading-none">{a.time || "—"}</span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[14.5px] font-medium truncate flex items-center gap-1.5">
-                    {isPrivate(a) && <Lock size={11} strokeWidth={2} color="var(--muted)" />}
-                    {a.title}
-                  </div>
-                  <div
-                    className="text-[12px] mt-0.5 truncate flex items-center gap-1.5"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
+                  <div className="text-[14.5px] font-medium truncate">{a.title}</div>
+                  <div className="text-[12px] mt-0.5 truncate flex items-center gap-1.5" style={{ color: "var(--ink-soft)" }}>
                     {a.place && (
                       <span className="inline-flex items-center gap-1">
                         <MapPin size={11} strokeWidth={1.75} />
@@ -250,86 +211,102 @@ function HeuteContent() {
                     {(a.tags ?? []).length > 0 && <TagChips tags={a.tags} size="xs" max={2} />}
                   </div>
                 </div>
-                <AvatarWithScope by={a.by} scope={a.scope} size={20} />
               </Card>
             ))}
 
-            {overdueAndTodayTodos.length > 0 && (
+            {todayList.length > 0 && (
               <Card className="p-1">
-                {overdueAndTodayTodos.map((t, i) => {
-                  const p = PRIO[t.prio];
-                  const overdue = t.due < today;
-                  return (
-                    <div
-                      key={t.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenTodo(t);
-                      }}
-                      role="button"
-                      tabIndex={0}
-                      className="flex items-start gap-2 px-2.5 py-2.5 tap cursor-pointer"
-                      style={
-                        i < overdueAndTodayTodos.length - 1
-                          ? { borderBottom: "1px solid rgba(218,201,168,0.4)" }
-                          : undefined
-                      }
-                    >
-                      <RoundCheck
-                        checked={false}
-                        onClick={() => toggleTodo(t.id)}
-                        size={20}
-                        color={p.color}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13.5px] flex items-center gap-1.5">
-                          {p.dot && (
-                            <span
-                              className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
-                              style={{ background: p.color }}
-                            />
-                          )}
-                          <span className="truncate">{t.text}</span>
-                        </div>
-                        <div
-                          className="text-[11px] mt-0.5 flex items-center gap-1.5"
-                          style={{ color: "var(--muted)" }}
-                        >
-                          <span
-                            style={
-                              overdue ? { color: "#C5634B", fontWeight: 500 } : undefined
-                            }
-                          >
-                            {overdue ? `überfällig · ${shortDate(t.due)}` : "heute"}
-                          </span>
-                          {(t.tags ?? []).length > 0 && (
-                            <TagChips tags={t.tags} size="xs" max={2} />
-                          )}
-                        </div>
-                      </div>
-                      <AvatarWithScope by={t.by} scope={t.scope} size={18} />
-                      <DeleteAction
-                        kind="Aufgabe"
-                        label={t.text}
-                        onConfirm={() => removeTodo(t.id)}
-                      />
-                    </div>
-                  );
-                })}
+                {todayList.map((t, i) => (
+                  <div key={t.id} style={i < todayList.length - 1 ? { borderBottom: "1px solid rgba(218,201,168,0.4)" } : undefined}>
+                    <TodoRow t={t} areas={areas} onToggle={toggleTodo} onOpen={(x) => setOpenTodoId(x.id)} dense hideToday />
+                  </div>
+                ))}
               </Card>
+            )}
+            {doneToday.length > 0 && (
+              <div className="text-[11.5px] px-1" style={{ color: "var(--muted)" }}>
+                {doneToday.length} heute erledigt
+              </div>
             )}
           </div>
         )}
       </section>
 
+      {/* Überfällig */}
+      {overdue.length > 0 && (
+        <section className="px-4 mb-4">
+          <SectionTitle label="Überfällig" />
+          <Card className="p-1">
+            {overdue.slice(0, 6).map((t, i, arr) => (
+              <div key={t.id} style={i < arr.length - 1 ? { borderBottom: "1px solid rgba(218,201,168,0.4)" } : undefined}>
+                <TodoRow t={t} areas={areas} onToggle={toggleTodo} onOpen={(x) => setOpenTodoId(x.id)} dense />
+              </div>
+            ))}
+          </Card>
+          {overdue.length > 6 && (
+            <Link href="/todo" className="block text-[12px] mt-1.5 px-1 font-medium" style={{ color: "var(--terra-deep)" }}>
+              und {overdue.length - 6} weitere
+            </Link>
+          )}
+        </section>
+      )}
+
+      {/* Inbox */}
+      {inbox.length > 0 && (
+        <section className="px-4 mb-3">
+          <Link href="/inbox">
+            <Card className="p-3 flex items-center gap-3">
+              <div
+                className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: "var(--plum-soft)", color: "var(--plum)" }}
+              >
+                <InboxIcon size={18} strokeWidth={1.75} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-semibold">
+                  {inbox.length === 1 ? "1 Eintrag in der Inbox" : `${inbox.length} Einträge in der Inbox`}
+                </div>
+                <div className="text-[11.5px] mt-0.5 truncate" style={{ color: "var(--ink-soft)" }}>
+                  {inbox[0].text.split("\n")[0]}
+                </div>
+              </div>
+              <ChevronRight size={16} strokeWidth={1.75} color="var(--muted)" />
+            </Card>
+          </Link>
+        </section>
+      )}
+
+      {/* Einkauf-Kacheln: Einkauf | Spinnerei */}
+      <div className="px-4 mb-3 grid grid-cols-2 gap-2 items-stretch">
+        <ShoppingTile
+          label="Einkauf"
+          accent="var(--sage)"
+          icon={<CartIcon size={11} strokeWidth={1.75} />}
+          items={privatItems}
+          onAdd={(text) => addShopping({ text, scope: "D", spinnerei: false })}
+          onOpenItem={setOpenShop}
+          onToggle={toggleShopping}
+          onRemove={removeShopping}
+          onQuickAdd={() => setQuickShopOpen({ spinnerei: false })}
+        />
+        <ShoppingTile
+          label="Spinnerei"
+          accent="var(--terra)"
+          icon={<span style={{ color: "var(--terra)", fontSize: 11 }}>✦</span>}
+          items={spinnereiItems}
+          onAdd={(text) => addShopping({ text, scope: "D", spinnerei: true })}
+          onOpenItem={setOpenShop}
+          onToggle={toggleShopping}
+          onRemove={removeShopping}
+          onQuickAdd={() => setQuickShopOpen({ spinnerei: true })}
+        />
+      </div>
+
       {/* Demnächst auf Reise (Packliste) */}
       {upcomingTrip && (
         <section className="px-4 mb-3">
           <SectionTitle label="Demnächst auf Reise" />
-          <Card
-            onClick={() => openAct(upcomingTrip)}
-            className="p-3 flex items-center gap-3"
-          >
+          <Card onClick={() => openAct(upcomingTrip)} className="p-3 flex items-center gap-3">
             <div
               className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
               style={{ background: "var(--terra-soft)", color: "var(--terra-deep)" }}
@@ -339,8 +316,7 @@ function HeuteContent() {
             <div className="flex-1 min-w-0">
               <div className="text-[14px] font-semibold truncate">{upcomingTrip.title}</div>
               <div className="text-[11.5px] mt-0.5" style={{ color: "var(--ink-soft)" }}>
-                {shortDate(upcomingTrip.date)} · Packliste{" "}
-                {upcomingTrip.packlist.filter((p) => p.packed).length}/
+                {shortDate(upcomingTrip.date)} · Packliste {upcomingTrip.packlist.filter((p) => p.packed).length}/
                 {upcomingTrip.packlist.length} fertig
               </div>
             </div>
@@ -361,65 +337,12 @@ function HeuteContent() {
         </section>
       )}
 
-      {/* Diese Woche */}
-      {soonTodos.length > 0 && (
-        <section className="px-4 mb-3">
-          <SectionTitle label="Diese Woche" actionHref="/todo" actionLabel="Alle" />
-          <Card className="p-1">
-            {soonTodos.map((t, i) => {
-              const p = PRIO[t.prio];
-              return (
-                <div
-                  key={t.id}
-                  onClick={() => setOpenTodo(t)}
-                  role="button"
-                  tabIndex={0}
-                  className="flex items-center gap-2.5 px-2.5 py-2 tap cursor-pointer"
-                  style={
-                    i < soonTodos.length - 1
-                      ? { borderBottom: "1px solid rgba(218,201,168,0.4)" }
-                      : undefined
-                  }
-                >
-                  <RoundCheck
-                    checked={false}
-                    onClick={() => toggleTodo(t.id)}
-                    size={18}
-                    color={p.color}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13.5px] truncate">{t.text}</div>
-                    <div className="text-[11px]" style={{ color: "var(--muted)" }}>
-                      {BUCKET_LABEL[dueBucket(t.due)]}
-                      {(t.tags ?? []).length > 0 && " · "}
-                      {(t.tags ?? []).length > 0 && (
-                        <TagChips tags={t.tags} size="xs" max={2} />
-                      )}
-                    </div>
-                  </div>
-                  <AvatarWithScope by={t.by} scope={t.scope} size={16} />
-                  <DeleteAction
-                    kind="Aufgabe"
-                    label={t.text}
-                    onConfirm={() => removeTodo(t.id)}
-                    size={12}
-                  />
-                </div>
-              );
-            })}
-          </Card>
-        </section>
-      )}
-
       {/* Im Blick */}
       {topGoal && (
         <section className="px-4 mb-3">
           <SectionTitle label="Im Blick" actionHref="/ziele" actionLabel="Ziele" />
           <Card onClick={() => setOpenGoal(topGoal)} className="p-3.5">
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <div className="text-[14px] font-medium leading-snug min-w-0">{topGoal.title}</div>
-              <AvatarWithScope by={topGoal.by} scope={topGoal.scope} size={20} />
-            </div>
+            <div className="text-[14px] font-medium leading-snug min-w-0 mb-2">{topGoal.title}</div>
             <GoalProgress goal={topGoal} />
           </Card>
         </section>
@@ -437,16 +360,7 @@ function HeuteContent() {
         onDelete={removeShopping}
         currentUser={currentUser}
       />
-      <TodoSheet
-        todo={openTodo}
-        onClose={() => setOpenTodo(null)}
-        onChange={(id, patch) => {
-          updateTodo(id, patch);
-          if (openTodo && openTodo.id === id) setOpenTodo({ ...openTodo, ...patch });
-        }}
-        onDelete={removeTodo}
-        currentUser={currentUser}
-      />
+      <TodoSheet todoId={openTodoId} onClose={() => setOpenTodoId(null)} />
       <GoalSheet
         goal={currentOpenGoal}
         onClose={() => setOpenGoal(null)}
@@ -457,7 +371,6 @@ function HeuteContent() {
         onRemoveStep={removeGoalStep}
         currentUser={currentUser}
       />
-      <CycleSheet open={cycleOpen} onClose={() => setCycleOpen(false)} />
 
       {/* Add-Sheets */}
       <ActivityAddSheet
@@ -466,26 +379,61 @@ function HeuteContent() {
         onAdd={addActivity}
         currentUser={currentUser}
       />
-      <TodoAddSheet
-        open={addTodoOpen}
-        onClose={() => setAddTodoOpen(false)}
-        onAdd={addTodo}
-        currentUser={currentUser}
-      />
+      <TodoAddSheet open={addTodoOpen} onClose={() => setAddTodoOpen(false)} onSubmit={addTodo} initialPlannedToday />
       <GoalAddSheet
         open={addGoalOpen}
         onClose={() => setAddGoalOpen(false)}
         onAdd={addGoal}
         currentUser={currentUser}
       />
+      <InboxNoteSheet open={inboxNoteOpen} onClose={() => setInboxNoteOpen(false)} onAdd={addInbox} />
       <QuickShoppingSheet
         open={quickShopOpen !== null}
         initialSpinnerei={quickShopOpen?.spinnerei ?? false}
         onClose={() => setQuickShopOpen(null)}
-        onAdd={(text, scope, spinnerei) => addShopping({ text, scope, spinnerei })}
-        currentUser={currentUser}
+        onAdd={(text, spinnerei) => addShopping({ text, scope: "D", spinnerei })}
       />
     </>
+  );
+}
+
+function InboxNoteSheet({
+  open,
+  onClose,
+  onAdd,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAdd: (text: string) => void;
+}) {
+  const [text, setText] = useState("");
+  if (!open) return null;
+  const submit = () => {
+    if (!text.trim()) return;
+    onAdd(text);
+    setText("");
+    onClose();
+  };
+  return (
+    <Sheet open onClose={onClose} title="In die Inbox">
+      <textarea
+        autoFocus
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={3}
+        placeholder="Kurz notieren, Jarvis sortiert es später ein."
+        className="w-full mt-3 rounded-2xl p-3 text-[15px] resize-none"
+        style={{ background: "rgba(228,217,191,0.5)" }}
+      />
+      <button
+        type="button"
+        onClick={submit}
+        className="w-full mt-4 py-3.5 rounded-2xl text-white text-[15.5px] font-semibold tap"
+        style={{ background: text.trim() ? "var(--terra)" : "var(--terra-soft)" }}
+      >
+        Ablegen
+      </button>
+    </Sheet>
   );
 }
 
@@ -602,9 +550,7 @@ function ShoppingTile({
                     <span style={{ color: "var(--terra)", fontSize: 10 }}>✦</span>
                   )}
                   <span className="truncate">{s.text}</span>
-                  {isPrivate(s) && <Lock size={9} strokeWidth={2} color="var(--muted)" />}
                 </button>
-                <Avatar id={s.by} size={14} />
                 <DeleteAction
                   label={s.text}
                   onConfirm={() => onRemove(s.id)}
@@ -655,14 +601,13 @@ function UpcomingActivityCard({
       <ActivityIcon kind={activity.icon} size={36} />
       <div className="min-w-0 flex-1">
         <div className="text-[14px] font-medium truncate flex items-center gap-1.5">
-          {isPrivate(activity) && <Lock size={11} strokeWidth={2} color="var(--muted)" />}
           {activity.title}
         </div>
         <div
           className="text-[12px] mt-0.5 truncate flex items-center gap-1.5"
           style={{ color: "var(--ink-soft)" }}
         >
-          <span style={{ color: USERS[activity.by].color, fontWeight: 500 }}>
+          <span style={{ color: "var(--sage)", fontWeight: 500 }}>
             {shortDate(activity.date)}
           </span>
           {activity.time && (
@@ -679,7 +624,6 @@ function UpcomingActivityCard({
           </div>
         )}
       </div>
-      <AvatarWithScope by={activity.by} scope={activity.scope} size={20} />
     </Card>
   );
 }
@@ -689,39 +633,32 @@ function QuickShoppingSheet({
   initialSpinnerei,
   onClose,
   onAdd,
-  currentUser,
 }: {
   open: boolean;
   initialSpinnerei: boolean;
   onClose: () => void;
-  onAdd: (text: string, scope: "geteilt" | "A" | "D", spinnerei: boolean) => void;
-  currentUser: "A" | "D";
+  onAdd: (text: string, spinnerei: boolean) => void;
 }) {
   if (!open) return null;
-  return (
-    <QuickShoppingForm
-      initialSpinnerei={initialSpinnerei}
-      onClose={onClose}
-      onAdd={onAdd}
-      currentUser={currentUser}
-    />
-  );
+  return <QuickShoppingForm initialSpinnerei={initialSpinnerei} onClose={onClose} onAdd={onAdd} />;
 }
 
 function QuickShoppingForm({
   initialSpinnerei,
   onClose,
   onAdd,
-  currentUser,
 }: {
   initialSpinnerei: boolean;
   onClose: () => void;
-  onAdd: (text: string, scope: "geteilt" | "A" | "D", spinnerei: boolean) => void;
-  currentUser: "A" | "D";
+  onAdd: (text: string, spinnerei: boolean) => void;
 }) {
   const [text, setText] = useState("");
-  const [scope, setScope] = useState<"geteilt" | "A" | "D">("geteilt");
   const [spinnerei, setSpinnerei] = useState(initialSpinnerei);
+  const submit = () => {
+    if (!text.trim()) return;
+    onAdd(text.trim(), spinnerei);
+    onClose();
+  };
   return (
     <Sheet open onClose={onClose} title={spinnerei ? "Spinnerei" : "Einkauf-Item"}>
       <div className="mt-3">
@@ -732,68 +669,35 @@ function QuickShoppingForm({
           autoFocus
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && text.trim()) {
-              onAdd(text.trim(), scope, spinnerei);
-              onClose();
-            }
-          }}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
           placeholder={spinnerei ? "z. B. Plattenspieler" : "z. B. Olivenöl"}
           className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
           style={{ background: "rgba(228,217,191,0.5)" }}
         />
       </div>
       <div className="mt-3 flex gap-1.5 flex-wrap">
-        <button
-          type="button"
-          onClick={() => {
-            setScope("geteilt");
-            setSpinnerei(false);
-          }}
-          className="tap text-[12px] font-medium rounded-full px-3 py-1.5"
-          style={
-            scope === "geteilt" && !spinnerei
-              ? { background: "var(--ink)", color: "var(--paper)" }
-              : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
-          }
-        >
-          Gemeinsam
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setScope(currentUser);
-            setSpinnerei(false);
-          }}
-          className="tap text-[12px] font-medium rounded-full px-3 py-1.5"
-          style={
-            scope === currentUser && !spinnerei
-              ? { background: "var(--ink)", color: "var(--paper)" }
-              : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
-          }
-        >
-          Privat
-        </button>
-        <button
-          type="button"
-          onClick={() => setSpinnerei(true)}
-          className="tap text-[12px] font-medium rounded-full px-3 py-1.5"
-          style={
-            spinnerei
-              ? { background: "var(--terra)", color: "white" }
-              : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
-          }
-        >
-          ✦ Spinnerei
-        </button>
+        {[
+          { v: false, l: "Einkauf" },
+          { v: true, l: "✦ Spinnerei" },
+        ].map((o) => (
+          <button
+            key={o.l}
+            type="button"
+            onClick={() => setSpinnerei(o.v)}
+            className="tap text-[12px] font-medium rounded-full px-3 py-1.5"
+            style={
+              spinnerei === o.v
+                ? { background: o.v ? "var(--terra)" : "var(--ink)", color: "var(--paper)" }
+                : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
+            }
+          >
+            {o.l}
+          </button>
+        ))}
       </div>
       <button
         type="button"
-        onClick={() => {
-          if (!text.trim()) return;
-          onAdd(text.trim(), scope, spinnerei);
-          onClose();
-        }}
+        onClick={submit}
         className="w-full mt-5 py-3.5 rounded-2xl text-white text-[15.5px] font-semibold tap"
         style={{ background: "var(--terra)" }}
       >

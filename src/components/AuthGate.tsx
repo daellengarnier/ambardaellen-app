@@ -6,6 +6,7 @@ import { LoginScreen } from "./auth/LoginScreen";
 import { PhoneShell } from "./PhoneShell";
 import { ClientOnly } from "./ClientOnly";
 import { CloudSyncProvider } from "./CloudSyncProvider";
+import { LifeSync } from "./LifeSync";
 
 export function AuthGate({ children }: { children: ReactNode }) {
   return (
@@ -27,5 +28,10 @@ function Gate({ children }: { children: ReactNode }) {
   if (!account) {
     return <LoginScreen />;
   }
-  return <PhoneShell>{children}</PhoneShell>;
+  return (
+    <PhoneShell>
+      <LifeSync />
+      {children}
+    </PhoneShell>
+  );
 }

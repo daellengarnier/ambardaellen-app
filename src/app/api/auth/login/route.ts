@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/lib/db/client";
 import {
+  OWNER_USER_ID,
   createSession,
   setSessionCookie,
   verifyPassword,
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
     .where(eq(schema.accounts.email, email))
     .limit(1);
   const account = rows[0];
-  if (!account) {
+  if (!account || account.userId !== OWNER_USER_ID) {
     return NextResponse.json(
       { error: "Account nicht gefunden." },
       { status: 401 },

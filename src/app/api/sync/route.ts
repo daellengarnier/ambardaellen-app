@@ -12,6 +12,21 @@ export async function GET() {
   return NextResponse.json(state);
 }
 
+// Seit dem Umbau liegen nur noch diese Bereiche im JSON-Block. Todos
+// haben eigene Tabellen, Zyklus und Partner-Daten gibt es nicht mehr.
+// Alles andere wird verworfen, damit ein alter Client nichts davon
+// zurückschreibt.
+const SYNC_KEYS = ["activities", "shopping", "goals", "packlistTemplates"] as const;
+
+function sanitize(data: unknown): Record<string, unknown[]> {
+  const src = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+  const out: Record<string, unknown[]> = {};
+  for (const k of SYNC_KEYS) {
+    if (Array.isArray(src[k])) out[k] = src[k] as unknown[];
+  }
+  return out;
+}
+
 const PutBody = z.object({
   baseVersion: z.number().int().nonnegative(),
   data: z.unknown(),
@@ -29,7 +44,7 @@ export async function PUT(req: Request) {
   const result = await saveState(
     session.account.workspaceId,
     parsed.data.baseVersion,
-    parsed.data.data,
+    sanitize(parsed.data.data),
   );
   if (!result.ok) {
     return NextResponse.json(

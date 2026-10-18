@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "../db/client";
 
 export const SESSION_COOKIE = "ad_session";
+/** Die App gehört seit dem Umbau nur noch Alain (User-Slot "D"). */
+export const OWNER_USER_ID = "D";
 const SESSION_MAX_AGE_S = 60 * 60 * 24 * 30; // 30 Tage
 
 function jwtSecret(): Uint8Array {
@@ -49,7 +51,7 @@ export async function verifySessionJwt(token: string): Promise<JwtClaims | null>
   }
 }
 
-function hashToken(token: string): string {
+export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
@@ -111,7 +113,7 @@ export async function getCurrentSession(): Promise<CurrentSession | null> {
     .where(eq(schema.accounts.id, claims.aid))
     .limit(1);
   const account = accountRows[0];
-  if (!account) return null;
+  if (!account || account.userId !== OWNER_USER_ID) return null;
 
   return { account };
 }

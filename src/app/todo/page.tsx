@@ -1,22 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, X, ChevronRight, Users, Lock, ListTodo } from "lucide-react";
-import { useStore } from "@/lib/store";
-import { visibleTo } from "@/lib/scope";
-import { shortDate, todayISO } from "@/lib/date";
+import { Plus, Search, X, ChevronRight, ListTodo } from "lucide-react";
+import { useLife, areaByKey, isOpen } from "@/lib/lifeStore";
 import { BUCKET_LABEL, BUCKET_ORDER, PRIO, dueBucket } from "@/lib/todo";
+import type { TodoDto, World } from "@/lib/life";
 import { Card } from "@/components/Card";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AvatarWithScope } from "@/components/Avatar";
-import { RoundCheck } from "@/components/RoundCheck";
-import { DeleteAction } from "@/components/DeleteAction";
 import { Empty } from "@/components/Empty";
-import { TagChips } from "@/components/TagChips";
 import { ClientOnly } from "@/components/ClientOnly";
+import { TodoRow } from "@/components/TodoRow";
+import { WORLD_COLOR } from "@/components/AreaPicker";
 import { TodoSheet } from "@/components/sheets/TodoSheet";
 import { TodoAddSheet } from "@/components/sheets/TodoAddSheet";
-import type { Todo } from "@/lib/types";
 
 export default function TodoPage() {
   return (
@@ -30,54 +26,56 @@ function Skeleton() {
   return <ScreenHeader title="Todo" subtitle="—" />;
 }
 
-type ScopeFilter = "alle" | "geteilt" | "nur-ich";
+type WorldFilter = "alle" | World | "ohne";
+
+const WORLD_FILTERS: Array<{ v: WorldFilter; l: string }> = [
+  { v: "alle", l: "Alle" },
+  { v: "spinnerei", l: "Spinnerei" },
+  { v: "privat", l: "Privat" },
+  { v: "ohne", l: "Ohne Bereich" },
+];
 
 function TodoContent() {
-  const todos = useStore((s) => s.todos);
-  const currentUser = useStore((s) => s.currentUser);
-  const addTodo = useStore((s) => s.addTodo);
-  const updateTodo = useStore((s) => s.updateTodo);
-  const removeTodo = useStore((s) => s.removeTodo);
-  const toggleTodo = useStore((s) => s.toggleTodo);
+  const todos = useLife((s) => s.todos);
+  const areas = useLife((s) => s.areas);
+  const loaded = useLife((s) => s.loaded);
+  const error = useLife((s) => s.error);
+  const addTodo = useLife((s) => s.addTodo);
+  const toggleTodo = useLife((s) => s.toggleTodo);
+  const removeTodo = useLife((s) => s.removeTodo);
 
   const [query, setQuery] = useState("");
-  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("alle");
-  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [world, setWorld] = useState<WorldFilter>("alle");
+  const [areaFilter, setAreaFilter] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
-  const [openTodo, setOpenTodo] = useState<Todo | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
-  const myTodos = useMemo(() => {
-    let arr = visibleTo(todos, currentUser);
-    if (scopeFilter === "geteilt") arr = arr.filter((t) => t.scope === "geteilt");
-    if (scopeFilter === "nur-ich") arr = arr.filter((t) => t.scope === currentUser);
-    if (tagFilter) arr = arr.filter((t) => (t.tags ?? []).includes(tagFilter));
+  const filtered = useMemo(() => {
+    let arr = todos.filter((t) => t.status !== "verworfen");
+    if (world === "ohne") arr = arr.filter((t) => !t.area);
+    else if (world !== "alle") arr = arr.filter((t) => areaByKey(areas, t.area)?.world === world);
+    if (areaFilter) arr = arr.filter((t) => t.area === areaFilter);
     if (query.trim()) {
       const q = query.toLowerCase();
       arr = arr.filter(
         (t) =>
           t.text.toLowerCase().includes(q) ||
-          (t.note || "").toLowerCase().includes(q) ||
-          (t.tags ?? []).some((tag) => tag.includes(q)),
+          t.note.toLowerCase().includes(q) ||
+          t.tags.some((tag) => tag.includes(q)),
       );
     }
     return arr;
-  }, [todos, scopeFilter, tagFilter, query, currentUser]);
+  }, [todos, areas, world, areaFilter, query]);
 
-  const allTags = useMemo(() => {
-    const set = new Set<string>();
-    visibleTo(todos, currentUser).forEach((t) => (t.tags ?? []).forEach((tg) => set.add(tg)));
-    return [...set].sort();
-  }, [todos, currentUser]);
-
-  const openItems = myTodos.filter((t) => !t.done);
-  const doneItems = myTodos.filter((t) => t.done);
+  const openItems = filtered.filter(isOpen);
+  const doneItems = filtered
+    .filter((t) => t.status === "erledigt")
+    .sort((a, b) => (b.doneAt ?? "").localeCompare(a.doneAt ?? ""));
 
   const buckets = useMemo(() => {
-    const m: Record<string, Todo[]> = Object.fromEntries(BUCKET_ORDER.map((k) => [k, []]));
-    openItems.forEach((t) => {
-      m[dueBucket(t.due)].push(t);
-    });
+    const m: Record<string, TodoDto[]> = Object.fromEntries(BUCKET_ORDER.map((k) => [k, []]));
+    openItems.forEach((t) => m[dueBucket(t.due ?? "")].push(t));
     Object.values(m).forEach((arr) =>
       arr.sort((a, b) => {
         const pr = PRIO[a.prio].rank - PRIO[b.prio].rank;
@@ -88,6 +86,8 @@ function TodoContent() {
     );
     return BUCKET_ORDER.map((k) => [k, m[k]] as const).filter(([, arr]) => arr.length > 0);
   }, [openItems]);
+
+  const worldAreas = world === "spinnerei" || world === "privat" ? areas.filter((a) => a.world === world) : [];
 
   return (
     <>
@@ -108,10 +108,7 @@ function TodoContent() {
       />
 
       <div className="px-4 pb-1.5">
-        <div
-          className="flex items-center gap-2 rounded-2xl px-3 py-2 shadow-card"
-          style={{ background: "var(--paper)" }}
-        >
+        <div className="flex items-center gap-2 rounded-2xl px-3 py-2 shadow-card" style={{ background: "var(--paper)" }}>
           <Search size={16} strokeWidth={1.75} color="var(--muted)" />
           <input
             value={query}
@@ -121,87 +118,73 @@ function TodoContent() {
             style={{ color: "var(--ink)" }}
           />
           {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              className="tap"
-              style={{ color: "var(--muted)" }}
-              aria-label="Suche leeren"
-            >
+            <button type="button" onClick={() => setQuery("")} className="tap" style={{ color: "var(--muted)" }} aria-label="Suche leeren">
               <X size={14} strokeWidth={1.75} />
             </button>
           )}
         </div>
       </div>
 
-      <div className="px-4 pb-2 flex gap-1.5">
-        {([
-          { v: "alle", l: "Alle" },
-          { v: "geteilt", l: "Gemeinsam", icon: <Users size={11} strokeWidth={1.75} /> },
-          { v: "nur-ich", l: "Privat", icon: <Lock size={11} strokeWidth={2} /> },
-        ] as Array<{ v: ScopeFilter; l: string; icon?: React.ReactNode }>).map((o) => {
-          const active = scopeFilter === o.v;
+      <div className="px-4 pb-2 flex gap-1.5 overflow-x-auto phone-scroll">
+        {WORLD_FILTERS.map((o) => {
+          const active = world === o.v;
+          const color = o.v === "spinnerei" || o.v === "privat" ? WORLD_COLOR[o.v] : "var(--ink)";
           return (
             <button
               key={o.v}
               type="button"
-              onClick={() => setScopeFilter(o.v)}
-              className="px-2.5 py-1 text-[11.5px] rounded-full font-medium tap inline-flex items-center gap-1"
+              onClick={() => {
+                setWorld(o.v);
+                setAreaFilter(null);
+              }}
+              className="shrink-0 px-2.5 py-1 text-[11.5px] rounded-full font-medium tap"
               style={
                 active
-                  ? { background: "var(--ink)", color: "var(--paper)" }
+                  ? { background: color, color: "var(--paper)" }
                   : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
               }
             >
-              {o.icon}
               {o.l}
             </button>
           );
         })}
       </div>
 
-      {allTags.length > 0 && (
+      {worldAreas.length > 0 && (
         <div className="px-4 pb-2 flex gap-1.5 overflow-x-auto phone-scroll">
-          <button
-            type="button"
-            onClick={() => setTagFilter(null)}
-            className="tap shrink-0 text-[11px] rounded-full px-2.5 py-1 font-medium"
-            style={
-              tagFilter === null
-                ? { background: "var(--ink)", color: "var(--paper)" }
-                : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
-            }
-          >
-            alle Bereiche
-          </button>
-          {allTags.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTagFilter(tagFilter === t ? null : t)}
-              className="tap shrink-0 text-[11px] rounded-full px-2.5 py-1 font-medium"
-              style={
-                tagFilter === t
-                  ? { background: "var(--terra)", color: "white" }
-                  : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
-              }
-            >
-              #{t}
-            </button>
-          ))}
+          {worldAreas.map((a) => {
+            const active = areaFilter === a.key;
+            return (
+              <button
+                key={a.key}
+                type="button"
+                onClick={() => setAreaFilter(active ? null : a.key)}
+                className="tap shrink-0 text-[11px] rounded-full px-2.5 py-1 font-medium"
+                style={
+                  active
+                    ? { background: WORLD_COLOR[a.world], color: "white" }
+                    : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
+                }
+              >
+                {a.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {error && (
+        <div className="px-4 pb-2 text-[12px]" style={{ color: "#C5634B" }}>
+          Sync-Fehler: {error}
         </div>
       )}
 
       <div className="px-4 space-y-3">
-        {buckets.length === 0 && doneItems.length === 0 && (
+        {loaded && buckets.length === 0 && doneItems.length === 0 && (
           <Empty
             icon={<ListTodo size={22} strokeWidth={1.75} />}
-            title={query || tagFilter ? "Nichts gefunden" : "Alles erledigt"}
-            body={
-              query || tagFilter
-                ? "Filter anpassen?"
-                : "Du bist auf dem Laufenden."
-            }
+            title={query || world !== "alle" ? "Nichts gefunden" : "Alles erledigt"}
+            body={query || world !== "alle" ? "Filter anpassen?" : "Du bist auf dem Laufenden."}
           />
         )}
 
@@ -210,10 +193,7 @@ function TodoContent() {
             <div className="flex items-center gap-1.5 mb-1.5 px-1">
               <span
                 className="inline-block w-1.5 h-1.5 rounded-full"
-                style={{
-                  background:
-                    k === "ueber" ? "#C5634B" : k === "heute" ? "var(--terra)" : "var(--ink-soft)",
-                }}
+                style={{ background: k === "ueber" ? "#C5634B" : k === "heute" ? "var(--terra)" : "var(--ink-soft)" }}
               />
               <h2 className="uplabel text-[10.5px]" style={{ color: "var(--ink-soft)" }}>
                 {BUCKET_LABEL[k]}
@@ -224,15 +204,8 @@ function TodoContent() {
             </div>
             <Card className="p-1">
               {arr.map((t, i) => (
-                <div
-                  key={t.id}
-                  style={
-                    i < arr.length - 1
-                      ? { borderBottom: "1px solid rgba(218,201,168,0.4)" }
-                      : undefined
-                  }
-                >
-                  <TodoRow t={t} onToggle={toggleTodo} onOpen={setOpenTodo} onRemove={removeTodo} />
+                <div key={t.id} style={i < arr.length - 1 ? { borderBottom: "1px solid rgba(218,201,168,0.4)" } : undefined}>
+                  <TodoRow t={t} areas={areas} onToggle={toggleTodo} onOpen={(x) => setOpenId(x.id)} onRemove={removeTodo} />
                 </div>
               ))}
             </Card>
@@ -251,24 +224,14 @@ function TodoContent() {
               <ChevronRight
                 size={12}
                 strokeWidth={1.75}
-                style={{
-                  transition: "transform 200ms",
-                  transform: showDone ? "rotate(90deg)" : "none",
-                }}
+                style={{ transition: "transform 200ms", transform: showDone ? "rotate(90deg)" : "none" }}
               />
             </button>
             {showDone && (
               <Card className="p-1 mt-1">
                 {doneItems.map((t, i) => (
-                  <div
-                    key={t.id}
-                    style={
-                      i < doneItems.length - 1
-                        ? { borderBottom: "1px solid rgba(218,201,168,0.4)" }
-                        : undefined
-                    }
-                  >
-                    <TodoRow t={t} onToggle={toggleTodo} onOpen={setOpenTodo} onRemove={removeTodo} dense />
+                  <div key={t.id} style={i < doneItems.length - 1 ? { borderBottom: "1px solid rgba(218,201,168,0.4)" } : undefined}>
+                    <TodoRow t={t} areas={areas} onToggle={toggleTodo} onOpen={(x) => setOpenId(x.id)} onRemove={removeTodo} dense />
                   </div>
                 ))}
               </Card>
@@ -277,103 +240,8 @@ function TodoContent() {
         )}
       </div>
 
-      <TodoSheet
-        todo={openTodo}
-        onClose={() => setOpenTodo(null)}
-        onChange={(id, patch) => {
-          updateTodo(id, patch);
-          if (openTodo && openTodo.id === id) setOpenTodo({ ...openTodo, ...patch });
-        }}
-        onDelete={removeTodo}
-        currentUser={currentUser}
-      />
-
-      <TodoAddSheet
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        onAdd={addTodo}
-        currentUser={currentUser}
-      />
+      <TodoSheet todoId={openId} onClose={() => setOpenId(null)} />
+      <TodoAddSheet open={addOpen} onClose={() => setAddOpen(false)} onSubmit={addTodo} />
     </>
-  );
-}
-
-function TodoRow({
-  t,
-  onToggle,
-  onOpen,
-  onRemove,
-  dense = false,
-}: {
-  t: Todo;
-  onToggle: (id: string) => void;
-  onOpen: (t: Todo) => void;
-  onRemove: (id: string) => void;
-  dense?: boolean;
-}) {
-  const p = PRIO[t.prio];
-  const today = todayISO();
-  return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onOpen(t);
-      }}
-      className={`flex items-start gap-2.5 ${dense ? "px-2.5 py-2" : "px-3 py-2.5"} tap cursor-pointer`}
-      role="button"
-      tabIndex={0}
-    >
-      <div className="pt-0.5">
-        <RoundCheck
-          checked={t.done}
-          onClick={() => onToggle(t.id)}
-          size={dense ? 20 : 22}
-          color={p.color}
-        />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div
-          className={`${dense ? "text-[13.5px]" : "text-[14px]"} flex items-center gap-1.5`}
-          style={t.done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}
-        >
-          {p.dot && !t.done && (
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ background: p.color }}
-            />
-          )}
-          <span className="truncate">{t.text}</span>
-        </div>
-        {(t.due || t.note || (t.tags ?? []).length > 0) && (
-          <div
-            className="text-[11px] mt-0.5 flex items-center gap-1.5 flex-wrap"
-            style={{ color: "var(--muted)" }}
-          >
-            {t.due && (
-              <span
-                style={
-                  t.due < today && !t.done
-                    ? { color: "#C5634B", fontWeight: 500 }
-                    : undefined
-                }
-              >
-                {shortDate(t.due)}
-              </span>
-            )}
-            {(t.tags ?? []).length > 0 && (
-              <TagChips tags={t.tags} size="xs" max={3} />
-            )}
-            {t.note && <span className="truncate">· {t.note.split("\n")[0]}</span>}
-          </div>
-        )}
-      </div>
-      <AvatarWithScope by={t.by} scope={t.scope} size={dense ? 18 : 20} />
-      <DeleteAction
-        kind="Aufgabe"
-        label={t.text}
-        onConfirm={() => onRemove(t.id)}
-        size={12}
-      />
-    </div>
   );
 }

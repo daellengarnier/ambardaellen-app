@@ -170,44 +170,13 @@ export type Goal = {
   log?: Record<ISODate, number>;
 };
 
-export type Mood =
-  | "weich"
-  | "okay"
-  | "klar"
-  | "fokussiert"
-  | "energisch"
-  | "dunkel"
-  | "aufgewühlt";
-export type FlowLevel = 0 | 1 | 2 | 3;
-export type Symptom =
-  | "krämpfe"
-  | "müde"
-  | "kopfweh"
-  | "blähbauch"
-  | "brustempfindlich"
-  | "libido"
-  | "akne"
-  | "schlaflos"
-  | "rückenschmerz"
-  | "weinerlich";
+/** Name in Begrüssung und Profil. */
+export const OWNER_NAME = "Alain";
+/** Arbeitstitel der App, bis der endgültige Name feststeht. */
+export const APP_NAME = "Life-App";
 
-export type CycleDayEntry = {
-  flow?: FlowLevel;
-  mood?: Mood;
-  energy?: 1 | 2 | 3 | 4 | 5;
-  symptoms?: Symptom[];
-  note?: string;
-};
-
-export type Cycle = {
-  owner: UserId;
-  scope: Scope;
-  avgCycle: number;
-  avgPeriod: number;
-  periodStarts: ISODate[];
-  entries: Record<ISODate, CycleDayEntry>;
-};
-
+// "A" (Ambar) kommt nur noch als Ersteller älterer, früher geteilter
+// Einträge vor. Neue Einträge gehören immer "D".
 export const USERS: Record<UserId, User> = {
   A: { id: "A", name: "Ambar", color: "#C77052", soft: "#F2D9CB" },
   D: { id: "D", name: "Dällen", color: "#7E9A79", soft: "#D7E2D4" },

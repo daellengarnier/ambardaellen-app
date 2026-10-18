@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, Lock, Mail, Heart, LogIn, UserPlus } from "lucide-react";
+import { ChevronLeft, Lock, Mail, Sun, LogIn, UserPlus } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { Avatar } from "../Avatar";
 import { Atmosphere } from "../Atmosphere";
 import { ALLOWED_EMAILS, userIdForEmail } from "@/lib/auth";
-import { USERS } from "@/lib/types";
+import { APP_NAME, OWNER_NAME } from "@/lib/types";
 
 type Mode =
   | { kind: "select" }
@@ -25,14 +25,14 @@ export function LoginScreen() {
       <div className="login-content">
         <div className="px-6 pt-10 pb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Heart size={18} strokeWidth={1.75} color="var(--terra)" />
-            <span className="serif-i text-[20px]">Ambar &amp; Dällen</span>
+            <Sun size={18} strokeWidth={1.75} color="var(--terra)" />
+            <span className="serif-i text-[20px]">{APP_NAME}</span>
           </div>
           <p
             className="text-center text-[13px]"
             style={{ color: "var(--ink-soft)" }}
           >
-            unser gemeinsamer Küchentisch — digital
+            Todos, Ziele und Alltag, mit Jarvis
           </p>
         </div>
 
@@ -152,7 +152,7 @@ function SelectScreen({
             >
               <Avatar id={uid} size={36} />
               <div className="flex-1 min-w-0 text-left">
-                <div className="text-[15px] font-semibold">{USERS[uid].name}</div>
+                <div className="text-[15px] font-semibold">{OWNER_NAME}</div>
                 <div className="text-[12px]" style={{ color: "var(--muted)" }}>
                   {email}
                 </div>
@@ -234,7 +234,7 @@ function LoginForm({
         <Avatar id={userId} size={48} />
         <div className="min-w-0">
           <div className="serif text-[22px] leading-tight" style={{ color: "var(--mens)" }}>
-            Hallo, {USERS[userId].name}
+            Hallo, {OWNER_NAME}
           </div>
           <div className="text-[12px]" style={{ color: "var(--muted)" }}>
             {email}
@@ -344,7 +344,7 @@ function RegisterForm({
         <Avatar id={userId} size={48} />
         <div className="min-w-0">
           <div className="serif text-[22px] leading-tight" style={{ color: "var(--mens)" }}>
-            Willkommen, {USERS[userId].name}
+            Willkommen, {OWNER_NAME}
           </div>
           <div
             className="text-[12px] inline-flex items-center gap-1"

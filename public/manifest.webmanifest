@@ -1,7 +1,7 @@
 {
-  "name": "Ambar & Dällen",
-  "short_name": "A&D",
-  "description": "Unser gemeinsamer Küchentisch — digital.",
+  "name": "Life-App",
+  "short_name": "Life",
+  "description": "Todos, Ziele und Alltag von Alain, verbunden mit Jarvis.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#EFE6D3",

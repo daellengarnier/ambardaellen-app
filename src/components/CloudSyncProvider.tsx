@@ -54,17 +54,6 @@ async function pushSync(
   }
 }
 
-function isAppDataEmpty(data: unknown): boolean {
-  if (!data || typeof data !== "object") return true;
-  const d = data as Record<string, unknown>;
-  const arrays = ["activities", "shopping", "todos", "goals", "packlistTemplates"];
-  for (const k of arrays) {
-    const v = d[k];
-    if (Array.isArray(v) && v.length > 0) return false;
-  }
-  return true;
-}
-
 export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const account = useStore((s) => s.account);
   const setAccount = useStore((s) => s.setAccount);
@@ -89,25 +78,15 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
         setCloudStatus("loading");
         const snap = await fetchSync();
         if (snap) {
-          const localEmpty = isAppDataEmpty(useStore.getState().exportAppData());
-          const remoteEmpty = isAppDataEmpty(snap.data);
-          if (snap.version === 0 && remoteEmpty && !localEmpty) {
-            // Frische Cloud, lokale Daten vorhanden → Migration
-            const local = useStore.getState().exportAppData();
-            const res = await pushSync(0, local);
-            if (res.ok) setCloudVersion(res.version);
-            setCloudStatus("idle");
-          } else {
-            applyCloudData(snap.data as Partial<ReturnType<typeof useStore.getState>>, snap.version);
-            setCloudStatus("idle");
-          }
+          applyCloudData(snap.data as Partial<ReturnType<typeof useStore.getState>>, snap.version);
+          setCloudStatus("idle");
         } else {
           setCloudStatus("error", "Konnte Daten nicht laden.");
         }
       }
       setAuthReady(true);
     })();
-  }, [setAccount, setAuthReady, applyCloudData, setCloudStatus, setCloudVersion]);
+  }, [setAccount, setAuthReady, applyCloudData, setCloudStatus]);
 
   // ── Push: dirty flag → debounced PUT ──────────────────────────
   useEffect(() => {

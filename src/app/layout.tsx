@@ -12,8 +12,8 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Ambar & Dällen",
-  description: "Unser gemeinsamer Küchentisch — digital.",
+  title: "Life-App",
+  description: "Todos, Ziele und Alltag von Alain, verbunden mit Jarvis.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Ambar & Dällen",
+    title: "Life-App",
     // black-translucent: iOS legt die Status-Bar transparent über die
     // App, der Atmosphere-Hintergrund läuft bis ganz an den oberen Rand.
     // Der Status-Bar-Text bleibt schwarz und ist auf Cream gut lesbar.

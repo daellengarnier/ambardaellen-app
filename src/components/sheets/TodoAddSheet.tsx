@@ -1,66 +1,102 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { Sun } from "lucide-react";
 import { Sheet } from "../Sheet";
 import { Segmented } from "../Segmented";
-import { ScopeToggle } from "../ScopeToggle";
 import { TagInput } from "../TagInput";
-import { useStore } from "@/lib/store";
-import type { Priority, Scope, Todo, UserId } from "@/lib/types";
+import { AreaPicker } from "../AreaPicker";
+import { useLife } from "@/lib/lifeStore";
+import { todayZurich, type TodoInput } from "@/lib/life";
+import type { Priority } from "@/lib/types";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onAdd: (
-    input: Pick<Todo, "text" | "scope" | "prio" | "due"> & { tags?: string[]; note?: string },
-  ) => void;
-  currentUser: UserId;
+  onSubmit: (input: TodoInput) => void;
+  title?: string;
+  submitLabel?: string;
+  initialText?: string;
+  initialPlannedToday?: boolean;
+  /** Zusätzliche Aktionen unter dem Hauptknopf (z.B. in der Inbox). */
+  footer?: ReactNode;
 };
 
-export function TodoAddSheet({ open, onClose, onAdd, currentUser }: Props) {
+export function TodoAddSheet({ open, ...rest }: Props) {
   if (!open) return null;
-  return <TodoAddForm onClose={onClose} onAdd={onAdd} currentUser={currentUser} />;
+  return <TodoAddForm {...rest} />;
 }
 
 function TodoAddForm({
   onClose,
-  onAdd,
-  currentUser,
-}: {
-  onClose: () => void;
-  onAdd: Props["onAdd"];
-  currentUser: UserId;
-}) {
-  const todos = useStore((s) => s.todos);
-  const knownTags = Array.from(new Set(todos.flatMap((t) => t.tags ?? [])));
+  onSubmit,
+  title = "Neue Aufgabe",
+  submitLabel = "Hinzufügen",
+  initialText = "",
+  initialPlannedToday = false,
+  footer,
+}: Omit<Props, "open">) {
+  const areas = useLife((s) => s.areas);
+  const todos = useLife((s) => s.todos);
+  const knownTags = useMemo(() => Array.from(new Set(todos.flatMap((t) => t.tags))), [todos]);
 
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [note, setNote] = useState("");
   const [due, setDue] = useState("");
   const [prio, setPrio] = useState<Priority>("normal");
-  const [scope, setScope] = useState<Scope>("geteilt");
+  const [area, setArea] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [today, setToday] = useState(initialPlannedToday);
+
+  const submit = () => {
+    if (!text.trim()) return;
+    onSubmit({
+      text: text.trim(),
+      note,
+      due: due || null,
+      prio,
+      area,
+      tags,
+      plannedFor: today ? todayZurich() : null,
+    });
+    onClose();
+  };
 
   return (
-    <Sheet open onClose={onClose} title="Neue Aufgabe">
+    <Sheet open onClose={onClose} title={title}>
       <div className="mt-3">
-        <div className="uplabel text-[10.5px] mb-1.5" style={{ color: "var(--muted)" }}>
-          Was?
-        </div>
+        <Label>Was?</Label>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
           autoFocus
-          placeholder="z. B. Mietvertrag verlängern"
+          placeholder="z. B. Gage für Doom Gong bestätigen"
           className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
           style={{ background: "rgba(228,217,191,0.5)" }}
         />
       </div>
 
+      <button
+        type="button"
+        onClick={() => setToday((v) => !v)}
+        className="tap mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium"
+        style={
+          today
+            ? { background: "var(--gold)", color: "white" }
+            : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
+        }
+      >
+        <Sun size={13} strokeWidth={2} /> Heute erledigen
+      </button>
+
       <div className="mt-3">
-        <div className="uplabel text-[10.5px] mb-1.5" style={{ color: "var(--muted)" }}>
-          Fällig (optional)
-        </div>
+        <Label>Bereich</Label>
+        <AreaPicker areas={areas} value={area} onChange={setArea} />
+      </div>
+
+      <div className="mt-3">
+        <Label>Fällig (optional)</Label>
         <input
           type="date"
           value={due}
@@ -70,53 +106,53 @@ function TodoAddForm({
         />
       </div>
 
-      <div className="uplabel text-[10.5px] mt-3 mb-1.5" style={{ color: "var(--muted)" }}>
-        Priorität
+      <div className="mt-3">
+        <Label>Priorität</Label>
+        <Segmented
+          value={prio}
+          onChange={(v) => setPrio(v as Priority)}
+          options={[
+            { value: "tief", label: "Tief" },
+            { value: "normal", label: "Normal" },
+            { value: "hoch", label: "Hoch" },
+          ]}
+        />
       </div>
-      <Segmented
-        value={prio}
-        onChange={(v) => setPrio(v as Priority)}
-        options={[
-          { value: "tief", label: "Tief" },
-          { value: "normal", label: "Normal" },
-          { value: "hoch", label: "Hoch" },
-        ]}
-      />
 
-      <div className="uplabel text-[10.5px] mt-3 mb-1.5" style={{ color: "var(--muted)" }}>
-        Bereiche / Tags
+      <div className="mt-3">
+        <Label>Tags</Label>
+        <TagInput value={tags} onChange={setTags} knownTags={knownTags} />
       </div>
-      <TagInput value={tags} onChange={setTags} knownTags={knownTags} />
 
-      <div className="uplabel text-[10.5px] mt-3 mb-1.5" style={{ color: "var(--muted)" }}>
-        Notiz (optional)
+      <div className="mt-3">
+        <Label>Notiz (optional)</Label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={2}
+          placeholder="Details, Kontakt, Links…"
+          className="w-full rounded-2xl p-3 text-[14.5px] resize-none"
+          style={{ background: "rgba(228,217,191,0.5)" }}
+        />
       </div>
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={2}
-        placeholder="Details, Kontakt, Links…"
-        className="w-full rounded-2xl p-3 text-[14.5px] resize-none"
-        style={{ background: "rgba(228,217,191,0.5)" }}
-      />
-
-      <div className="uplabel text-[10.5px] mt-3 mb-1.5" style={{ color: "var(--muted)" }}>
-        Sichtbar für
-      </div>
-      <ScopeToggle value={scope} onChange={setScope} currentUser={currentUser} />
 
       <button
         type="button"
-        onClick={() => {
-          if (!text.trim()) return;
-          onAdd({ text: text.trim(), due, prio, scope, tags, note });
-          onClose();
-        }}
+        onClick={submit}
         className="w-full mt-5 py-3.5 rounded-2xl text-white text-[15.5px] font-semibold tap"
-        style={{ background: "var(--terra)" }}
+        style={{ background: text.trim() ? "var(--terra)" : "var(--terra-soft)" }}
       >
-        Hinzufügen
+        {submitLabel}
       </button>
+      {footer}
     </Sheet>
+  );
+}
+
+export function Label({ children }: { children: ReactNode }) {
+  return (
+    <div className="uplabel text-[10.5px] mb-1.5" style={{ color: "var(--muted)" }}>
+      {children}
+    </div>
   );
 }

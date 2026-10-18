@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "../db/client";
 
 /**
- * Wir betreiben einen einzigen Workspace ("Ambar & Dällen").
+ * Wir betreiben einen einzigen Workspace (historischer Name "Ambar & Dällen").
  * Beim ersten Account-Registrieren wird er erzeugt; jeder weitere
  * Account joint demselben Workspace.
  */

@@ -1,125 +1,162 @@
 "use client";
 
-import { Calendar as CalIcon, Clock, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Calendar as CalIcon, Clock, ExternalLink, Sparkles, Sun, Trash2 } from "lucide-react";
 import { Sheet } from "../Sheet";
 import { DetailRow } from "../DetailRow";
-import { Avatar } from "../Avatar";
-import { ScopeToggle } from "../ScopeToggle";
 import { TagInput } from "../TagInput";
-import { useStore } from "@/lib/store";
-import type { Priority, Todo, UserId } from "@/lib/types";
-import { USERS } from "@/lib/types";
-import { formatDate, relativeWhen } from "@/lib/date";
+import { AreaPicker } from "../AreaPicker";
+import { Label } from "./TodoAddSheet";
+import { useLife } from "@/lib/lifeStore";
+import { todayZurich, type TodoDto, type TodoPatch } from "@/lib/life";
+import type { Priority } from "@/lib/types";
+import { relativeWhen } from "@/lib/date";
 import { PRIO } from "@/lib/todo";
 
 type Props = {
-  todo: Todo | null;
+  /** ID statt Objekt: das Sheet liest immer den aktuellen Stand aus dem Store. */
+  todoId: string | null;
   onClose: () => void;
-  onChange: (id: string, patch: Partial<Todo>) => void;
-  onDelete: (id: string) => void;
-  currentUser: UserId;
 };
 
-export function TodoSheet({ todo, onClose, onChange, onDelete, currentUser }: Props) {
-  const todos = useStore((s) => s.todos);
-  if (!todo) return null;
-  const p = PRIO[todo.prio];
+const SOURCE_LABEL: Record<string, string> = {
+  app: "App",
+  jarvis: "Jarvis",
+  telegram: "Telegram",
+  inbox: "Inbox",
+  migration: "alte App",
+  "orga-app": "Orga-App Spinnerei",
+};
 
-  const knownTags = Array.from(
-    new Set(todos.flatMap((t) => t.tags ?? [])),
-  ).filter((t) => !(todo.tags ?? []).includes(t));
+export function TodoSheet({ todoId, onClose }: Props) {
+  const todo = useLife((s) => s.todos.find((t) => t.id === todoId) ?? null);
+  if (!todo) return null;
+  // key: Formular neu aufsetzen, wenn ein anderes Todo geöffnet wird.
+  return <TodoDetail key={todo.id} todo={todo} onClose={onClose} />;
+}
+
+function TodoDetail({ todo, onClose }: { todo: TodoDto; onClose: () => void }) {
+  const areas = useLife((s) => s.areas);
+  const todos = useLife((s) => s.todos);
+  const updateTodo = useLife((s) => s.updateTodo);
+  const removeTodo = useLife((s) => s.removeTodo);
+
+  const [text, setText] = useState(todo.text);
+  const [note, setNote] = useState(todo.note);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const knownTags = useMemo(
+    () => Array.from(new Set(todos.flatMap((t) => t.tags))).filter((t) => !todo.tags.includes(t)),
+    [todos, todo.tags],
+  );
+
+  const change = (patch: TodoPatch) => updateTodo(todo.id, patch);
+  const today = todayZurich();
+  const plannedToday = todo.plannedFor === today;
+  const done = todo.status !== "offen";
+  const sourceIsLink = todo.sourceRef && /^https?:\/\//.test(todo.sourceRef);
 
   return (
     <Sheet open onClose={onClose} title="Aufgabe">
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-[22px] font-semibold leading-tight flex-1 flex items-start gap-2">
-          {p.dot && (
-            <span
-              className="inline-block w-2 h-2 rounded-full mt-2.5 shrink-0"
-              style={{ background: p.color }}
-            />
-          )}
-          <span>{todo.text}</span>
-        </div>
-        <Avatar id={todo.by} size={22} />
-      </div>
-
-      {todo.note && (
-        <div
-          className="rounded-2xl p-3 mt-3"
-          style={{ background: "rgba(228,217,191,0.5)" }}
-        >
-          <div className="uplabel text-[10px]" style={{ color: "var(--muted)" }}>
-            Notiz
-          </div>
-          <div className="text-[14px] mt-1 whitespace-pre-line leading-relaxed">{todo.note}</div>
-        </div>
-      )}
-
-      <div className="mt-4 space-y-1">
-        <DetailRow
-          label="Fällig"
-          value={todo.due ? formatDate(todo.due) : "Ohne Datum"}
-          icon={<CalIcon size={16} />}
-        />
-        <DetailRow
-          label="Hinzugefügt"
-          value={`${USERS[todo.by].name} · ${relativeWhen(todo.addedAt)}`}
-          icon={<Clock size={16} />}
-        />
-      </div>
-
-      <div className="uplabel text-[10.5px] mt-4 mb-1.5" style={{ color: "var(--muted)" }}>
-        Priorität
-      </div>
-      <div
-        className="inline-flex p-0.5 rounded-full"
-        style={{ background: "var(--cream-deep)" }}
-      >
-        {(Object.entries(PRIO) as Array<[Priority, (typeof PRIO)[Priority]]>).map(([k, v]) => {
-          const active = todo.prio === k;
-          return (
-            <button
-              key={k}
-              type="button"
-              onClick={() => onChange(todo.id, { prio: k })}
-              className="px-3 py-1 text-[12px] rounded-full font-medium tap inline-flex items-center gap-1"
-              style={
-                active
-                  ? { background: "var(--paper)", color: v.color }
-                  : { color: "var(--ink-soft)" }
-              }
-            >
-              {v.dot && (
-                <span
-                  className="inline-block w-1.5 h-1.5 rounded-full"
-                  style={{ background: v.color }}
-                />
-              )}
-              {v.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="uplabel text-[10.5px] mt-4 mb-1.5" style={{ color: "var(--muted)" }}>
-        Bereiche / Tags
-      </div>
-      <TagInput
-        value={todo.tags ?? []}
-        onChange={(next) => onChange(todo.id, { tags: next })}
-        knownTags={knownTags}
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => text.trim() && text.trim() !== todo.text && change({ text: text.trim() })}
+        className="w-full bg-transparent text-[21px] font-semibold leading-tight"
+        aria-label="Titel"
       />
 
-      <div className="flex items-center justify-between mt-3">
-        <div className="uplabel text-[10.5px]" style={{ color: "var(--muted)" }}>
-          Sichtbar für
+      <button
+        type="button"
+        onClick={() => change({ plannedFor: plannedToday ? null : today })}
+        className="tap mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium"
+        style={
+          plannedToday
+            ? { background: "var(--gold)", color: "white" }
+            : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
+        }
+      >
+        <Sun size={13} strokeWidth={2} /> {plannedToday ? "Für heute geplant" : "Heute erledigen"}
+      </button>
+
+      <div className="mt-4">
+        <Label>Bereich</Label>
+        <AreaPicker areas={areas} value={todo.area} onChange={(area) => change({ area })} />
+      </div>
+
+      <div className="mt-4">
+        <Label>Fällig</Label>
+        <input
+          type="date"
+          value={todo.due ?? ""}
+          onChange={(e) => change({ due: e.target.value || null })}
+          className="w-full rounded-2xl px-3.5 py-2.5 text-[15px]"
+          style={{ background: "rgba(228,217,191,0.5)" }}
+        />
+      </div>
+
+      <div className="mt-4">
+        <Label>Priorität</Label>
+        <div className="inline-flex p-0.5 rounded-full" style={{ background: "var(--cream-deep)" }}>
+          {(Object.entries(PRIO) as Array<[Priority, (typeof PRIO)[Priority]]>).map(([k, v]) => {
+            const active = todo.prio === k;
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => change({ prio: k })}
+                className="px-3 py-1 text-[12px] rounded-full font-medium tap inline-flex items-center gap-1"
+                style={active ? { background: "var(--paper)", color: v.color } : { color: "var(--ink-soft)" }}
+              >
+                {v.dot && <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: v.color }} />}
+                {v.label}
+              </button>
+            );
+          })}
         </div>
-        <ScopeToggle
-          value={todo.scope || "geteilt"}
-          onChange={(s) => onChange(todo.id, { scope: s })}
-          currentUser={currentUser}
-          compact
+      </div>
+
+      <div className="mt-4">
+        <Label>Tags</Label>
+        <TagInput value={todo.tags} onChange={(tags) => change({ tags })} knownTags={knownTags} />
+      </div>
+
+      <div className="mt-4">
+        <Label>Notiz</Label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onBlur={() => note !== todo.note && change({ note })}
+          rows={3}
+          placeholder="Details, Kontakt, Links…"
+          className="w-full rounded-2xl p-3 text-[14.5px] resize-none"
+          style={{ background: "rgba(228,217,191,0.5)" }}
+        />
+      </div>
+
+      <div className="mt-3 space-y-1">
+        <DetailRow
+          label="Erstellt"
+          value={`${todo.createdBy === "jarvis" ? "Jarvis" : "Alain"} · ${relativeWhen(Date.parse(todo.createdAt))}`}
+          icon={todo.createdBy === "jarvis" ? <Sparkles size={16} /> : <Clock size={16} />}
+        />
+        <DetailRow
+          label="Quelle"
+          value={
+            sourceIsLink ? (
+              <a
+                href={todo.sourceRef!}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 underline"
+              >
+                {SOURCE_LABEL[todo.source] ?? todo.source} <ExternalLink size={12} />
+              </a>
+            ) : (
+              SOURCE_LABEL[todo.source] ?? todo.source
+            )
+          }
+          icon={<CalIcon size={16} />}
         />
       </div>
 
@@ -127,29 +164,34 @@ export function TodoSheet({ todo, onClose, onChange, onDelete, currentUser }: Pr
         <button
           type="button"
           onClick={() => {
-            onChange(todo.id, { done: !todo.done });
+            change({ status: done ? "offen" : "erledigt" });
             onClose();
           }}
           className="flex-1 py-3 rounded-2xl text-[15px] font-semibold tap"
-          style={
-            todo.done
-              ? { background: "var(--cream-deep)", color: "var(--ink)" }
-              : { background: "var(--sage)", color: "white" }
-          }
+          style={done ? { background: "var(--cream-deep)", color: "var(--ink)" } : { background: "var(--sage)", color: "white" }}
         >
-          {todo.done ? "Wieder offen" : "Erledigt ✓"}
+          {done ? "Wieder offen" : "Erledigt ✓"}
         </button>
         <button
           type="button"
           onClick={() => {
-            onDelete(todo.id);
+            if (!confirmDelete) {
+              setConfirmDelete(true);
+              return;
+            }
+            removeTodo(todo.id);
             onClose();
           }}
-          className="px-4 rounded-2xl tap"
-          style={{ background: "var(--cream-deep)", color: "var(--ink-soft)" }}
+          className="px-4 rounded-2xl tap text-[13px] font-medium inline-flex items-center gap-1.5"
+          style={
+            confirmDelete
+              ? { background: "var(--terra)", color: "white" }
+              : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
+          }
           aria-label="Löschen"
         >
-          <X size={18} strokeWidth={1.75} />
+          <Trash2 size={16} strokeWidth={1.75} />
+          {confirmDelete && "Löschen?"}
         </button>
       </div>
     </Sheet>

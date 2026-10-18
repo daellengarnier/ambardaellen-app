@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, Calendar, ListTodo, ShoppingCart, Target, X } from "lucide-react";
+import { Plus, Calendar, ListTodo, ShoppingCart, Target, X, Inbox } from "lucide-react";
 
-type ActionKey = "activity" | "todo" | "shopping" | "goal";
+type ActionKey = "inbox" | "activity" | "todo" | "shopping" | "goal";
 
 type Action = {
   key: ActionKey;
@@ -13,8 +13,9 @@ type Action = {
 };
 
 const ACTIONS: Action[] = [
+  { key: "inbox", label: "In die Inbox", Icon: Inbox, color: "var(--ink-soft)" },
+  { key: "todo", label: "Aufgabe für heute", Icon: ListTodo, color: "var(--plum)" },
   { key: "activity", label: "Termin / Idee", Icon: Calendar, color: "var(--terra)" },
-  { key: "todo", label: "Aufgabe", Icon: ListTodo, color: "var(--plum)" },
   { key: "shopping", label: "Einkauf-Item", Icon: ShoppingCart, color: "var(--sage)" },
   { key: "goal", label: "Ziel", Icon: Target, color: "var(--gold)" },
 ];
@@ -126,6 +127,9 @@ export function QuickAddMenu({ onPick }: Props) {
         }
         :global(.qam-pop:nth-child(4)) {
           animation-delay: 90ms;
+        }
+        :global(.qam-pop:nth-child(5)) {
+          animation-delay: 120ms;
         }
       `}</style>
     </div>

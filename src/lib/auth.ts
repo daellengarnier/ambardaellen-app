@@ -8,15 +8,9 @@ export type Account = {
   createdAt: number;
 };
 
-/** Mapping fix: jede Email gehört eindeutig zu einem User-Slot. */
+/** Seit dem Umbau gibt es nur noch Alains Account (User-Slot "D"). */
 export const EMAIL_TO_USER: Record<string, UserId> = {
-  "ambar@al-daellen.ch": "A",
   "alain@al-daellen.ch": "D",
-};
-
-export const USER_TO_EMAIL: Record<UserId, string> = {
-  A: "ambar@al-daellen.ch",
-  D: "alain@al-daellen.ch",
 };
 
 export const ALLOWED_EMAILS = Object.keys(EMAIL_TO_USER);

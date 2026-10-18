@@ -1,20 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Plus, Users, Lock, ChevronRight, ShoppingCart } from "lucide-react";
+import { useState } from "react";
+import { Plus, ChevronRight, ShoppingCart } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { visibleTo } from "@/lib/scope";
-import { USERS } from "@/lib/types";
 import { relativeWhen } from "@/lib/date";
 import { Card } from "@/components/Card";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AvatarWithScope } from "@/components/Avatar";
 import { RoundCheck } from "@/components/RoundCheck";
 import { DeleteAction } from "@/components/DeleteAction";
 import { Empty } from "@/components/Empty";
 import { ClientOnly } from "@/components/ClientOnly";
 import { ShoppingSheet } from "@/components/sheets/ShoppingSheet";
-import type { Scope, ShoppingItem } from "@/lib/types";
+import type { ShoppingItem } from "@/lib/types";
 
 export default function EinkaufPage() {
   return (
@@ -42,17 +39,13 @@ function ShopContent() {
 
   const [input, setInput] = useState("");
   const [spinnerei, setSpinnerei] = useState(false);
-  const [scopeForNew, setScopeForNew] = useState<Scope>("geteilt");
   const [showDone, setShowDone] = useState(false);
   const [openItem, setOpenItem] = useState<ShoppingItem | null>(null);
 
-  const visibleShopping = useMemo(() => visibleTo(shopping, currentUser), [shopping, currentUser]);
-
-  const openItems = visibleShopping.filter((s) => !s.done);
-  const gemeinsam = openItems.filter((s) => !s.spinnerei && s.scope === "geteilt");
-  const privat = openItems.filter((s) => !s.spinnerei && s.scope === currentUser);
+  const openItems = shopping.filter((s) => !s.done);
+  const einkauf = openItems.filter((s) => !s.spinnerei);
   const spinnereiArr = openItems.filter((s) => s.spinnerei);
-  const doneItems = visibleShopping.filter((s) => s.done);
+  const doneItems = shopping.filter((s) => s.done);
 
   const sections: Array<{
     key: string;
@@ -63,18 +56,11 @@ function ShopContent() {
     hint?: string;
   }> = [
     {
-      key: "gemeinsam",
-      label: "Gemeinsam",
-      items: gemeinsam,
+      key: "einkauf",
+      label: "Einkauf",
+      items: einkauf,
       accent: "var(--sage)",
-      icon: <Users size={11} strokeWidth={1.75} />,
-    },
-    {
-      key: "privat",
-      label: `Privat · ${USERS[currentUser].name}`,
-      items: privat,
-      accent: USERS[currentUser].color,
-      icon: <Lock size={11} strokeWidth={2} />,
+      icon: <ShoppingCart size={11} strokeWidth={1.75} />,
     },
     {
       key: "spinnerei",
@@ -88,7 +74,7 @@ function ShopContent() {
 
   const add = () => {
     if (!input.trim()) return;
-    addShopping({ text: input, scope: spinnerei ? scopeForNew : scopeForNew, spinnerei });
+    addShopping({ text: input, scope: "D", spinnerei });
     setInput("");
   };
 
@@ -131,33 +117,15 @@ function ShopContent() {
             >
               <button
                 type="button"
-                onClick={() => {
-                  setScopeForNew("geteilt");
-                  setSpinnerei(false);
-                }}
+                onClick={() => setSpinnerei(false)}
                 className="px-2.5 py-0.5 text-[11.5px] rounded-full tap font-medium inline-flex items-center gap-1"
                 style={
-                  scopeForNew === "geteilt" && !spinnerei
+                  !spinnerei
                     ? { background: "var(--paper)", color: "var(--ink)" }
                     : { color: "var(--ink-soft)" }
                 }
               >
-                <Users size={11} strokeWidth={1.75} /> Gemeinsam
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setScopeForNew(currentUser);
-                  setSpinnerei(false);
-                }}
-                className="px-2.5 py-0.5 text-[11.5px] rounded-full tap font-medium inline-flex items-center gap-1"
-                style={
-                  scopeForNew === currentUser && !spinnerei
-                    ? { background: "var(--paper)", color: "var(--ink)" }
-                    : { color: "var(--ink-soft)" }
-                }
-              >
-                <Lock size={11} strokeWidth={2} /> Privat
+                <ShoppingCart size={11} strokeWidth={1.75} /> Einkauf
               </button>
               <button
                 type="button"
@@ -265,7 +233,7 @@ function ShopContent() {
           </div>
         )}
 
-        {visibleShopping.length === 0 && (
+        {shopping.length === 0 && (
           <Empty
             icon={<ShoppingCart size={22} strokeWidth={1.75} />}
             title="Liste ist leer"
@@ -334,7 +302,6 @@ function ShoppingRow({
           </div>
         )}
       </div>
-      <AvatarWithScope by={item.by} scope={item.scope} size={dense ? 18 : 20} />
       <DeleteAction label={item.text} onConfirm={() => onRemove(item.id)} size={12} />
     </div>
   );

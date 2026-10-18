@@ -2,20 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sun, Calendar, ShoppingCart, ListTodo, Target } from "lucide-react";
+import { Sun, Inbox, ListTodo, Target, LayoutGrid } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { useLife } from "@/lib/lifeStore";
 
 const TABS = [
-  { href: "/", label: "Home", Icon: Sun },
-  { href: "/aktivitaeten", label: "Aktivitäten", Icon: Calendar },
-  { href: "/einkauf", label: "Einkauf", Icon: ShoppingCart },
-  { href: "/todo", label: "Todo", Icon: ListTodo },
-  { href: "/ziele", label: "Ziele", Icon: Target },
+  { href: "/", label: "Heute", Icon: Sun, match: ["/"] },
+  { href: "/inbox", label: "Inbox", Icon: Inbox, match: ["/inbox"] },
+  { href: "/todo", label: "Todo", Icon: ListTodo, match: ["/todo"] },
+  { href: "/ziele", label: "Ziele", Icon: Target, match: ["/ziele"] },
+  { href: "/mehr", label: "Mehr", Icon: LayoutGrid, match: ["/mehr", "/einkauf", "/aktivitaeten"] },
 ] as const;
 
 export function BottomTabs() {
   const pathname = usePathname();
   const sheetOpen = useStore((s) => s.sheetOpen);
+  const inboxCount = useLife((s) => s.inbox.length);
   if (sheetOpen > 0) return null;
 
   return (
@@ -42,8 +44,9 @@ export function BottomTabs() {
           paddingBottom: "calc(env(safe-area-inset-bottom) * 0.35)",
         }}
       >
-        {TABS.map(({ href, label, Icon }) => {
-          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        {TABS.map(({ href, label, Icon, match }) => {
+          const active = match.some((m) => (m === "/" ? pathname === "/" : pathname.startsWith(m)));
+          const badge = href === "/inbox" && inboxCount > 0 ? inboxCount : 0;
           return (
             <Link
               key={href}
@@ -60,11 +63,21 @@ export function BottomTabs() {
               }
               aria-current={active ? "page" : undefined}
             >
-              <Icon
-                size={18}
-                strokeWidth={active ? 2 : 1.6}
-                color={active ? "var(--terra-deep)" : "var(--ink-soft)"}
-              />
+              <span className="relative inline-flex">
+                <Icon
+                  size={18}
+                  strokeWidth={active ? 2 : 1.6}
+                  color={active ? "var(--terra-deep)" : "var(--ink-soft)"}
+                />
+                {badge > 0 && (
+                  <span
+                    className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-[3px] rounded-full text-[8.5px] font-bold text-white inline-flex items-center justify-center"
+                    style={{ background: "var(--terra)" }}
+                  >
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
+              </span>
               <span
                 className="text-[9.5px]"
                 style={{

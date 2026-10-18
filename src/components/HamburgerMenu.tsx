@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Menu, X, UserCircle2, Layers, LogOut, ArrowLeftRight } from "lucide-react";
+import { Menu, X, UserCircle2, Layers, LogOut } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { USERS, type UserId } from "@/lib/types";
+import { useLife } from "@/lib/lifeStore";
+import { OWNER_NAME } from "@/lib/types";
 import { Avatar } from "./Avatar";
 import { ProfileSheet } from "./sheets/ProfileSheet";
 import { PacklistTemplatesManagerSheet } from "./sheets/PacklistTemplatesManagerSheet";
@@ -18,10 +19,8 @@ export function HamburgerMenu() {
   const account = useStore((s) => s.account);
   const loggedInEmail = account?.email ?? "";
   const currentUser = useStore((s) => s.currentUser);
-  const setCurrentUser = useStore((s) => s.setCurrentUser);
   const logout = useStore((s) => s.logout);
-
-  const otherUser: UserId = currentUser === "A" ? "D" : "A";
+  const resetLife = useLife((s) => s.reset);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -76,32 +75,13 @@ export function HamburgerMenu() {
               <Avatar id={currentUser} size={28} />
               <div className="min-w-0 flex-1">
                 <div className="text-[13.5px] font-semibold leading-tight">
-                  {USERS[currentUser].name}
+                  {OWNER_NAME}
                 </div>
                 <div className="text-[10.5px] truncate" style={{ color: "var(--muted)" }}>
                   {loggedInEmail}
                 </div>
               </div>
             </div>
-
-            {/* Profil-Switch */}
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentUser(otherUser);
-                setMenuOpen(false);
-              }}
-              className="tap w-full inline-flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px]"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              <Avatar id={otherUser} size={22} dim />
-              <span className="flex-1 text-left">
-                Als <span className="font-semibold" style={{ color: "var(--ink)" }}>{USERS[otherUser].name}</span> ansehen
-              </span>
-              <ArrowLeftRight size={13} strokeWidth={1.75} color="var(--muted)" />
-            </button>
-
-            <div className="border-t my-1" style={{ borderColor: "var(--line)" }} />
 
             <MenuItem
               icon={<UserCircle2 size={16} strokeWidth={1.75} />}
@@ -128,6 +108,7 @@ export function HamburgerMenu() {
               color="var(--terra-deep)"
               onClick={() => {
                 logout();
+                resetLife();
                 setMenuOpen(false);
               }}
             />

@@ -4,25 +4,15 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type {
   Activity,
-  Cycle,
   Goal,
   PacklistItem,
   PacklistTemplate,
   PacklistTemplateItem,
   Scope,
   ShoppingItem,
-  Todo,
   TripSegment,
   UserId,
 } from "./types";
-import {
-  SEED_ACTIVITIES,
-  SEED_CYCLE,
-  SEED_GOALS,
-  SEED_PACKLIST_TEMPLATES,
-  SEED_SHOPPING,
-  SEED_TODOS,
-} from "./seed";
 
 function uid(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -37,12 +27,12 @@ export type AuthAccount = {
 
 export type CloudStatus = "idle" | "loading" | "syncing" | "error" | "offline";
 
+// Todos liegen seit dem Umbau in eigenen Tabellen (siehe lib/lifeStore.ts).
+// Im JSON-Block bleiben nur noch diese Bereiche.
 type AppData = {
   activities: Activity[];
   shopping: ShoppingItem[];
-  todos: Todo[];
   goals: Goal[];
-  cycle: Cycle;
   packlistTemplates: PacklistTemplate[];
 };
 
@@ -72,7 +62,6 @@ type State = AppData & {
   login: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   logout: () => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<{ ok: true } | { ok: false; error: string }>;
-  resetPartnerPassword: (newPassword: string) => Promise<{ ok: true; email: string } | { ok: false; error: string }>;
 
   // Cloud-Sync
   setAccount: (a: AuthAccount | null) => void;
@@ -88,14 +77,6 @@ type State = AppData & {
   toggleShopping: (id: string) => void;
   updateShopping: (id: string, patch: Partial<ShoppingItem>) => void;
   removeShopping: (id: string) => void;
-
-  // todos
-  addTodo: (
-    input: Pick<Todo, "text" | "scope" | "prio" | "due"> & { tags?: string[]; note?: string },
-  ) => void;
-  toggleTodo: (id: string) => void;
-  updateTodo: (id: string, patch: Partial<Todo>) => void;
-  removeTodo: (id: string) => void;
 
   // activities
   addActivity: (input: Omit<Activity, "id" | "by">) => void;
@@ -131,10 +112,6 @@ type State = AppData & {
   updateTemplateItem: (templateId: string, itemId: string, patch: Partial<PacklistTemplateItem>) => void;
   removeTemplateItem: (templateId: string, itemId: string) => void;
 
-  // cycle
-  setCycle: (cycle: Cycle) => void;
-  updateCycle: (patch: Partial<Cycle>) => void;
-
   // goals
   addGoal: (input: Omit<Goal, "id" | "by">) => void;
   logGoalProgress: (goalId: string, iso: string, delta: number) => void;
@@ -146,13 +123,22 @@ type State = AppData & {
 };
 
 const EMPTY_APP_DATA: AppData = {
-  activities: SEED_ACTIVITIES,
-  shopping: SEED_SHOPPING,
-  todos: SEED_TODOS,
-  goals: SEED_GOALS,
-  cycle: SEED_CYCLE,
-  packlistTemplates: SEED_PACKLIST_TEMPLATES,
+  activities: [],
+  shopping: [],
+  goals: [],
+  packlistTemplates: [],
 };
+
+// Lokaler Speicher der alten Paar-App. Enthielt auch Daten von Ambar und
+// den Zyklus, darum beim ersten Start der neuen Version entfernen.
+const LEGACY_STORAGE_KEY = "ambardaellen-store";
+if (typeof window !== "undefined") {
+  try {
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch {
+    // Privater Modus o.ä.: nichts zu tun
+  }
+}
 
 /**
  * Markiert eine Mutation, die in die Cloud gepusht werden soll. Setzt
@@ -193,9 +179,7 @@ export const useStore = create<State>()(
         return {
           activities: s.activities,
           shopping: s.shopping,
-          todos: s.todos,
           goals: s.goals,
-          cycle: s.cycle,
           packlistTemplates: s.packlistTemplates,
         };
       },
@@ -203,9 +187,7 @@ export const useStore = create<State>()(
         set({
           activities: data.activities ?? EMPTY_APP_DATA.activities,
           shopping: data.shopping ?? EMPTY_APP_DATA.shopping,
-          todos: data.todos ?? EMPTY_APP_DATA.todos,
           goals: data.goals ?? EMPTY_APP_DATA.goals,
-          cycle: data.cycle ?? EMPTY_APP_DATA.cycle,
           packlistTemplates: data.packlistTemplates ?? EMPTY_APP_DATA.packlistTemplates,
           cloudVersion: version,
           pendingPush: false,
@@ -254,19 +236,6 @@ export const useStore = create<State>()(
         return { ok: true };
       },
 
-      resetPartnerPassword: async (newPassword) => {
-        const res = await fetch("/api/auth/reset-partner-password", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ newPassword }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          return { ok: false, error: body.error ?? `Fehler ${res.status}` };
-        }
-        const body = (await res.json()) as { email: string };
-        return { ok: true, email: body.email };
-      },
 
       logout: async () => {
         try {
@@ -323,43 +292,6 @@ export const useStore = create<State>()(
           ...markDirty(),
         })),
 
-      // ---------- todos ----------
-      addTodo: ({ text, scope, prio, due, tags = [], note = "" }) => {
-        const t = text.trim();
-        if (!t) return;
-        const by = get().currentUser;
-        set((s) => ({
-          todos: [
-            {
-              id: uid("t"),
-              text: t,
-              done: false,
-              due,
-              prio,
-              by,
-              scope,
-              addedAt: Date.now(),
-              note,
-              tags,
-            },
-            ...s.todos,
-          ],
-          ...markDirty(),
-        }));
-      },
-      toggleTodo: (id) =>
-        set((s) => ({
-          todos: s.todos.map((it) => (it.id === id ? { ...it, done: !it.done } : it)),
-          ...markDirty(),
-        })),
-      updateTodo: (id, patch) =>
-        set((s) => ({
-          todos: s.todos.map((it) => (it.id === id ? { ...it, ...patch } : it)),
-          ...markDirty(),
-        })),
-      removeTodo: (id) =>
-        set((s) => ({ todos: s.todos.filter((it) => it.id !== id), ...markDirty() })),
-
       // ---------- activities ----------
       addActivity: (input) => {
         const t = input.title.trim();
@@ -377,11 +309,6 @@ export const useStore = create<State>()(
         })),
       removeActivity: (id) =>
         set((s) => ({ activities: s.activities.filter((it) => it.id !== id), ...markDirty() })),
-
-      // ---------- cycle ----------
-      setCycle: (cycle) => set({ cycle, ...markDirty() }),
-      updateCycle: (patch) =>
-        set((s) => ({ cycle: { ...s.cycle, ...patch }, ...markDirty() })),
 
       // ---------- packlist ----------
       addPacklistItem: (activityId, text, scope, category) => {
@@ -767,61 +694,16 @@ export const useStore = create<State>()(
         })),
     }),
     {
-      name: "ambardaellen-store",
-      version: 8,
+      name: "life-app-store",
+      version: 1,
       storage: createJSONStorage(() => localStorage),
       // Auth + Transient + Sync-Status nicht persistieren — die kommen vom Server.
       partialize: (state) => ({
-        currentUser: state.currentUser,
         activities: state.activities,
         shopping: state.shopping,
-        todos: state.todos,
         goals: state.goals,
-        cycle: state.cycle,
         packlistTemplates: state.packlistTemplates,
       }),
-      migrate: (persisted: unknown, version: number) => {
-        type LegacyGoal = Partial<Goal> & { kind?: Goal["kind"] };
-        const upgradeGoals = (goals: LegacyGoal[] | undefined): Goal[] =>
-          (goals ?? []).map((g) => {
-            const kind: Goal["kind"] = g.kind ?? "einmalig";
-            const base = {
-              id: g.id!,
-              title: g.title ?? "",
-              by: g.by ?? "D",
-              scope: g.scope ?? "geteilt",
-              target: g.target ?? 0,
-              unit: g.unit ?? "",
-              kind,
-            };
-            return kind === "wiederkehrend"
-              ? { ...base, period: g.period ?? "woche", log: g.log ?? {} }
-              : {
-                  ...base,
-                  term: g.term ?? "kurz",
-                  current: g.current ?? 0,
-                  steps: g.steps ?? [],
-                };
-          });
-        if (!persisted || version < 7) {
-          const prev = (persisted as Partial<AppData & { currentUser: UserId }> | null) ?? null;
-          return {
-            currentUser: prev?.currentUser ?? ("D" as UserId),
-            activities: prev?.activities ?? EMPTY_APP_DATA.activities,
-            shopping: prev?.shopping ?? EMPTY_APP_DATA.shopping,
-            todos: prev?.todos ?? EMPTY_APP_DATA.todos,
-            goals: upgradeGoals(prev?.goals as LegacyGoal[] | undefined),
-            cycle: prev?.cycle ?? EMPTY_APP_DATA.cycle,
-            packlistTemplates: prev?.packlistTemplates ?? EMPTY_APP_DATA.packlistTemplates,
-          };
-        }
-        // v7 → v8: nur Goal-Schema upgraden, Rest bleibt.
-        if (version < 8) {
-          const p = persisted as Partial<AppData & { goals: LegacyGoal[] }>;
-          return { ...p, goals: upgradeGoals(p.goals) };
-        }
-        return persisted;
-      },
     },
   ),
 );
