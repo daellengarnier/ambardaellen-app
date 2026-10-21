@@ -134,7 +134,7 @@ function Detail({ id }: { id: string }) {
           {a.note && (
             <div
               className="rounded-2xl p-3 mt-3"
-              style={{ background: "rgba(228,217,191,0.5)" }}
+              style={{ background: "var(--cream-deep)" }}
             >
               <div
                 className="uplabel text-[10px]"
@@ -338,7 +338,7 @@ function DateInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-2xl px-2.5 py-2 text-[13px]"
-        style={{ background: "rgba(228,217,191,0.5)" }}
+        style={{ background: "var(--cream-deep)" }}
       />
     </div>
   );

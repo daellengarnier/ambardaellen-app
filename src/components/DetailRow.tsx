@@ -12,7 +12,7 @@ export function DetailRow({ label, value, icon }: Props) {
   return (
     <div
       className="flex items-center gap-3 py-2 border-b last:border-0"
-      style={{ borderColor: "rgba(218,201,168,0.4)" }}
+      style={{ borderColor: "var(--cream-deep)" }}
     >
       <div
         className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"

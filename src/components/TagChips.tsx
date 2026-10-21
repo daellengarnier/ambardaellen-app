@@ -8,13 +8,13 @@ type Props = {
 
 const TAG_COLOR: Record<string, { bg: string; fg: string }> = {
   arbeit: { bg: "rgba(75,48,80,0.12)", fg: "var(--plum)" },
-  haushalt: { bg: "rgba(126,151,123,0.18)", fg: "#4F6B4C" },
+  haushalt: { bg: "var(--sage-soft)", fg: "#1E6B47" },
   familie: { bg: "rgba(199,127,119,0.18)", fg: "#9A4E45" },
   freunde: { bg: "rgba(232,210,154,0.4)", fg: "#7A5E1F" },
-  gesundheit: { bg: "rgba(126,151,123,0.18)", fg: "#4F6B4C" },
+  gesundheit: { bg: "var(--sage-soft)", fg: "#1E6B47" },
   finanzen: { bg: "rgba(75,48,80,0.12)", fg: "var(--plum)" },
   hobby: { bg: "rgba(232,210,154,0.4)", fg: "#7A5E1F" },
-  spinnerei: { bg: "rgba(197,99,75,0.14)", fg: "var(--terra)" },
+  spinnerei: { bg: "var(--spinnerei-soft)", fg: "var(--terra)" },
   reise: { bg: "rgba(199,127,119,0.18)", fg: "#9A4E45" },
   lernen: { bg: "rgba(75,48,80,0.12)", fg: "var(--plum)" },
 };

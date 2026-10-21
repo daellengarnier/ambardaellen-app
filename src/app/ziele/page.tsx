@@ -38,7 +38,7 @@ export default function ZielePage() {
 function Skeleton() {
   return (
     <div className="pt-2 pb-3">
-      <ScreenHeader title="Ziele" subtitle="Wohin wir wollen" />
+      <ScreenHeader title="Ziele" subtitle="Wohin ich will" />
     </div>
   );
 }
@@ -87,7 +87,7 @@ function GoalContent() {
     <>
       <ScreenHeader
         title="Ziele"
-        subtitle="Wohin wir wollen"
+        subtitle="Wohin ich will"
         right={
           <button
             type="button"

@@ -16,7 +16,7 @@ export function Card({ children, className = "", onClick }: Props) {
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       className={[
-        "bg-[var(--paper)] rounded-2xl shadow-card",
+        "bg-[var(--paper)] rounded-[20px] shadow-card",
         clickable ? "tap cursor-pointer" : "",
         className,
       ]

@@ -25,7 +25,7 @@ export function dueBucket(due: ISODate | ""): DueBucket {
 }
 
 export const PRIO: Record<Priority, { label: string; color: string; dot: boolean; rank: number }> = {
-  hoch: { label: "Hoch", color: "#C5634B", dot: true, rank: 0 },
-  normal: { label: "Normal", color: "#7E977B", dot: false, rank: 1 },
-  tief: { label: "Tief", color: "#978675", dot: false, rank: 2 },
+  hoch: { label: "Hoch", color: "#B42318", dot: true, rank: 0 },
+  normal: { label: "Normal", color: "#646B7A", dot: false, rank: 1 },
+  tief: { label: "Tief", color: "#9AA1AE", dot: false, rank: 2 },
 };

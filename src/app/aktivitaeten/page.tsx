@@ -242,13 +242,13 @@ function AktContent() {
               {filter === "geplant" && sec.key === "verpasst" && (
                 <span
                   className="inline-block w-1.5 h-1.5 rounded-full"
-                  style={{ background: "#C5634B" }}
+                  style={{ background: "#B42318" }}
                 />
               )}
               <h2
                 className="uplabel text-[10.5px]"
                 style={{
-                  color: sec.key === "verpasst" ? "#C5634B" : "var(--ink-soft)",
+                  color: sec.key === "verpasst" ? "#B42318" : "var(--ink-soft)",
                 }}
               >
                 {sec.label}
@@ -335,7 +335,7 @@ function AktContent() {
                     {isPlanning && (
                       <div
                         className="mt-3 pt-3 flex items-center gap-2"
-                        style={{ borderTop: "1px solid rgba(218,201,168,0.4)" }}
+                        style={{ borderTop: "1px solid var(--cream-deep)" }}
                       >
                         <CalendarPlus
                           size={14}
@@ -348,7 +348,7 @@ function AktContent() {
                           onChange={(e) => setPlanDate(e.target.value)}
                           autoFocus
                           className="flex-1 rounded-xl px-2.5 py-1.5 text-[13.5px]"
-                          style={{ background: "rgba(228,217,191,0.55)" }}
+                          style={{ background: "var(--cream-deep)" }}
                         />
                         <button
                           type="button"

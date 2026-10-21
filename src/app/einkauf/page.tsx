@@ -178,7 +178,7 @@ function ShopContent() {
                       key={s.id}
                       style={
                         i < sec.items.length - 1
-                          ? { borderBottom: "1px solid rgba(218,201,168,0.4)" }
+                          ? { borderBottom: "1px solid var(--cream-deep)" }
                           : undefined
                       }
                     >
@@ -215,7 +215,7 @@ function ShopContent() {
                     key={s.id}
                     style={
                       i < doneItems.length - 1
-                        ? { borderBottom: "1px solid rgba(218,201,168,0.4)" }
+                        ? { borderBottom: "1px solid var(--cream-deep)" }
                         : undefined
                     }
                   >

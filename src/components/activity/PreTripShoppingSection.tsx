@@ -66,7 +66,7 @@ export function PreTripShoppingSection({ activityId }: { activityId: string }) {
                 className="flex items-center gap-2 px-2 py-2"
                 style={
                   i < arr.length - 1
-                    ? { borderBottom: "1px solid rgba(218,201,168,0.4)" }
+                    ? { borderBottom: "1px solid var(--cream-deep)" }
                     : undefined
                 }
               >
@@ -77,7 +77,7 @@ export function PreTripShoppingSection({ activityId }: { activityId: string }) {
                   style={
                     p.done
                       ? { background: "var(--sage)", color: "white" }
-                      : { background: "var(--paper)", border: "1px solid rgba(151,134,117,0.6)" }
+                      : { background: "var(--paper)", border: "1px solid rgba(100,107,122,0.6)" }
                   }
                   aria-label={p.done ? "Wieder offen" : "Besorgt"}
                 >
@@ -131,7 +131,7 @@ export function PreTripShoppingSection({ activityId }: { activityId: string }) {
         <div className="flex gap-2 items-stretch">
           <div
             className="flex-1 flex items-center rounded-2xl px-3"
-            style={{ background: "rgba(228,217,191,0.5)" }}
+            style={{ background: "var(--cream-deep)" }}
           >
             <input
               value={input}

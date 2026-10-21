@@ -78,7 +78,7 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
     cloudStatus === "error" ? CloudOff : cloudStatus === "syncing" ? RefreshCw : Cloud;
   const statusColor =
     cloudStatus === "error"
-      ? "#C5634B"
+      ? "#B42318"
       : cloudStatus === "syncing" || pendingPush
         ? "var(--terra)"
         : "var(--sage)";
@@ -111,7 +111,7 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
           }
         />
         {cloudError && (
-          <div className="text-[11.5px] py-1.5" style={{ color: "#C5634B" }}>
+          <div className="text-[11.5px] py-1.5" style={{ color: "#B42318" }}>
             {cloudError}
           </div>
         )}
@@ -127,7 +127,7 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
           <Lock size={14} strokeWidth={1.75} /> Passwort ändern
         </button>
       ) : (
-        <div className="rounded-2xl p-3" style={{ background: "rgba(228,217,191,0.5)" }}>
+        <div className="rounded-2xl p-3" style={{ background: "var(--cream-deep)" }}>
           <div className="uplabel text-[10px] mb-2" style={{ color: "var(--muted)" }}>
             Passwort ändern
           </div>
@@ -156,7 +156,7 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
             style={{ background: "var(--paper)" }}
           />
           {pwError && (
-            <p className="text-[12px] mt-2" style={{ color: "#C5634B" }}>
+            <p className="text-[12px] mt-2" style={{ color: "#B42318" }}>
               {pwError}
             </p>
           )}
@@ -191,7 +191,7 @@ function ProfileInner({ onClose }: { onClose: () => void }) {
       {pwSuccess && (
         <div
           className="mt-3 rounded-xl p-2.5 text-[12.5px] inline-flex items-center gap-2"
-          style={{ background: "rgba(126,151,123,0.18)", color: "#4F6B4C" }}
+          style={{ background: "var(--sage-soft)", color: "#1E6B47" }}
         >
           <Check size={13} strokeWidth={2} /> Passwort geändert.
         </div>
@@ -221,7 +221,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div
       className="flex items-center justify-between py-2"
-      style={{ borderBottom: "1px solid rgba(218,201,168,0.4)" }}
+      style={{ borderBottom: "1px solid var(--cream-deep)" }}
     >
       <div className="uplabel text-[10px]" style={{ color: "var(--muted)" }}>
         {label}

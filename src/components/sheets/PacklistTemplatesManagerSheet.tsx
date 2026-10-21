@@ -45,7 +45,7 @@ export function PacklistTemplatesManagerSheet({ open, onClose }: Props) {
               <div
                 key={tpl.id}
                 className="rounded-2xl p-3 flex items-center gap-3"
-                style={{ background: "rgba(228,217,191,0.4)" }}
+                style={{ background: "var(--cream-deep)" }}
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-[14.5px] font-medium truncate">{tpl.name}</div>

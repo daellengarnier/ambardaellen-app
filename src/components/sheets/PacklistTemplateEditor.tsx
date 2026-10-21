@@ -50,7 +50,7 @@ export function PacklistTemplateEditor({ templateId, onClose }: Props) {
           onChange={(e) => updateTemplate(tpl.id, { name: e.target.value })}
           placeholder="z. B. Wochenende"
           className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-          style={{ background: "rgba(228,217,191,0.5)" }}
+          style={{ background: "var(--cream-deep)" }}
         />
       </div>
 
@@ -73,7 +73,7 @@ export function PacklistTemplateEditor({ templateId, onClose }: Props) {
       {tpl.items.length > 0 && (
         <div
           className="rounded-2xl overflow-hidden mb-2"
-          style={{ background: "rgba(228,217,191,0.4)" }}
+          style={{ background: "var(--cream-deep)" }}
         >
           {tpl.items.map((it, i) => (
             <div
@@ -81,7 +81,7 @@ export function PacklistTemplateEditor({ templateId, onClose }: Props) {
               className="flex items-center gap-2 px-3 py-2"
               style={
                 i < tpl.items.length - 1
-                  ? { borderBottom: "1px solid rgba(218,201,168,0.4)" }
+                  ? { borderBottom: "1px solid var(--cream-deep)" }
                   : undefined
               }
             >
@@ -118,7 +118,7 @@ export function PacklistTemplateEditor({ templateId, onClose }: Props) {
       <div className="flex gap-2 items-stretch">
         <div
           className="flex-1 flex items-center rounded-2xl px-3"
-          style={{ background: "rgba(228,217,191,0.5)" }}
+          style={{ background: "var(--cream-deep)" }}
         >
           <input
             value={newItem}

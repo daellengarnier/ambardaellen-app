@@ -96,7 +96,7 @@ function GoalAddForm({
               : "z. B. Sonntags wandern gehen"
           }
           className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-          style={{ background: "rgba(228,217,191,0.5)" }}
+          style={{ background: "var(--cream-deep)" }}
         />
       </div>
 
@@ -126,7 +126,7 @@ function GoalAddForm({
                 value={target}
                 onChange={(e) => setTarget(Number(e.target.value) || 1)}
                 className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-                style={{ background: "rgba(228,217,191,0.5)" }}
+                style={{ background: "var(--cream-deep)" }}
               />
             </div>
             <div>
@@ -138,7 +138,7 @@ function GoalAddForm({
                 onChange={(e) => setUnit(e.target.value)}
                 placeholder="mal · km · Bücher"
                 className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-                style={{ background: "rgba(228,217,191,0.5)" }}
+                style={{ background: "var(--cream-deep)" }}
               />
             </div>
           </div>
@@ -168,7 +168,7 @@ function GoalAddForm({
                 value={target}
                 onChange={(e) => setTarget(Number(e.target.value) || 0)}
                 className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-                style={{ background: "rgba(228,217,191,0.5)" }}
+                style={{ background: "var(--cream-deep)" }}
               />
             </div>
             <div>
@@ -180,7 +180,7 @@ function GoalAddForm({
                 onChange={(e) => setUnit(e.target.value)}
                 placeholder="optional"
                 className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-                style={{ background: "rgba(228,217,191,0.5)" }}
+                style={{ background: "var(--cream-deep)" }}
               />
             </div>
           </div>

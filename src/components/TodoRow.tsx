@@ -61,7 +61,7 @@ export function TodoRow({ t, areas, onToggle, onOpen, onRemove, dense = false, h
               </span>
             )}
             {t.due && (
-              <span style={t.due < today && !done ? { color: "#C5634B", fontWeight: 500 } : undefined}>
+              <span style={t.due < today && !done ? { color: "#B42318", fontWeight: 500 } : undefined}>
                 {shortDate(t.due)}
               </span>
             )}

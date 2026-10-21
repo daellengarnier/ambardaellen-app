@@ -47,7 +47,7 @@ export function PacklistTemplatePicker({ open, activityId, onClose }: Props) {
               <div
                 key={tpl.id}
                 className="rounded-2xl p-3 flex items-center gap-3"
-                style={{ background: "rgba(228,217,191,0.4)" }}
+                style={{ background: "var(--cream-deep)" }}
               >
                 <button
                   type="button"

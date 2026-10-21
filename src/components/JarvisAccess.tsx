@@ -68,7 +68,7 @@ export function JarvisAccess() {
   const active = tokens.filter((t) => !t.revokedAt);
 
   return (
-    <div className="rounded-2xl p-3" style={{ background: "rgba(228,217,191,0.5)" }}>
+    <div className="rounded-2xl p-3" style={{ background: "var(--cream-deep)" }}>
       <div
         className="uplabel text-[10px] mb-1.5 inline-flex items-center gap-1.5"
         style={{ color: "var(--muted)" }}
@@ -148,7 +148,7 @@ export function JarvisAccess() {
       )}
 
       {error && (
-        <p className="text-[12px] mb-2" style={{ color: "#C5634B" }}>
+        <p className="text-[12px] mb-2" style={{ color: "#B42318" }}>
           {error}
         </p>
       )}

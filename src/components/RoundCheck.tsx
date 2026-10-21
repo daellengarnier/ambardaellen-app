@@ -44,7 +44,7 @@ export function RoundCheck({
           <path
             className="tick-path"
             d="M3 8.5l3.5 3.5L13 5"
-            stroke="#FBF6E8"
+            stroke="#FFFFFF"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"

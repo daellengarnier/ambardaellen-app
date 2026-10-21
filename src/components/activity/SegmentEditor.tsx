@@ -130,7 +130,7 @@ function SegmentEditorInner({
         rows={2}
         placeholder="z. B. Sitzplatz, Adresse, Pickup-Ort…"
         className="w-full rounded-2xl p-3 text-[14px] resize-none"
-        style={{ background: "rgba(228,217,191,0.5)" }}
+        style={{ background: "var(--cream-deep)" }}
       />
 
       <button
@@ -180,7 +180,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full rounded-2xl px-3.5 py-2.5 text-[14.5px]"
-        style={{ background: "rgba(228,217,191,0.5)" }}
+        style={{ background: "var(--cream-deep)" }}
       />
     </div>
   );
@@ -205,7 +205,7 @@ function DateTimeField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-2xl px-3 py-2.5 text-[13.5px]"
-        style={{ background: "rgba(228,217,191,0.5)" }}
+        style={{ background: "var(--cream-deep)" }}
       />
     </div>
   );

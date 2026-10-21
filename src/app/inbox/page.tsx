@@ -99,7 +99,7 @@ function InboxContent() {
                   role="button"
                   tabIndex={0}
                   className="flex items-start gap-2.5 px-3 py-2.5 tap cursor-pointer"
-                  style={i < inbox.length - 1 ? { borderBottom: "1px solid rgba(218,201,168,0.4)" } : undefined}
+                  style={i < inbox.length - 1 ? { borderBottom: "1px solid var(--cream-deep)" } : undefined}
                 >
                   <Icon size={15} strokeWidth={1.75} color="var(--muted)" className="mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">

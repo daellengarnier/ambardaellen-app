@@ -91,7 +91,7 @@ function TodoDetail({ todo, onClose }: { todo: TodoDto; onClose: () => void }) {
           value={todo.due ?? ""}
           onChange={(e) => change({ due: e.target.value || null })}
           className="w-full rounded-2xl px-3.5 py-2.5 text-[15px]"
-          style={{ background: "rgba(228,217,191,0.5)" }}
+          style={{ background: "var(--cream-deep)" }}
         />
       </div>
 
@@ -130,7 +130,7 @@ function TodoDetail({ todo, onClose }: { todo: TodoDto; onClose: () => void }) {
           rows={3}
           placeholder="Details, Kontakt, Links…"
           className="w-full rounded-2xl p-3 text-[14.5px] resize-none"
-          style={{ background: "rgba(228,217,191,0.5)" }}
+          style={{ background: "var(--cream-deep)" }}
         />
       </div>
 

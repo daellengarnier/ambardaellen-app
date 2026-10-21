@@ -71,7 +71,7 @@ function RecurringDetail({
         <AvatarWithScope by={goal.by} scope={goal.scope} size={24} />
       </div>
 
-      <div className="mt-4 rounded-2xl p-4" style={{ background: "rgba(228,217,191,0.5)" }}>
+      <div className="mt-4 rounded-2xl p-4" style={{ background: "var(--cream-deep)" }}>
         <div className="flex items-baseline justify-between mb-2">
           <div className="flex items-baseline gap-1.5">
             <span className="mono text-[28px] font-semibold leading-none">{value}</span>
@@ -199,7 +199,7 @@ function OneTimeDetail({
         <AvatarWithScope by={goal.by} scope={goal.scope} size={24} />
       </div>
 
-      <div className="mt-4 rounded-2xl p-4" style={{ background: "rgba(228,217,191,0.5)" }}>
+      <div className="mt-4 rounded-2xl p-4" style={{ background: "var(--cream-deep)" }}>
         <div className="flex items-baseline justify-between mb-2">
           <div className="flex items-baseline gap-1.5">
             <span className="mono text-[28px] font-semibold leading-none">{current}</span>
@@ -239,7 +239,7 @@ function OneTimeDetail({
       </div>
       <div
         className="rounded-2xl overflow-hidden"
-        style={{ background: "rgba(228,217,191,0.35)" }}
+        style={{ background: "var(--paper-2)" }}
       >
         {steps.length === 0 && (
           <div className="px-3.5 py-3 text-[13px]" style={{ color: "var(--muted)" }}>
@@ -252,7 +252,7 @@ function OneTimeDetail({
             className="flex items-center gap-3 px-3 py-2.5"
             style={
               i < steps.length - 1
-                ? { borderBottom: "1px solid rgba(218,201,168,0.4)" }
+                ? { borderBottom: "1px solid var(--cream-deep)" }
                 : undefined
             }
           >
@@ -269,7 +269,7 @@ function OneTimeDetail({
                     }
                   : {
                       background: "var(--paper)",
-                      border: "1px solid rgba(151,134,117,0.6)",
+                      border: "1px solid rgba(100,107,122,0.6)",
                     }
               }
               aria-label={s.done ? "Schritt offen" : "Schritt erledigt"}
@@ -307,7 +307,7 @@ function OneTimeDetail({
           }}
           placeholder="Schritt hinzufügen…"
           className="flex-1 rounded-2xl px-3.5 py-2.5 text-[14px]"
-          style={{ background: "rgba(228,217,191,0.5)" }}
+          style={{ background: "var(--cream-deep)" }}
         />
         <button
           type="button"

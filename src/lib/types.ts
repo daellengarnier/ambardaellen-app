@@ -179,5 +179,5 @@ export const APP_NAME = "Life-App";
 // Einträge vor. Neue Einträge gehören immer "D".
 export const USERS: Record<UserId, User> = {
   A: { id: "A", name: "Ambar", color: "#C77052", soft: "#F2D9CB" },
-  D: { id: "D", name: "Dällen", color: "#7E9A79", soft: "#D7E2D4" },
+  D: { id: "D", name: "Dällen", color: "#14161C", soft: "#E3E7EF" },
 };

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ChevronLeft, Lock, Mail, Sun, LogIn, UserPlus } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { Avatar } from "../Avatar";
-import { Atmosphere } from "../Atmosphere";
 import { ALLOWED_EMAILS, userIdForEmail } from "@/lib/auth";
 import { APP_NAME, OWNER_NAME } from "@/lib/types";
 
@@ -18,9 +17,6 @@ export function LoginScreen() {
 
   return (
     <div className="login-shell">
-      <div className="login-atmos" aria-hidden="true">
-        <Atmosphere />
-      </div>
 
       <div className="login-content">
         <div className="px-6 pt-10 pb-6">
@@ -72,16 +68,6 @@ export function LoginScreen() {
           background: var(--cream);
           isolation: isolate;
           overflow: hidden;
-        }
-        .login-atmos {
-          position: fixed;
-          inset: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          max-width: 480px;
-          width: 100%;
-          z-index: 0;
-          pointer-events: none;
         }
         .login-content {
           position: relative;
@@ -267,7 +253,7 @@ function LoginForm({
       </div>
 
       {error && (
-        <p className="text-[12.5px] mt-2" style={{ color: "#C5634B" }}>
+        <p className="text-[12.5px] mt-2" style={{ color: "#B42318" }}>
           {error}
         </p>
       )}
@@ -395,7 +381,7 @@ function RegisterForm({
       </div>
 
       {error && (
-        <p className="text-[12.5px] mt-2" style={{ color: "#C5634B" }}>
+        <p className="text-[12.5px] mt-2" style={{ color: "#B42318" }}>
           {error}
         </p>
       )}

@@ -213,7 +213,7 @@ export function PacklistSection({ activityId }: Props) {
         <div className="flex gap-2 items-stretch">
           <div
             className="flex-1 flex items-center rounded-2xl px-3"
-            style={{ background: "rgba(228,217,191,0.5)" }}
+            style={{ background: "var(--cream-deep)" }}
           >
             <input
               value={input}
@@ -347,7 +347,7 @@ function CategoryAddRow({
   return (
     <div
       className="flex items-center gap-1.5 px-2 py-1.5"
-      style={{ borderTop: "1px solid rgba(218,201,168,0.4)" }}
+      style={{ borderTop: "1px solid var(--cream-deep)" }}
     >
       <Plus size={12} strokeWidth={2.2} color="var(--terra)" />
       <input
@@ -418,7 +418,7 @@ function PackRow({
   return (
     <div
       className="flex items-center gap-1.5 px-2 py-2"
-      style={last ? undefined : { borderBottom: "1px solid rgba(218,201,168,0.4)" }}
+      style={last ? undefined : { borderBottom: "1px solid var(--cream-deep)" }}
     >
       <button
         type="button"
@@ -427,7 +427,7 @@ function PackRow({
         style={
           item.packed
             ? { background: "var(--sage)", color: "white" }
-            : { background: "var(--paper)", border: "1px solid rgba(151,134,117,0.6)" }
+            : { background: "var(--paper)", border: "1px solid rgba(100,107,122,0.6)" }
         }
         aria-label={item.packed ? "Nicht gepackt" : "Eingepackt"}
       >
@@ -472,7 +472,7 @@ function PackRow({
             style={{
               background: "var(--cream-deep)",
               color: "var(--muted)",
-              border: "1px dashed rgba(151,134,117,0.45)",
+              border: "1px dashed rgba(100,107,122,0.45)",
             }}
           >
             <UserMinus size={11} strokeWidth={1.75} />
@@ -506,7 +506,7 @@ function PackRow({
           style={{
             width: 18,
             height: 14,
-            color: isFirstInCat ? "rgba(151,134,117,0.25)" : "var(--muted)",
+            color: isFirstInCat ? "rgba(100,107,122,0.25)" : "var(--muted)",
           }}
           aria-label="Nach oben"
         >
@@ -520,7 +520,7 @@ function PackRow({
           style={{
             width: 18,
             height: 14,
-            color: isLastInCat ? "rgba(151,134,117,0.25)" : "var(--muted)",
+            color: isLastInCat ? "rgba(100,107,122,0.25)" : "var(--muted)",
           }}
           aria-label="Nach unten"
         >

@@ -147,7 +147,7 @@ function ActivityAddForm({
             : "Details, Reservierung, Links…"
         }
         className="w-full rounded-2xl p-3 text-[14.5px] resize-none"
-        style={{ background: "rgba(228,217,191,0.5)" }}
+        style={{ background: "var(--cream-deep)" }}
       />
 
       <div className="uplabel text-[10.5px] mt-3 mb-1.5" style={{ color: "var(--muted)" }}>
@@ -209,7 +209,7 @@ function Field({
         placeholder={placeholder}
         autoFocus={autoFocus}
         className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-        style={{ background: "rgba(228,217,191,0.5)" }}
+        style={{ background: "var(--cream-deep)" }}
       />
     </div>
   );
@@ -236,7 +236,7 @@ function DateField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-        style={{ background: "rgba(228,217,191,0.5)" }}
+        style={{ background: "var(--cream-deep)" }}
       />
     </div>
   );

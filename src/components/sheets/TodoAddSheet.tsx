@@ -73,7 +73,7 @@ function TodoAddForm({
           autoFocus
           placeholder="z. B. Gage für Doom Gong bestätigen"
           className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-          style={{ background: "rgba(228,217,191,0.5)" }}
+          style={{ background: "var(--cream-deep)" }}
         />
       </div>
 
@@ -102,7 +102,7 @@ function TodoAddForm({
           value={due}
           onChange={(e) => setDue(e.target.value)}
           className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-          style={{ background: "rgba(228,217,191,0.5)" }}
+          style={{ background: "var(--cream-deep)" }}
         />
       </div>
 
@@ -132,7 +132,7 @@ function TodoAddForm({
           rows={2}
           placeholder="Details, Kontakt, Links…"
           className="w-full rounded-2xl p-3 text-[14.5px] resize-none"
-          style={{ background: "rgba(228,217,191,0.5)" }}
+          style={{ background: "var(--cream-deep)" }}
         />
       </div>
 

@@ -14,7 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { useLife } from "@/lib/lifeStore";
+import { useLife, areaByKey } from "@/lib/lifeStore";
 import { OWNER_NAME, type ShoppingItem } from "@/lib/types";
 import { todayISO, greetingFor, shortDate } from "@/lib/date";
 import { todayZurich, type TodoDto } from "@/lib/life";
@@ -51,6 +51,11 @@ function HeuteSkeleton() {
 }
 
 const byPrio = (a: TodoDto, b: TodoDto) => PRIO[a.prio].rank - PRIO[b.prio].rank;
+
+const WORLDS = [
+  { key: "spinnerei", label: "Spinnerei", bg: "var(--spinnerei)", fg: "#FFFFFF" },
+  { key: "privat", label: "Privat", bg: "var(--privat)", fg: "var(--ink)" },
+] as const;
 
 function HeuteContent() {
   const currentUser = useStore((s) => s.currentUser);
@@ -116,6 +121,8 @@ function HeuteContent() {
     (t) => t.status === "erledigt" && t.doneAt && todayZurich(new Date(t.doneAt)) === todayZ,
   );
   const todayList = [...planned, ...dueToday];
+  const forToday = [...todayList, ...overdue];
+  const worldOf = (t: TodoDto) => areaByKey(areas, t.area)?.world ?? null;
 
   const todayActs = activities
     .filter((a) => a.date === today && a.status !== "erledigt")
@@ -164,16 +171,48 @@ function HeuteContent() {
         </div>
       </div>
 
+      {/* Zwei Welten: was heute in Spinnerei und Privat ansteht */}
+      <div className="px-4 mb-3 grid grid-cols-2 gap-2.5">
+        {WORLDS.map((w) => {
+          const todayCount = forToday.filter((t) => worldOf(t) === w.key).length;
+          const overdueCount = overdue.filter((t) => worldOf(t) === w.key).length;
+          const openCount = open.filter((t) => worldOf(t) === w.key).length;
+          return (
+            <Link
+              key={w.key}
+              href={`/todo?welt=${w.key}`}
+              className="tap rounded-[22px] p-3.5 flex flex-col gap-2"
+              style={{ background: w.bg, color: w.fg, minHeight: 128 }}
+            >
+              <span className="text-[13px] font-bold">{w.label}</span>
+              <span className="serif text-[40px] leading-none">{todayCount}</span>
+              <span className="text-[12.5px] leading-snug font-medium">
+                heute
+                {overdueCount > 0 ? ` · ${overdueCount} überfällig` : ` · ${openCount} offen`}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+
       {/* Notiz von Jarvis für den Tag */}
       {plan?.note && (
         <div className="px-4 mb-3">
-          <Card className="p-3.5">
-            <div className="uplabel text-[10px] mb-1.5 inline-flex items-center gap-1.5" style={{ color: "var(--plum)" }}>
-              <Sparkles size={11} strokeWidth={2} /> Jarvis für heute
+          <Card className="p-3.5 flex gap-3 items-start">
+            <span
+              className="shrink-0 w-[34px] h-[34px] rounded-full inline-flex items-center justify-center"
+              style={{ background: "var(--ink)", color: "white" }}
+            >
+              <Sparkles size={16} strokeWidth={2} aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <div className="text-[12px] font-bold" style={{ color: "var(--ink-soft)" }}>
+                Jarvis
+              </div>
+              <p className="text-[14.5px] leading-relaxed whitespace-pre-line mt-0.5" style={{ color: "var(--ink)" }}>
+                {plan.note}
+              </p>
             </div>
-            <p className="text-[14px] leading-relaxed whitespace-pre-line" style={{ color: "var(--ink)" }}>
-              {plan.note}
-            </p>
           </Card>
         </div>
       )}
@@ -217,7 +256,7 @@ function HeuteContent() {
             {todayList.length > 0 && (
               <Card className="p-1">
                 {todayList.map((t, i) => (
-                  <div key={t.id} style={i < todayList.length - 1 ? { borderBottom: "1px solid rgba(218,201,168,0.4)" } : undefined}>
+                  <div key={t.id} style={i < todayList.length - 1 ? { borderBottom: "1px solid var(--cream-deep)" } : undefined}>
                     <TodoRow t={t} areas={areas} onToggle={toggleTodo} onOpen={(x) => setOpenTodoId(x.id)} dense hideToday />
                   </div>
                 ))}
@@ -238,7 +277,7 @@ function HeuteContent() {
           <SectionTitle label="Überfällig" />
           <Card className="p-1">
             {overdue.slice(0, 6).map((t, i, arr) => (
-              <div key={t.id} style={i < arr.length - 1 ? { borderBottom: "1px solid rgba(218,201,168,0.4)" } : undefined}>
+              <div key={t.id} style={i < arr.length - 1 ? { borderBottom: "1px solid var(--cream-deep)" } : undefined}>
                 <TodoRow t={t} areas={areas} onToggle={toggleTodo} onOpen={(x) => setOpenTodoId(x.id)} dense />
               </div>
             ))}
@@ -423,7 +462,7 @@ function InboxNoteSheet({
         rows={3}
         placeholder="Kurz notieren, Jarvis sortiert es später ein."
         className="w-full mt-3 rounded-2xl p-3 text-[15px] resize-none"
-        style={{ background: "rgba(228,217,191,0.5)" }}
+        style={{ background: "var(--cream-deep)" }}
       />
       <button
         type="button"
@@ -564,7 +603,7 @@ function ShoppingTile({
 
       <div
         className="flex items-center gap-1 rounded-xl px-1.5 py-1"
-        style={{ background: "rgba(228,217,191,0.4)" }}
+        style={{ background: "var(--cream-deep)" }}
       >
         <input
           value={input}
@@ -672,7 +711,7 @@ function QuickShoppingForm({
           onKeyDown={(e) => e.key === "Enter" && submit()}
           placeholder={spinnerei ? "z. B. Plattenspieler" : "z. B. Olivenöl"}
           className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
-          style={{ background: "rgba(228,217,191,0.5)" }}
+          style={{ background: "var(--cream-deep)" }}
         />
       </div>
       <div className="mt-3 flex gap-1.5 flex-wrap">

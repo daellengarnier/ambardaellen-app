@@ -45,7 +45,11 @@ function TodoContent() {
   const removeTodo = useLife((s) => s.removeTodo);
 
   const [query, setQuery] = useState("");
-  const [world, setWorld] = useState<WorldFilter>("alle");
+  // Startfilter aus ?welt=spinnerei|privat (Kacheln auf Heute).
+  const [world, setWorld] = useState<WorldFilter>(() => {
+    const w = new URLSearchParams(window.location.search).get("welt");
+    return w === "spinnerei" || w === "privat" ? w : "alle";
+  });
   const [areaFilter, setAreaFilter] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -174,7 +178,7 @@ function TodoContent() {
       )}
 
       {error && (
-        <div className="px-4 pb-2 text-[12px]" style={{ color: "#C5634B" }}>
+        <div className="px-4 pb-2 text-[12px]" style={{ color: "#B42318" }}>
           Sync-Fehler: {error}
         </div>
       )}
@@ -193,7 +197,7 @@ function TodoContent() {
             <div className="flex items-center gap-1.5 mb-1.5 px-1">
               <span
                 className="inline-block w-1.5 h-1.5 rounded-full"
-                style={{ background: k === "ueber" ? "#C5634B" : k === "heute" ? "var(--terra)" : "var(--ink-soft)" }}
+                style={{ background: k === "ueber" ? "#B42318" : k === "heute" ? "var(--terra)" : "var(--ink-soft)" }}
               />
               <h2 className="uplabel text-[10.5px]" style={{ color: "var(--ink-soft)" }}>
                 {BUCKET_LABEL[k]}
@@ -204,7 +208,7 @@ function TodoContent() {
             </div>
             <Card className="p-1">
               {arr.map((t, i) => (
-                <div key={t.id} style={i < arr.length - 1 ? { borderBottom: "1px solid rgba(218,201,168,0.4)" } : undefined}>
+                <div key={t.id} style={i < arr.length - 1 ? { borderBottom: "1px solid var(--cream-deep)" } : undefined}>
                   <TodoRow t={t} areas={areas} onToggle={toggleTodo} onOpen={(x) => setOpenId(x.id)} onRemove={removeTodo} />
                 </div>
               ))}
@@ -230,7 +234,7 @@ function TodoContent() {
             {showDone && (
               <Card className="p-1 mt-1">
                 {doneItems.map((t, i) => (
-                  <div key={t.id} style={i < doneItems.length - 1 ? { borderBottom: "1px solid rgba(218,201,168,0.4)" } : undefined}>
+                  <div key={t.id} style={i < doneItems.length - 1 ? { borderBottom: "1px solid var(--cream-deep)" } : undefined}>
                     <TodoRow t={t} areas={areas} onToggle={toggleTodo} onOpen={(x) => setOpenId(x.id)} onRemove={removeTodo} dense />
                   </div>
                 ))}

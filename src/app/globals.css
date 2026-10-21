@@ -5,31 +5,42 @@
    Source: design_handoff/DESIGN_TOKENS.md (verifiziert gegen App.html)
    ============================================================ */
 :root {
-  --cream:      #EFE6D3;
-  --cream-deep: #E4D9BF;
-  --paper:      #FBF6E8;
-  --paper-2:    #F5EEDB;
-  --ink:        #211913;
-  --ink-soft:   #4F4338;
-  --muted:      #978675;
-  --line:       #DAC9A8;
-  --terra:      #C5634B;
-  --terra-deep: #A14934;
-  --terra-soft: #ECC4B0;
-  --sage:       #7E977B;
-  --sage-soft:  #CBD8C2;
-  --plum:       #4B3050;
-  --plum-soft:  #C7B0CB;
-  --gold:       #C8973F;
-  --gold-soft:  #E8D29A;
-  --rose:       #C77F77;
-  --mens:       #A8484E;
+  /* Richtung "Zwei Welten" (2026-10). Die Namen der Variablen stammen
+     aus der Paar-App und bleiben, damit nicht jede Komponente angefasst
+     werden muss: cream = Grund, paper = Karte, terra = Hauptakzent. */
+  --cream:      #EDF0F5;
+  --cream-deep: #E3E7EF;
+  --paper:      #FFFFFF;
+  --paper-2:    #F6F7FA;
+  --ink:        #14161C;
+  --ink-soft:   #3E4452;
+  --muted:      #646B7A;
+  --line:       #D5DAE3;
+  --terra:      #2F45D8;
+  --terra-deep: #2537B8;
+  --terra-soft: #C9D0F7;
+  --sage:       #1E7F55;
+  --sage-soft:  #D4EEE1;
+  --plum:       #5B3FD0;
+  --plum-soft:  #E4DEFA;
+  --gold:       #8A5A00;
+  --gold-soft:  #FBE7C2;
+  --rose:       #B42318;
+  --mens:       #14161C;
 
-  /* User identity colors */
+  /* Welten */
+  --spinnerei:      #2F45D8;
+  --spinnerei-soft: #E3E7FB;
+  --spinnerei-text: #2537B8;
+  --privat:         #F28C28;
+  --privat-soft:    #FDEBD8;
+  --privat-text:    #8A4A0B;
+
+  /* Historisch, nur noch für alte Einträge */
   --user-a:      #C77052;
   --user-a-soft: #F2D9CB;
-  --user-d:      #7E9A79;
-  --user-d-soft: #D7E2D4;
+  --user-d:      #1E7F55;
+  --user-d-soft: #D4EEE1;
 }
 
 @theme inline {
@@ -51,7 +62,7 @@
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
   --color-rose: var(--rose);
-  --font-serif: var(--font-instrument-serif);
+  --font-serif: var(--font-display);
 }
 
 html, body {
@@ -60,7 +71,7 @@ html, body {
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-family: var(--font-body), system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.005em;
@@ -68,24 +79,24 @@ body {
 }
 
 /* Typography utilities */
+/* Display-Schrift. Der Klassenname "serif" ist historisch. */
 .serif {
-  font-family: var(--font-instrument-serif), "Cormorant Garamond", Georgia, serif;
-  font-style: normal;
-  letter-spacing: -0.012em;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 .serif-i {
-  font-family: var(--font-instrument-serif), "Cormorant Garamond", Georgia, serif;
-  font-style: italic;
-  letter-spacing: -0.012em;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 .mono {
   font-feature-settings: "tnum";
   font-variant-numeric: tabular-nums;
 }
 .uplabel {
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-weight: 600;
+  letter-spacing: 0.01em;
+  font-weight: 700;
 }
 
 /* Hide scrollbars inside the phone scroll containers */
@@ -102,20 +113,11 @@ input:focus, textarea:focus { outline: none; }
 
 /* Soft shadow tokens */
 .shadow-card {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.55),
-    0 1px 0 rgba(33,25,19,0.04),
-    0 14px 32px -16px rgba(75,48,80,0.16),
-    0 2px 6px -2px rgba(75,48,80,0.06);
+  box-shadow: 0 1px 2px rgba(20,22,28,0.04);
 }
 .shadow-float {
-  box-shadow:
-    0 8px 24px -10px rgba(33,25,19,0.28),
-    0 28px 56px -22px rgba(75,48,80,0.30),
-    inset 0 1px 0 rgba(255,255,255,0.65);
+  box-shadow: 0 12px 32px -12px rgba(20,22,28,0.28);
 }
-.shadow-glow-terra { box-shadow: 0 12px 30px -14px rgba(197,99,75,0.45); }
-.shadow-glow-plum  { box-shadow: 0 12px 30px -14px rgba(75,48,80,0.45); }
 
 /* Bottom-sheet & scrim animations */
 @keyframes sheetIn {
@@ -140,62 +142,9 @@ input:focus, textarea:focus { outline: none; }
 
 /* Dot-Pattern Placeholder */
 .dot-bg {
-  background-image: radial-gradient(rgba(154,142,126,0.35) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(100,107,122,0.3) 1px, transparent 1px);
   background-size: 12px 12px;
 }
-
-/* ============================================================
-   Atmosphere — slow drifting watercolor blobs + rings + grain
-   ============================================================ */
-.atmos-layer {
-  position: absolute; inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
-}
-.atmos-layer > svg { width: 100%; height: 100%; display: block; }
-
-@keyframes driftA { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(56px,-44px) scale(1.22); } }
-@keyframes driftB { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-52px,38px) scale(1.28); } }
-@keyframes driftC { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(42px,58px) scale(0.84); } }
-@keyframes driftD { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-44px,-58px) scale(1.18); } }
-@keyframes driftE { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(64px,28px) scale(1.14); } }
-@keyframes hueDrift { 0%,100% { filter: hue-rotate(0deg) saturate(1); } 33% { filter: hue-rotate(-10deg) saturate(1.12); } 66% { filter: hue-rotate(12deg) saturate(0.94); } }
-@keyframes slowSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-@keyframes groupBreathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
-
-.blob {
-  transform-origin: center;
-  transform-box: fill-box;
-  will-change: transform;
-  mix-blend-mode: multiply;
-}
-.blob-a { animation: driftA 14s ease-in-out infinite; }
-.blob-b { animation: driftB 18s ease-in-out infinite; }
-.blob-c { animation: driftC 12s ease-in-out infinite; }
-.blob-d { animation: driftD 22s ease-in-out infinite; }
-.blob-e { animation: driftE 16s ease-in-out infinite; }
-.blob-group {
-  transform-origin: center;
-  transform-box: fill-box;
-  animation:
-    hueDrift 28s ease-in-out infinite,
-    groupBreathe 11s ease-in-out infinite;
-}
-.atmos-spin { transform-origin: 183px 410px; animation: slowSpin 90s linear infinite; }
-
-@media (prefers-reduced-motion: reduce) {
-  .blob-a, .blob-b, .blob-c, .blob-d, .blob-e,
-  .blob-group, .atmos-spin {
-    animation: none !important;
-  }
-}
-
-@keyframes ringPulse {
-  0%,100% { transform: scale(1); opacity: 0.10; }
-  50%     { transform: scale(1.06); opacity: 0.16; }
-}
-.atmos-rings { animation: ringPulse 18s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 
 /* Safe-area helpers (PWA on iOS) */
 @supports(padding: max(0px)) {
