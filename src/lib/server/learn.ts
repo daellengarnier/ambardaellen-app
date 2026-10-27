@@ -574,3 +574,53 @@ export async function getChapterQueue(today: string, mode: StudyMode = "mix"): P
     };
   });
 }
+
+// ─── Glossar (Wort-Pop-ups) ─────────────────────────────────
+
+export type GlossaryEntry = { vi: string; de: string; source: "karte" | "glossar" };
+
+const normVi = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+
+/**
+ * Alle bekannten Wörter und Wortgruppen. Vokabelkarten und Wendungen haben
+ * Vorrang (Kursinhalt), das Glossar füllt den Rest.
+ */
+export async function getGlossary(): Promise<GlossaryEntry[]> {
+  const map = new Map<string, GlossaryEntry>();
+  const cards = await db
+    .select({ type: schema.cards.type, front: schema.cards.front, backDe: schema.cards.backDe, backVi: schema.cards.backVi })
+    .from(schema.cards)
+    .where(or(eq(schema.cards.type, "vocab"), eq(schema.cards.type, "phrase")));
+  for (const c of cards) {
+    const vi = c.type === "phrase" ? c.backVi : c.front;
+    for (const alt of vi.split("/")) {
+      const k = normVi(alt);
+      if (k && !map.has(k)) map.set(k, { vi: k, de: c.backDe, source: "karte" });
+    }
+  }
+  const rows = await db.select().from(schema.glossary);
+  for (const r of rows) if (!map.has(r.vi)) map.set(r.vi, { vi: r.vi, de: r.de, source: "glossar" });
+  return [...map.values()];
+}
+
+export const GlossaryImportSchema = z.object({
+  entries: z
+    .array(z.object({ vi: z.string().trim().min(1).max(200), de: z.string().trim().min(1).max(500) }))
+    .min(1)
+    .max(5000),
+});
+
+/** Einträge anlegen oder überschreiben (Jarvis). */
+export async function upsertGlossary(entries: { vi: string; de: string }[]): Promise<number> {
+  const rows = entries.map((e) => ({ vi: normVi(e.vi), de: e.de, source: "jarvis" }));
+  for (let i = 0; i < rows.length; i += 500) {
+    await db
+      .insert(schema.glossary)
+      .values(rows.slice(i, i + 500))
+      .onConflictDoUpdate({
+        target: schema.glossary.vi,
+        set: { de: sql`excluded.de`, source: sql`excluded.source`, updatedAt: sql`now()` },
+      });
+  }
+  return rows.length;
+}

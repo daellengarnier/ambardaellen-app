@@ -230,6 +230,15 @@ export type DeckRow = typeof decks.$inferSelect;
 export type CardRow = typeof cards.$inferSelect;
 export type CardStateRow = typeof cardStates.$inferSelect;
 
+// Glossar für Wort-Pop-ups in Sätzen. Ergänzt die Vokabelkarten, die
+// Vorrang haben. vi ist klein geschrieben, Silben mit einem Leerzeichen.
+export const glossary = pgTable("glossary", {
+  vi: text("vi").primaryKey(),
+  de: text("de").notNull(),
+  source: text("source").notNull().default("jarvis"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Einstellungen der App als Schlüssel/Wert, z.B. "study" (Lernen).
 export const settings = pgTable("settings", {
   key: text("key").primaryKey(),

@@ -9,6 +9,7 @@ import { speakVi, useViVoice } from "@/lib/speak";
 import { useStore } from "@/lib/store";
 import { useLife } from "@/lib/lifeStore";
 import { ClientOnly } from "@/components/ClientOnly";
+import { ViText, useGlossary } from "@/components/ViText";
 
 export default function UebenPage() {
   return (
@@ -139,6 +140,7 @@ function Session() {
   const decSheetOpen = useStore((s) => s.decSheetOpen);
   const refreshLife = useLife((s) => s.refresh);
   const hasVoice = useViVoice();
+  const gloss = useGlossary();
 
   const [queue, setQueue] = useState<StudyItem[] | null>(null);
   const [index, setIndex] = useState(0);
@@ -210,8 +212,8 @@ function Session() {
   };
 
   const reveal = () => {
+    // Kein automatisches Vorlesen: nur über den Lautsprecher-Knopf.
     setRevealed(true);
-    if (view?.answer.vi && hasVoice) speakVi(view.answer.text);
   };
 
   const total = queue ? queue.length : 0;
@@ -324,7 +326,7 @@ function Session() {
                   className={view.prompt.vi ? "serif text-[30px] leading-tight flex-1" : "text-[21px] font-semibold leading-snug flex-1"}
                   lang={view.prompt.vi ? "vi" : "de"}
                 >
-                  {view.prompt.text}
+                  {view.prompt.vi ? <ViText text={view.prompt.text} gloss={gloss} /> : view.prompt.text}
                 </p>
                 {view.prompt.vi && hasVoice && <SpeakButton text={view.prompt.text} />}
               </div>
@@ -350,7 +352,7 @@ function Session() {
                       className={view.answer.vi ? "serif text-[28px] leading-tight flex-1" : "text-[19px] font-semibold leading-snug flex-1"}
                       lang={view.answer.vi ? "vi" : "de"}
                     >
-                      {view.answer.text}
+                      {view.answer.vi ? <ViText text={view.answer.text} gloss={gloss} /> : view.answer.text}
                     </p>
                     {view.answer.vi && hasVoice && <SpeakButton text={view.answer.text} />}
                   </div>
@@ -375,7 +377,7 @@ function Session() {
                     <div className="rounded-2xl p-3 mt-1" style={{ background: "var(--paper-2)" }}>
                       <div className="flex items-start gap-2">
                         <p className="text-[15px] font-semibold flex-1" lang="vi">
-                          {item.card.exampleVi}
+                          <ViText text={item.card.exampleVi} gloss={gloss} />
                         </p>
                         {hasVoice && <SpeakButton text={item.card.exampleVi} small />}
                       </div>

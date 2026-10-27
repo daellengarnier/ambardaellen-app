@@ -50,6 +50,13 @@
       "when": 1793109345187,
       "tag": "0006_seed_svff_l2_lektionen",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793143545382,
+      "tag": "0007_glossary",
+      "breakpoints": true
     }
   ]
 }
