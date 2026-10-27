@@ -41,26 +41,78 @@ const RATING_STYLE: Record<Rating, { bg: string; fg: string }> = {
 };
 
 type Side = { text: string; vi: boolean; hint?: string };
+type View = { question: string; dir: string; prompt: Side; answer: Side; explain?: string };
+
+// Buchstaben, die es nur im Vietnamesischen gibt (Sonderzeichen und Töne).
+const VI_CHARS =
+  /[ăâđêôơưàáảãạằắẳẵặầấẩẫậèẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]/i;
+
+/**
+ * Klammern mit vietnamesischem Inhalt verraten beim Abfragen DE → VI die
+ * Lösung ("bitte (giùm: locker, làm ơn: höflicher)"). Sie wandern auf die
+ * Rückseite.
+ */
+function splitDe(text: string): { text: string; aside: string } {
+  const asides: string[] = [];
+  const rest = text.replace(/\s*\(([^)]*)\)/g, (m, inner: string) => {
+    if (!VI_CHARS.test(inner)) return m;
+    asides.push(inner);
+    return "";
+  });
+  return { text: rest.trim(), aside: asides.join(" · ") };
+}
+
+const ASK_DE = "Was heisst das?";
+const ASK_VI = "Wie sagst du das auf Vietnamesisch?";
 
 /** Was gefragt und was aufgedeckt wird, je nach Kartentyp und Richtung. */
-function sides(item: StudyItem): { prompt: Side; answer: Side } {
+function sides(item: StudyItem): View {
   const c = item.card;
-  if (c.type === "sentence") {
-    return item.direction === "vi_de"
-      ? { prompt: { text: c.front, vi: true }, answer: { text: c.backDe, vi: false, hint: c.note } }
-      : { prompt: { text: c.backDe, vi: false }, answer: { text: c.front, vi: true, hint: c.note } };
+  const toDe = item.direction === "vi_de";
+  if (c.type === "grammar") {
+    // Grammatik übt man am Satz: deutsches Beispiel, Struktur als Hilfe,
+    // gesucht ist der vietnamesische Satz. Ohne Beispiel: Bedeutung erklären.
+    if (c.exampleVi && c.exampleDe) {
+      return {
+        question: "Bilde den Satz mit dieser Struktur",
+        dir: "DE → VI",
+        prompt: { text: c.exampleDe, vi: false, hint: c.front },
+        answer: { text: c.exampleVi, vi: true },
+        explain: c.backDe,
+      };
+    }
+    return {
+      question: "Was drückt diese Struktur aus?",
+      dir: "VI → DE",
+      prompt: { text: c.front, vi: true },
+      answer: { text: c.backDe, vi: false },
+    };
   }
   if (c.type === "phrase") {
-    return item.direction === "vi_de"
-      ? { prompt: { text: c.backVi, vi: true }, answer: { text: c.backDe, vi: false, hint: c.front } }
-      : { prompt: { text: c.backDe, vi: false, hint: c.front }, answer: { text: c.backVi, vi: true } };
+    const de = splitDe(c.backDe);
+    return toDe
+      ? { question: ASK_DE, dir: "VI → DE", prompt: { text: c.backVi, vi: true }, answer: { text: c.backDe, vi: false, hint: c.front } }
+      : {
+          question: ASK_VI,
+          dir: "DE → VI",
+          prompt: { text: de.text, vi: false, hint: c.front },
+          answer: { text: c.backVi, vi: true, hint: de.aside },
+        };
   }
-  if (c.type === "grammar") {
-    return { prompt: { text: c.front, vi: true }, answer: { text: c.backDe, vi: false } };
+  if (c.type === "sentence") {
+    return toDe
+      ? { question: ASK_DE, dir: "VI → DE", prompt: { text: c.front, vi: true }, answer: { text: c.backDe, vi: false } }
+      : { question: ASK_VI, dir: "DE → VI", prompt: { text: c.backDe, vi: false }, answer: { text: c.front, vi: true } };
   }
-  return item.direction === "vi_de"
-    ? { prompt: { text: c.front, vi: true }, answer: { text: c.backDe, vi: false } }
-    : { prompt: { text: c.backDe, vi: false }, answer: { text: c.front, vi: true } };
+  const de = splitDe(c.backDe);
+  return toDe
+    ? { question: ASK_DE, dir: "VI → DE", prompt: { text: c.front, vi: true }, answer: { text: c.backDe, vi: false } }
+    : {
+        question: ASK_VI,
+        dir: "DE → VI",
+        prompt: { text: de.text, vi: false },
+        answer: { text: c.front, vi: true, hint: de.aside },
+      };
 }
 
 /**
@@ -106,7 +158,7 @@ function Session() {
     // deck, mode und extra kommen unverändert von der Lernseite.
     const q = new URLSearchParams(window.location.search);
     const params = new URLSearchParams();
-    for (const k of ["deck", "mode", "extra", "chapter"]) {
+    for (const k of ["deck", "mode", "extra", "chapter", "review"]) {
       const v = q.get(k);
       if (v) params.set(k, v);
     }
@@ -237,7 +289,7 @@ function Session() {
             <div className="rounded-[26px] p-5 flex flex-col gap-4" style={{ background: "var(--paper)" }}>
               <div className="flex items-center justify-between gap-2 text-[11.5px] font-bold" style={{ color: "var(--muted)" }}>
                 <span>
-                  {TYPE_LABEL[item.card.type]} · {item.direction === "vi_de" ? "VI → DE" : "DE → VI"}
+                  {TYPE_LABEL[item.card.type]} · {view.dir}
                 </span>
                 {item.state.isNew && (
                   <span className="px-2 py-0.5 rounded-lg" style={{ background: "var(--spinnerei-soft)", color: "var(--spinnerei-text)" }}>
@@ -246,8 +298,15 @@ function Session() {
                 )}
               </div>
 
+              <div className="text-[13px] font-semibold" style={{ color: "var(--muted)" }}>
+                {view.question}
+              </div>
               {view.prompt.hint && (
-                <div className="text-[13px] font-semibold" style={{ color: "var(--ink-soft)" }}>
+                <div
+                  className="self-start text-[14px] font-bold rounded-xl px-3 py-1.5"
+                  style={{ background: "var(--paper-2)", color: "var(--ink)" }}
+                  lang="vi"
+                >
                   {view.prompt.hint}
                 </div>
               )}
@@ -298,7 +357,12 @@ function Session() {
                         .join(" · ")}
                     </p>
                   )}
-                  {item.card.exampleVi && (
+                  {view.explain && (
+                    <p className="text-[13.5px]" style={{ color: "var(--ink-soft)" }}>
+                      {view.explain}
+                    </p>
+                  )}
+                  {item.card.exampleVi && item.card.exampleVi !== view.answer.text && (
                     <div className="rounded-2xl p-3 mt-1" style={{ background: "var(--paper-2)" }}>
                       <div className="flex items-start gap-2">
                         <p className="text-[15px] font-semibold flex-1" lang="vi">
@@ -313,7 +377,7 @@ function Session() {
                       )}
                     </div>
                   )}
-                  {item.card.note && (
+                  {item.card.note && item.card.note !== view.answer.hint && (
                     <p className="text-[13px]" style={{ color: "var(--ink-soft)" }}>
                       {item.card.note}
                     </p>
