@@ -1,6 +1,7 @@
 // Gemeinsame Typen der Life-App, genutzt von Server (API) und Client.
 
 import type { ISODate, Priority } from "./types";
+import type { Direction, SrsState } from "./srs";
 
 export type World = "spinnerei" | "privat";
 export type Actor = "alain" | "jarvis";
@@ -92,3 +93,53 @@ export function todayZurich(now: Date = new Date()): ISODate {
     day: "2-digit",
   }).format(now);
 }
+
+// ─── Lernen ─────────────────────────────────────────────────
+
+export type CardType = "vocab" | "grammar" | "phrase";
+
+export type CardDto = {
+  id: string;
+  deckId: string;
+  type: CardType;
+  front: string;
+  backDe: string;
+  backEn: string;
+  backVi: string;
+  pos: string;
+  category: string;
+  exampleVi: string;
+  exampleDe: string;
+  note: string;
+};
+
+export type DeckDto = {
+  id: string;
+  title: string;
+  course: string;
+  level: string;
+  topic: string;
+  source: string;
+  language: string;
+  cards: number;
+  /** Lernrichtungen insgesamt (Vokabeln zählen doppelt). */
+  items: number;
+  learned: number;
+  due: number;
+  fresh: number;
+};
+
+export type StudyItem = {
+  card: CardDto;
+  direction: Direction;
+  state: SrsState & { isNew: boolean };
+};
+
+export type StudyStats = {
+  date: ISODate;
+  due: number;
+  newToday: number;
+  newLimit: number;
+  reviewedToday: number;
+  streak: number;
+};

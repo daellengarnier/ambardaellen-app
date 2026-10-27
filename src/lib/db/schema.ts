@@ -8,6 +8,9 @@ import {
   char,
   date,
   index,
+  uniqueIndex,
+  primaryKey,
+  real,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -146,3 +149,81 @@ export type TodoRow = typeof todos.$inferSelect;
 export type InboxRow = typeof inboxItems.$inferSelect;
 export type DayPlanRow = typeof dayPlans.$inferSelect;
 export type ApiToken = typeof apiTokens.$inferSelect;
+
+// ─── Lernen (Phase 4) ───────────────────────────────────────
+// Decks mit Karten, Wiederholung nach Abständen pro Richtung.
+
+export const decks = pgTable("decks", {
+  id: text("id").primaryKey(), // z.B. "svff-l2-b1"
+  title: text("title").notNull(),
+  course: text("course").notNull().default(""),
+  level: text("level").notNull().default(""),
+  topic: text("topic").notNull().default(""),
+  source: text("source").notNull().default(""),
+  language: text("language").notNull().default("vi"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const cards = pgTable(
+  "cards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deckId: text("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // "vocab" | "grammar" | "phrase"
+    front: text("front").notNull(),
+    backDe: text("back_de").notNull().default(""),
+    backEn: text("back_en").notNull().default(""),
+    backVi: text("back_vi").notNull().default(""),
+    pos: text("pos").notNull().default(""),
+    category: text("category").notNull().default(""),
+    exampleVi: text("example_vi").notNull().default(""),
+    exampleDe: text("example_de").notNull().default(""),
+    note: text("note").notNull().default(""),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("cards_deck_type_front_idx").on(t.deckId, t.type, t.front)],
+);
+
+// Lernstand pro Karte und Richtung. reps = 0 heisst: noch neu.
+export const cardStates = pgTable(
+  "card_states",
+  {
+    cardId: uuid("card_id")
+      .notNull()
+      .references(() => cards.id, { onDelete: "cascade" }),
+    direction: text("direction").notNull(), // "vi_de" | "de_vi"
+    due: date("due", { mode: "string" }),
+    intervalDays: integer("interval_days").notNull().default(0),
+    ease: real("ease").notNull().default(2.5),
+    reps: integer("reps").notNull().default(0),
+    lapses: integer("lapses").notNull().default(0),
+    introducedOn: date("introduced_on", { mode: "string" }),
+    lastReviewedAt: timestamp("last_reviewed_at", { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.cardId, t.direction] }), index("card_states_due_idx").on(t.due)],
+);
+
+export const cardReviews = pgTable(
+  "card_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    cardId: uuid("card_id")
+      .notNull()
+      .references(() => cards.id, { onDelete: "cascade" }),
+    direction: text("direction").notNull(),
+    rating: integer("rating").notNull(), // 1 Nochmal, 2 Schwer, 3 Gut, 4 Leicht
+    intervalBefore: integer("interval_before").notNull(),
+    intervalAfter: integer("interval_after").notNull(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("card_reviews_reviewed_at_idx").on(t.reviewedAt)],
+);
+
+export type DeckRow = typeof decks.$inferSelect;
+export type CardRow = typeof cards.$inferSelect;
+export type CardStateRow = typeof cardStates.$inferSelect;

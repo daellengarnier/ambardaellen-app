@@ -22,6 +22,20 @@
       "when": 1792334669645,
       "tag": "0002_life_data_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793108015505,
+      "tag": "0003_learn_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793108016400,
+      "tag": "0004_seed_svff_l2_b1",
+      "breakpoints": true
     }
   ]
 }

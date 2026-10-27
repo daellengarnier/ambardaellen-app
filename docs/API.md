@@ -76,6 +76,18 @@ Objekt: `{ id, text, source, createdBy, createdAt, processedAt, todoId }`
 
 - `GET /tokens`, `POST /tokens` Body `{ name }` → `{ token, id, name, createdAt }`, `DELETE /tokens/:id` (widerruft).
 
+## Lernen (Vietnamesisch)
+
+Decks mit Karten, Wiederholung nach Abständen (vereinfachtes SM-2, `src/lib/srs.ts`). Vokabeln und Sätze werden in beide Richtungen gelernt (VI→DE, DE→VI), Grammatik nur VI→DE. Pro Tag kommen höchstens 15 neue Lernrichtungen dazu, die Gegenrichtung einer Karte frühestens am Tag nach der ersten.
+
+- `GET /decks` → `{ decks: [{ id, title, course, level, topic, source, cards, items, learned, due, fresh }] }`
+- `POST /decks/import` Body im Format der Deck-Dateien im Jarvis-Repo (`areas/privat-lernen/vietnamesisch/decks/*.json`):
+  `{ deck: { id, title, course?, level?, topic?, source? }, cards: [{ type: "vocab"|"grammar"|"phrase", front, back_de?, back_en?, back_vi?, pos?, category?, example_vi?, example_de?, note? }] }`.
+  Karten werden über Deck, Typ und `front` erkannt: erneuter Import aktualisiert Inhalte, der Lernstand bleibt. → `201 { deck, created, updated }`
+- `GET /study/queue[?deck=]` → `{ items: [{ card, direction, state }] }` fällige Wiederholungen, dann neue Karten.
+- `POST /study/review` Body `{ cardId, direction: "vi_de"|"de_vi", rating: 1|2|3|4 }` (Nochmal, Schwer, Gut, Leicht) → `{ intervalDays, due }`. `intervalDays: 0` heisst: heute nochmal.
+- `GET /study/stats` → `{ date, due, newToday, newLimit, reviewedToday, streak }`. `newToday` = heute noch verfügbare neue Karten.
+
 ## Nicht in v1
 
 Einkauf, Aktivitäten, Reisen und Ziele laufen noch über `GET/PUT /api/sync` (JSON-Block der App). Sie bekommen in Phase 3 eigene Tabellen und Endpunkte.

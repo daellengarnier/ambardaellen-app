@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, Calendar, ChevronRight } from "lucide-react";
+import { ShoppingCart, Calendar, ChevronRight, Languages } from "lucide-react";
+import { useLife } from "@/lib/lifeStore";
 import { useStore } from "@/lib/store";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Card } from "@/components/Card";
@@ -19,7 +20,15 @@ function MehrContent() {
   const shoppingOpen = useStore((s) => s.shopping.filter((i) => !i.done).length);
   const plannedActs = useStore((s) => s.activities.filter((a) => a.status === "geplant").length);
 
+  const study = useLife((s) => s.study);
   const items = [
+    {
+      href: "/lernen",
+      label: "Lernen: Vietnamesisch",
+      detail: study ? `${study.due + study.newToday} Karten heute` : "Lernkarten",
+      Icon: Languages,
+      color: "var(--privat-text)",
+    },
     { href: "/einkauf", label: "Einkauf", detail: `${shoppingOpen} offen`, Icon: ShoppingCart, color: "var(--sage)" },
     { href: "/aktivitaeten", label: "Aktivitäten & Reisen", detail: `${plannedActs} geplant`, Icon: Calendar, color: "var(--terra)" },
   ];

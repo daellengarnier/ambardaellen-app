@@ -5,6 +5,7 @@ import type {
   AreaDto,
   DayPlanDto,
   InboxDto,
+  StudyStats,
   TodoDto,
   TodoInput,
   TodoPatch,
@@ -34,6 +35,7 @@ type LifeState = {
   todos: TodoDto[];
   inbox: InboxDto[];
   plan: DayPlanDto | null;
+  study: StudyStats | null;
   loaded: boolean;
   error: string | null;
 
@@ -62,13 +64,14 @@ export const useLife = create<LifeState>()((set, get) => {
     todos: [],
     inbox: [],
     plan: null,
+    study: null,
     loaded: false,
     error: null,
 
     refresh: async () => {
       try {
         const today = todayZurich();
-        const [areas, open, done, inbox, plan] = await Promise.all([
+        const [areas, open, done, inbox, plan, study] = await Promise.all([
           get().areas.length
             ? Promise.resolve({ areas: get().areas })
             : api<{ areas: AreaDto[] }>("/areas"),
@@ -76,12 +79,14 @@ export const useLife = create<LifeState>()((set, get) => {
           api<{ todos: TodoDto[] }>(`/todos?status=erledigt&limit=${DONE_LIMIT}`),
           api<{ items: InboxDto[] }>("/inbox"),
           api<{ plan: DayPlanDto | null }>(`/day-plans/${today}`),
+          api<StudyStats>("/study/stats").catch(() => null),
         ]);
         set({
           areas: areas.areas,
           todos: [...open.todos, ...done.todos],
           inbox: inbox.items,
           plan: plan.plan,
+          study,
           loaded: true,
           error: null,
         });
@@ -192,7 +197,7 @@ export const useLife = create<LifeState>()((set, get) => {
       }
     },
 
-    reset: () => set({ todos: [], inbox: [], plan: null, loaded: false, error: null }),
+    reset: () => set({ todos: [], inbox: [], plan: null, study: null, loaded: false, error: null }),
   };
 });
 

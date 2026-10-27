@@ -12,6 +12,7 @@ import {
   Backpack,
   Inbox as InboxIcon,
   Sparkles,
+  Languages,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useLife, areaByKey } from "@/lib/lifeStore";
@@ -81,6 +82,8 @@ function HeuteContent() {
   const areas = useLife((s) => s.areas);
   const inbox = useLife((s) => s.inbox);
   const plan = useLife((s) => s.plan);
+  const study = useLife((s) => s.study);
+  const studyToday = study ? study.due + study.newToday : 0;
   const addTodo = useLife((s) => s.addTodo);
   const toggleTodo = useLife((s) => s.toggleTodo);
   const addInbox = useLife((s) => s.addInbox);
@@ -214,6 +217,32 @@ function HeuteContent() {
               </p>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* Vietnamesisch: fällige Karten */}
+      {study && (studyToday > 0 || study.reviewedToday > 0) && (
+        <div className="px-4 mb-3">
+          <Link href={studyToday > 0 ? "/lernen/ueben" : "/lernen"}>
+            <Card className="p-3 flex items-center gap-3">
+              <span
+                className="shrink-0 w-10 h-10 rounded-xl inline-flex items-center justify-center"
+                style={{ background: "var(--privat-soft)", color: "var(--privat-text)" }}
+              >
+                <Languages size={18} strokeWidth={1.9} aria-hidden="true" />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[14px] font-semibold">
+                  {studyToday > 0 ? `Vietnamesisch: ${studyToday} Karten` : "Vietnamesisch erledigt"}
+                </span>
+                <span className="block text-[12px]" style={{ color: "var(--ink-soft)" }}>
+                  {study.streak > 0 ? `${study.streak} ${study.streak === 1 ? "Tag" : "Tage"} in Folge` : "Heute anfangen"}
+                  {study.reviewedToday > 0 && ` · ${study.reviewedToday} geübt`}
+                </span>
+              </span>
+              <ChevronRight size={16} strokeWidth={1.75} color="var(--muted)" />
+            </Card>
+          </Link>
         </div>
       )}
 

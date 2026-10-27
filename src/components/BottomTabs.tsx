@@ -11,7 +11,7 @@ const TABS = [
   { href: "/inbox", label: "Inbox", Icon: Inbox, match: ["/inbox"] },
   { href: "/todo", label: "Todo", Icon: ListTodo, match: ["/todo"] },
   { href: "/ziele", label: "Ziele", Icon: Target, match: ["/ziele"] },
-  { href: "/mehr", label: "Mehr", Icon: LayoutGrid, match: ["/mehr", "/einkauf", "/aktivitaeten"] },
+  { href: "/mehr", label: "Mehr", Icon: LayoutGrid, match: ["/mehr", "/einkauf", "/aktivitaeten", "/lernen"] },
 ] as const;
 
 export function BottomTabs() {
