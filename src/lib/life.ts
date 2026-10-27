@@ -146,3 +146,24 @@ export type StudyStats = {
   fresh: number;
   dailyGoal: number;
 };
+
+export type ChapterInfo = {
+  id: string;
+  title: string;
+  position: number;
+  cards: number;
+  /** Letzter Tag, an dem das Kapitel komplett durchgearbeitet wurde. */
+  lastCompleted: string | null;
+};
+
+/** Kapitel des Tages: jeden Tag eine Lektion ganz durcharbeiten. */
+export type ChapterToday = {
+  date: ISODate;
+  chapter: ChapterInfo | null;
+  done: number;
+  total: number;
+  completed: boolean;
+  /** Vorschlag: erst nie gemachte Kapitel, dann das am längsten her. */
+  suggestion: string | null;
+  chapters: ChapterInfo[];
+};

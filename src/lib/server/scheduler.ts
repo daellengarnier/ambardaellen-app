@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "../db/client";
 import { todayZurich } from "../life";
-import { getStats, getStudySettings } from "./learn";
+import { getChapterToday, getStudySettings } from "./learn";
 import { sendToAll } from "./push";
 
 // Läuft im Server-Prozess (gestartet in src/instrumentation.ts) und
 // schickt einmal pro Tag zur eingestellten Zeit eine Erinnerung, wenn
-// das Lern-Tagesziel noch offen ist.
+// das Kapitel des Tages noch offen ist.
 
 const TICK_MS = 60_000;
 
@@ -32,17 +32,16 @@ async function reminderTick() {
     .values({ key: "push.lastReminder", value: today })
     .onConflictDoUpdate({ target: schema.settings.key, set: { value: today, updatedAt: new Date() } });
 
-  const stats = await getStats(today);
-  const waiting = stats.due + stats.newToday;
-  if (stats.reviewedToday >= stats.dailyGoal || waiting === 0) return;
-  const left = Math.min(waiting, stats.dailyGoal - stats.reviewedToday);
+  // Tagesziel ist das Kapitel des Tages.
+  const ch = await getChapterToday(today);
+  if (ch.completed) return;
+  const suggested = ch.chapters.find((c) => c.id === ch.suggestion);
   await sendToAll({
     title: "Vietnamesisch",
-    body:
-      stats.reviewedToday > 0
-        ? `Noch ${left} Karten bis zum Tagesziel (${stats.reviewedToday}/${stats.dailyGoal}).`
-        : `${left} Karten warten auf dich.${stats.streak > 0 ? ` Serie: ${stats.streak} Tage.` : ""}`,
-    url: "/lernen/ueben",
+    body: ch.chapter
+      ? `Noch ${ch.total - ch.done} Karten in ${ch.chapter.title}.`
+      : `Heute noch kein Kapitel.${suggested ? ` Wie wärs mit ${suggested.title}?` : ""}`,
+    url: "/lernen",
   });
 }
 

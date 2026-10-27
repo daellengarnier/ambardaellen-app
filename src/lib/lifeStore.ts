@@ -6,6 +6,7 @@ import type {
   DayPlanDto,
   InboxDto,
   StudyStats,
+  ChapterToday,
   TodoDto,
   TodoInput,
   TodoPatch,
@@ -36,6 +37,7 @@ type LifeState = {
   inbox: InboxDto[];
   plan: DayPlanDto | null;
   study: StudyStats | null;
+  chapter: ChapterToday | null;
   loaded: boolean;
   error: string | null;
 
@@ -48,6 +50,7 @@ type LifeState = {
   processInbox: (id: string, input: TodoInput) => Promise<void>;
   dismissInbox: (id: string) => Promise<void>;
   removeInbox: (id: string) => Promise<void>;
+  chooseChapter: (deckId: string) => Promise<void>;
   reset: () => void;
 };
 
@@ -65,13 +68,14 @@ export const useLife = create<LifeState>()((set, get) => {
     inbox: [],
     plan: null,
     study: null,
+    chapter: null,
     loaded: false,
     error: null,
 
     refresh: async () => {
       try {
         const today = todayZurich();
-        const [areas, open, done, inbox, plan, study] = await Promise.all([
+        const [areas, open, done, inbox, plan, study, chapter] = await Promise.all([
           get().areas.length
             ? Promise.resolve({ areas: get().areas })
             : api<{ areas: AreaDto[] }>("/areas"),
@@ -80,6 +84,7 @@ export const useLife = create<LifeState>()((set, get) => {
           api<{ items: InboxDto[] }>("/inbox"),
           api<{ plan: DayPlanDto | null }>(`/day-plans/${today}`),
           api<StudyStats>("/study/stats").catch(() => null),
+          api<ChapterToday>("/study/today").catch(() => null),
         ]);
         set({
           areas: areas.areas,
@@ -87,6 +92,7 @@ export const useLife = create<LifeState>()((set, get) => {
           inbox: inbox.items,
           plan: plan.plan,
           study,
+          chapter,
           loaded: true,
           error: null,
         });
@@ -197,7 +203,16 @@ export const useLife = create<LifeState>()((set, get) => {
       }
     },
 
-    reset: () => set({ todos: [], inbox: [], plan: null, study: null, loaded: false, error: null }),
+    chooseChapter: async (deckId) => {
+      try {
+        const chapter = await api<ChapterToday>("/study/today", { method: "PUT", body: JSON.stringify({ deckId }) });
+        set({ chapter });
+      } catch (e) {
+        await fail(e);
+      }
+    },
+
+    reset: () => set({ todos: [], inbox: [], plan: null, study: null, chapter: null, loaded: false, error: null }),
   };
 });
 

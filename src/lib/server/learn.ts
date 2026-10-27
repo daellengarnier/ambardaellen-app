@@ -1,7 +1,7 @@
 import { and, asc, eq, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "../db/client";
-import type { CardDto, CardType, DeckDto, StudyItem, StudyStats } from "../life";
+import type { CardDto, CardType, ChapterInfo, ChapterToday, DeckDto, StudyItem, StudyStats } from "../life";
 import { directionsFor, schedule, type Direction, type Rating } from "../srs";
 
 // ─── Einstellungen ──────────────────────────────────────────
@@ -436,4 +436,124 @@ export async function getStats(today: string): Promise<StudyStats> {
     reviewedToday: [...reviewedRows][0]?.n ?? 0,
     streak,
   };
+}
+
+// ─── Kapitel des Tages ──────────────────────────────────────
+// Jeden Tag ein ganzes Kapitel (Deck) einmal durcharbeiten. Alain wählt,
+// welches. Erledigt ist es, wenn jede Karte des Kapitels heute bewertet
+// wurde. Die Bewertungen fliessen wie sonst in die Wiederholung ein.
+
+async function listChapters(): Promise<ChapterInfo[]> {
+  const rows = await db.execute<{ id: string; title: string; position: number; cards: number; last_completed: string | null }>(sql`
+    WITH per_day AS (
+      SELECT c.deck_id, (r.reviewed_at AT TIME ZONE 'Europe/Zurich')::date AS day, count(DISTINCT r.card_id) AS n
+      FROM card_reviews r JOIN cards c ON c.id = r.card_id
+      GROUP BY 1, 2
+    ), totals AS (
+      SELECT deck_id, count(*) AS total FROM cards GROUP BY 1
+    )
+    SELECT d.id, d.title, d.position, t.total::int AS cards,
+      to_char(max(p.day) FILTER (WHERE p.n >= t.total), 'YYYY-MM-DD') AS last_completed
+    FROM decks d
+    JOIN totals t ON t.deck_id = d.id
+    LEFT JOIN per_day p ON p.deck_id = d.id
+    GROUP BY d.id, d.title, d.position, t.total
+    ORDER BY d.position, d.id
+  `);
+  return [...rows].map((r) => ({
+    id: r.id,
+    title: r.title,
+    position: r.position,
+    cards: r.cards,
+    lastCompleted: r.last_completed,
+  }));
+}
+
+async function chosenChapter(today: string): Promise<string | null> {
+  const rows = await db.select().from(schema.settings).where(eq(schema.settings.key, "study.today")).limit(1);
+  const v = rows[0]?.value as { date?: string; deckId?: string } | undefined;
+  return v?.date === today && v.deckId ? v.deckId : null;
+}
+
+async function reviewedTodayInDeck(today: string, deckId: string): Promise<Set<string>> {
+  const rows = await db.execute<{ card_id: string }>(sql`
+    SELECT DISTINCT r.card_id FROM card_reviews r JOIN cards c ON c.id = r.card_id
+    WHERE c.deck_id = ${deckId}
+      AND (r.reviewed_at AT TIME ZONE 'Europe/Zurich')::date = ${today}::date
+  `);
+  return new Set([...rows].map((r) => r.card_id));
+}
+
+export async function getChapterToday(today: string): Promise<ChapterToday> {
+  const [chapters, chosen] = await Promise.all([listChapters(), chosenChapter(today)]);
+  const chapter = chapters.find((c) => c.id === chosen) ?? null;
+  const done = chapter ? (await reviewedTodayInDeck(today, chapter.id)).size : 0;
+  const total = chapter?.cards ?? 0;
+  const never = chapters.find((c) => !c.lastCompleted);
+  const oldest = [...chapters].sort((a, b) => (a.lastCompleted ?? "").localeCompare(b.lastCompleted ?? ""))[0];
+  return {
+    date: today,
+    chapter,
+    done: Math.min(done, total),
+    total,
+    completed: chapter !== null && done >= total,
+    suggestion: (never ?? oldest)?.id ?? null,
+    chapters,
+  };
+}
+
+export async function setChapterToday(today: string, deckId: string): Promise<boolean> {
+  const exists = await db.select({ id: schema.decks.id }).from(schema.decks).where(eq(schema.decks.id, deckId)).limit(1);
+  if (!exists[0]) return false;
+  const value = { date: today, deckId };
+  await db
+    .insert(schema.settings)
+    .values({ key: "study.today", value })
+    .onConflictDoUpdate({ target: schema.settings.key, set: { value, updatedAt: new Date() } });
+  return true;
+}
+
+/**
+ * Die heute noch offenen Karten des gewählten Kapitels, in Kapitel-
+ * reihenfolge. Pro Karte eine Richtung: fest gewählt, oder gemischt die
+ * schwächere der beiden (kürzerer Abstand). Grammatik immer VI→DE.
+ */
+export async function getChapterQueue(today: string, mode: StudyMode = "mix"): Promise<StudyItem[]> {
+  const deckId = await chosenChapter(today);
+  if (!deckId) return [];
+  const reviewed = await reviewedTodayInDeck(today, deckId);
+  const rows = await db
+    .select({ state: schema.cardStates, card: schema.cards })
+    .from(schema.cardStates)
+    .innerJoin(schema.cards, eq(schema.cardStates.cardId, schema.cards.id))
+    .where(eq(schema.cards.deckId, deckId))
+    .orderBy(asc(schema.cards.position), asc(schema.cardStates.direction));
+
+  const byCard = new Map<string, { card: schema.CardRow; states: schema.CardStateRow[] }>();
+  for (const r of rows) {
+    if (reviewed.has(r.card.id)) continue;
+    const e = byCard.get(r.card.id) ?? { card: r.card, states: [] };
+    e.states.push(r.state);
+    byCard.set(r.card.id, e);
+  }
+
+  return [...byCard.values()].map(({ card, states }, i) => {
+    const strength = (s: schema.CardStateRow) => (s.introducedOn === null ? -1 : s.intervalDays);
+    let state =
+      mode === "mix"
+        ? [...states].sort((a, b) => strength(a) - strength(b) || (i % 2 === 0 ? 1 : -1) * a.direction.localeCompare(b.direction))[0]
+        : (states.find((s) => s.direction === mode) ?? states[0]);
+    if (!state) state = states[0];
+    return {
+      card: toCardDto(card),
+      direction: state.direction as Direction,
+      state: {
+        intervalDays: state.intervalDays,
+        ease: state.ease,
+        reps: state.reps,
+        lapses: state.lapses,
+        isNew: state.introducedOn === null,
+      },
+    };
+  });
 }

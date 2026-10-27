@@ -85,6 +85,7 @@ Decks mit Karten, Wiederholung nach Abständen (vereinfachtes SM-2, `src/lib/srs
   `{ deck: { id, title, course?, level?, topic?, source? }, cards: [{ type: "vocab"|"grammar"|"phrase", front, back_de?, back_en?, back_vi?, pos?, category?, example_vi?, example_de?, note? }] }`.
   Typ `sentence`: `front` = vietnamesischer Satz, `back_de` = Übersetzung, `note` = Tipp (Struktur). Alternativ ein Kursexport `{ kurs, karten: [{ lektion, deck, vorderseite, rueckseite, zusatz }] }` (`zusatz` "EN: …" = Vokabel, "Struktur: …" = Satz), daraus wird ein Deck pro Lektion (`svff-l2-b<lektion>`).
   Karten werden über Deck, Typ und `front` erkannt (Vokabeln auch mit vertauschten Varianten "a / b"), Sätze, die schon als `phrase` im Deck sind, übersprungen. Erneuter Import aktualisiert nur mitgelieferte Felder, der Lernstand bleibt. → `201 { decks: [{ deck, created, updated, skipped }] }`
+- `GET /study/today` → Kapitel des Tages `{ date, chapter, done, total, completed, suggestion, chapters }`, `PUT /study/today` Body `{ deckId }` wählt es. `GET /study/queue?chapter=1[&mode=]` liefert die heute noch offenen Karten dieses Kapitels, eine Richtung pro Karte. Erledigt ist das Kapitel, wenn jede Karte heute bewertet wurde.
 - `GET /study/settings`, `PUT /study/settings` Body Teilmenge von `{ newPerDay, dailyGoal, reminderEnabled, reminderTime: "HH:MM" }`.
 - `GET /study/queue[?deck=][&mode=mix|vi_de|de_vi][&extra=N]` → `{ items: [{ card, direction, state }] }` fällige Wiederholungen, dann neue Karten. `mode` filtert die Richtung, `extra` gibt zusätzlich N neue Karten über das Tageslimit.
 - `POST /study/review` Body `{ cardId, direction: "vi_de"|"de_vi", rating: 1|2|3|4 }` (Nochmal, Schwer, Gut, Leicht) → `{ intervalDays, due }`. `intervalDays: 0` heisst: heute nochmal.
@@ -96,7 +97,7 @@ Decks mit Karten, Wiederholung nach Abständen (vereinfachtes SM-2, `src/lib/srs
 - `POST /push/subscribe` Body = `PushSubscription.toJSON()`, `DELETE /push/subscribe` Body `{ endpoint }`
 - `POST /push/test` schickt eine Testnachricht an alle Geräte.
 
-Der Server prüft jede Minute (`src/lib/server/scheduler.ts`): Ist die Erinnerung an, die Uhrzeit erreicht und das Tagesziel noch offen, geht einmal pro Tag eine Nachricht raus.
+Der Server prüft jede Minute (`src/lib/server/scheduler.ts`): Ist die Erinnerung an, die Uhrzeit erreicht und das Kapitel des Tages noch offen, geht einmal pro Tag eine Nachricht raus.
 
 ## Nicht in v1
 

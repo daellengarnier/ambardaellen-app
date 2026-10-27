@@ -106,7 +106,7 @@ function Session() {
     // deck, mode und extra kommen unverändert von der Lernseite.
     const q = new URLSearchParams(window.location.search);
     const params = new URLSearchParams();
-    for (const k of ["deck", "mode", "extra"]) {
+    for (const k of ["deck", "mode", "extra", "chapter"]) {
       const v = q.get(k);
       if (v) params.set(k, v);
     }
@@ -163,7 +163,9 @@ function Session() {
   };
 
   const total = queue ? queue.length : 0;
-  const modeParam = new URLSearchParams(window.location.search).get("mode");
+  const urlParams = new URLSearchParams(window.location.search);
+  const isChapter = urlParams.get("chapter") === "1";
+  const modeParam = urlParams.get("mode");
   const moreQuery = modeParam ? `&mode=${encodeURIComponent(modeParam)}` : "";
   const tips = item && view ? tipsFor(item, view.answer) : [];
 
@@ -171,7 +173,7 @@ function Session() {
     <div className="min-h-dvh flex flex-col px-4 pt-4 pb-6">
       <div className="flex items-center gap-3">
         <Link
-          href="/lernen"
+          href={isChapter ? "/" : "/lernen"}
           className="tap w-11 h-11 rounded-full inline-flex items-center justify-center shrink-0"
           style={{ background: "var(--paper)" }}
           aria-label="Üben beenden"
@@ -203,10 +205,14 @@ function Session() {
 
       {finished && (
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
-          <div className="serif text-[34px] leading-tight">{total === 0 ? "Nichts fällig" : "Geschafft"}</div>
+          <div className="serif text-[34px] leading-tight">
+            {total === 0 ? (isChapter ? "Kapitel schon fertig" : "Nichts fällig") : isChapter ? "Kapitel geschafft" : "Geschafft"}
+          </div>
           <p className="text-[15px]" style={{ color: "var(--ink-soft)" }}>
             {total === 0
-              ? "Für heute ist alles gelernt. Morgen kommen neue Karten."
+              ? isChapter
+                ? "Heute ist dieses Kapitel durch. Auf Heute kannst du ein weiteres wählen."
+                : "Für heute ist alles gelernt. Morgen kommen neue Karten."
               : `${done} Karten gelernt.`}
           </p>
           {stats && stats.streak > 0 && (
@@ -216,7 +222,7 @@ function Session() {
             </p>
           )}
           <div className="flex flex-col gap-2 mt-4 w-full max-w-[280px]">
-            {stats && stats.fresh > 0 && (
+            {!isChapter && stats && stats.fresh > 0 && (
               // Volles Neuladen: dieselbe Seite mit neuer Runde.
               <a
                 href={`/lernen/ueben?extra=10${moreQuery}`}
@@ -227,7 +233,7 @@ function Session() {
               </a>
             )}
             <Link
-              href="/lernen"
+              href={isChapter ? "/" : "/lernen"}
               className="tap h-12 rounded-2xl inline-flex items-center justify-center text-[15px] font-bold"
               style={{ background: "var(--ink)", color: "white" }}
             >

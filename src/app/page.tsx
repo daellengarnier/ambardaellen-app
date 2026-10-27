@@ -12,7 +12,6 @@ import {
   Backpack,
   Inbox as InboxIcon,
   Sparkles,
-  Languages,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useLife, areaByKey } from "@/lib/lifeStore";
@@ -27,6 +26,7 @@ import { RoundCheck } from "@/components/RoundCheck";
 import { DeleteAction } from "@/components/DeleteAction";
 import { TagChips } from "@/components/TagChips";
 import { TodoRow } from "@/components/TodoRow";
+import { ChapterCard } from "@/components/ChapterCard";
 import { ClientOnly } from "@/components/ClientOnly";
 import { QuickAddMenu } from "@/components/QuickAddMenu";
 import { HamburgerMenu } from "@/components/HamburgerMenu";
@@ -82,8 +82,6 @@ function HeuteContent() {
   const areas = useLife((s) => s.areas);
   const inbox = useLife((s) => s.inbox);
   const plan = useLife((s) => s.plan);
-  const study = useLife((s) => s.study);
-  const studyToday = study ? study.due + study.newToday : 0;
   const addTodo = useLife((s) => s.addTodo);
   const toggleTodo = useLife((s) => s.toggleTodo);
   const addInbox = useLife((s) => s.addInbox);
@@ -98,7 +96,7 @@ function HeuteContent() {
   const [addTodoOpen, setAddTodoOpen] = useState(false);
   const [addGoalOpen, setAddGoalOpen] = useState(false);
   const [inboxNoteOpen, setInboxNoteOpen] = useState(false);
-  const [quickShopOpen, setQuickShopOpen] = useState<null | { spinnerei: boolean }>(null);
+  const [quickShopOpen, setQuickShopOpen] = useState(false);
 
   const today = todayISO();
   const todayZ = todayZurich();
@@ -109,9 +107,8 @@ function HeuteContent() {
     month: "long",
   });
 
-  // Einkauf-Listen (offen)
-  const privatItems = shopping.filter((s) => !s.done && !s.spinnerei);
-  const spinnereiItems = shopping.filter((s) => !s.done && s.spinnerei);
+  // Einkauf (offen). Die frühere Spinnerei-Wunschliste läuft hier mit.
+  const shoppingOpen = shopping.filter((s) => !s.done);
 
   // Heute: von Jarvis oder mir für heute geplant, dazu Fälliges
   const open = todos.filter((t) => t.status === "offen");
@@ -167,7 +164,7 @@ function HeuteContent() {
               if (key === "inbox") setInboxNoteOpen(true);
               if (key === "todo") setAddTodoOpen(true);
               if (key === "activity") setAddActOpen(true);
-              if (key === "shopping") setQuickShopOpen({ spinnerei: false });
+              if (key === "shopping") setQuickShopOpen(true);
               if (key === "goal") setAddGoalOpen(true);
             }}
           />
@@ -220,31 +217,10 @@ function HeuteContent() {
         </div>
       )}
 
-      {/* Vietnamesisch: fällige Karten */}
-      {study && (studyToday > 0 || study.reviewedToday > 0) && (
-        <div className="px-4 mb-3">
-          <Link href={studyToday > 0 ? "/lernen/ueben" : "/lernen"}>
-            <Card className="p-3 flex items-center gap-3">
-              <span
-                className="shrink-0 w-10 h-10 rounded-xl inline-flex items-center justify-center"
-                style={{ background: "var(--privat-soft)", color: "var(--privat-text)" }}
-              >
-                <Languages size={18} strokeWidth={1.9} aria-hidden="true" />
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="block text-[14px] font-semibold">
-                  {studyToday > 0 ? `Vietnamesisch: ${studyToday} Karten` : "Vietnamesisch erledigt"}
-                </span>
-                <span className="block text-[12px]" style={{ color: "var(--ink-soft)" }}>
-                  {study.streak > 0 ? `${study.streak} ${study.streak === 1 ? "Tag" : "Tage"} in Folge` : "Heute anfangen"}
-                  {study.reviewedToday > 0 && ` · ${study.reviewedToday} geübt`}
-                </span>
-              </span>
-              <ChevronRight size={16} strokeWidth={1.75} color="var(--muted)" />
-            </Card>
-          </Link>
-        </div>
-      )}
+      {/* Vietnamesisch: Kapitel des Tages */}
+      <div className="px-4 mb-3">
+        <ChapterCard />
+      </div>
 
       {/* HEUTE */}
       <section className="px-4 mb-4">
@@ -344,29 +320,18 @@ function HeuteContent() {
         </section>
       )}
 
-      {/* Einkauf-Kacheln: Einkauf | Spinnerei */}
-      <div className="px-4 mb-3 grid grid-cols-2 gap-2 items-stretch">
+      {/* Einkauf */}
+      <div className="px-4 mb-3">
         <ShoppingTile
           label="Einkauf"
           accent="var(--sage)"
           icon={<CartIcon size={11} strokeWidth={1.75} />}
-          items={privatItems}
+          items={shoppingOpen}
           onAdd={(text) => addShopping({ text, scope: "D", spinnerei: false })}
           onOpenItem={setOpenShop}
           onToggle={toggleShopping}
           onRemove={removeShopping}
-          onQuickAdd={() => setQuickShopOpen({ spinnerei: false })}
-        />
-        <ShoppingTile
-          label="Spinnerei"
-          accent="var(--terra)"
-          icon={<span style={{ color: "var(--terra)", fontSize: 11 }}>✦</span>}
-          items={spinnereiItems}
-          onAdd={(text) => addShopping({ text, scope: "D", spinnerei: true })}
-          onOpenItem={setOpenShop}
-          onToggle={toggleShopping}
-          onRemove={removeShopping}
-          onQuickAdd={() => setQuickShopOpen({ spinnerei: true })}
+          onQuickAdd={() => setQuickShopOpen(true)}
         />
       </div>
 
@@ -456,10 +421,9 @@ function HeuteContent() {
       />
       <InboxNoteSheet open={inboxNoteOpen} onClose={() => setInboxNoteOpen(false)} onAdd={addInbox} />
       <QuickShoppingSheet
-        open={quickShopOpen !== null}
-        initialSpinnerei={quickShopOpen?.spinnerei ?? false}
-        onClose={() => setQuickShopOpen(null)}
-        onAdd={(text, spinnerei) => addShopping({ text, scope: "D", spinnerei })}
+        open={quickShopOpen}
+        onClose={() => setQuickShopOpen(false)}
+        onAdd={(text) => addShopping({ text, scope: "D", spinnerei: false })}
       />
     </>
   );
@@ -698,70 +662,39 @@ function UpcomingActivityCard({
 
 function QuickShoppingSheet({
   open,
-  initialSpinnerei,
   onClose,
   onAdd,
 }: {
   open: boolean;
-  initialSpinnerei: boolean;
   onClose: () => void;
-  onAdd: (text: string, spinnerei: boolean) => void;
+  onAdd: (text: string) => void;
 }) {
   if (!open) return null;
-  return <QuickShoppingForm initialSpinnerei={initialSpinnerei} onClose={onClose} onAdd={onAdd} />;
+  return <QuickShoppingForm onClose={onClose} onAdd={onAdd} />;
 }
 
-function QuickShoppingForm({
-  initialSpinnerei,
-  onClose,
-  onAdd,
-}: {
-  initialSpinnerei: boolean;
-  onClose: () => void;
-  onAdd: (text: string, spinnerei: boolean) => void;
-}) {
+function QuickShoppingForm({ onClose, onAdd }: { onClose: () => void; onAdd: (text: string) => void }) {
   const [text, setText] = useState("");
-  const [spinnerei, setSpinnerei] = useState(initialSpinnerei);
   const submit = () => {
     if (!text.trim()) return;
-    onAdd(text.trim(), spinnerei);
+    onAdd(text.trim());
     onClose();
   };
   return (
-    <Sheet open onClose={onClose} title={spinnerei ? "Spinnerei" : "Einkauf-Item"}>
+    <Sheet open onClose={onClose} title="Einkauf-Item">
       <div className="mt-3">
         <div className="uplabel text-[10.5px] mb-1.5" style={{ color: "var(--muted)" }}>
-          {spinnerei ? "Was wünschst du dir?" : "Was fehlt?"}
+          Was fehlt?
         </div>
         <input
           autoFocus
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
-          placeholder={spinnerei ? "z. B. Plattenspieler" : "z. B. Olivenöl"}
+          placeholder="z. B. Olivenöl"
           className="w-full rounded-2xl px-3.5 py-3 text-[15px]"
           style={{ background: "var(--cream-deep)" }}
         />
-      </div>
-      <div className="mt-3 flex gap-1.5 flex-wrap">
-        {[
-          { v: false, l: "Einkauf" },
-          { v: true, l: "✦ Spinnerei" },
-        ].map((o) => (
-          <button
-            key={o.l}
-            type="button"
-            onClick={() => setSpinnerei(o.v)}
-            className="tap text-[12px] font-medium rounded-full px-3 py-1.5"
-            style={
-              spinnerei === o.v
-                ? { background: o.v ? "var(--terra)" : "var(--ink)", color: "var(--paper)" }
-                : { background: "var(--cream-deep)", color: "var(--ink-soft)" }
-            }
-          >
-            {o.l}
-          </button>
-        ))}
       </div>
       <button
         type="button"

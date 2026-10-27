@@ -38,13 +38,10 @@ function ShopContent() {
   const removeShopping = useStore((s) => s.removeShopping);
 
   const [input, setInput] = useState("");
-  const [spinnerei, setSpinnerei] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [openItem, setOpenItem] = useState<ShoppingItem | null>(null);
 
   const openItems = shopping.filter((s) => !s.done);
-  const einkauf = openItems.filter((s) => !s.spinnerei);
-  const spinnereiArr = openItems.filter((s) => s.spinnerei);
   const doneItems = shopping.filter((s) => s.done);
 
   const sections: Array<{
@@ -58,23 +55,15 @@ function ShopContent() {
     {
       key: "einkauf",
       label: "Einkauf",
-      items: einkauf,
+      items: openItems,
       accent: "var(--sage)",
       icon: <ShoppingCart size={11} strokeWidth={1.75} />,
-    },
-    {
-      key: "spinnerei",
-      label: "Spinnerei",
-      items: spinnereiArr,
-      accent: "var(--terra)",
-      icon: <span style={{ color: "var(--terra)" }}>✦</span>,
-      hint: "Wünsche & Nice-to-haves",
     },
   ];
 
   const add = () => {
     if (!input.trim()) return;
-    addShopping({ text: input, scope: "D", spinnerei });
+    addShopping({ text: input, scope: "D", spinnerei: false });
     setInput("");
   };
 
@@ -109,37 +98,6 @@ function ShopContent() {
             >
               Hinzu
             </button>
-          </div>
-          <div className="mt-2 pl-1 flex items-center justify-between gap-2">
-            <div
-              className="inline-flex p-0.5 rounded-full"
-              style={{ background: "var(--cream-deep)" }}
-            >
-              <button
-                type="button"
-                onClick={() => setSpinnerei(false)}
-                className="px-2.5 py-0.5 text-[11.5px] rounded-full tap font-medium inline-flex items-center gap-1"
-                style={
-                  !spinnerei
-                    ? { background: "var(--paper)", color: "var(--ink)" }
-                    : { color: "var(--ink-soft)" }
-                }
-              >
-                <ShoppingCart size={11} strokeWidth={1.75} /> Einkauf
-              </button>
-              <button
-                type="button"
-                onClick={() => setSpinnerei(true)}
-                className="px-2.5 py-0.5 text-[11.5px] rounded-full tap font-medium inline-flex items-center gap-1"
-                style={
-                  spinnerei
-                    ? { background: "var(--paper)", color: "var(--terra)" }
-                    : { color: "var(--ink-soft)" }
-                }
-              >
-                <span>✦</span> Spinnerei
-              </button>
-            </div>
           </div>
         </Card>
       </div>
@@ -284,7 +242,7 @@ function ShoppingRow({
         checked={item.done}
         onClick={() => onToggle(item.id)}
         size={dense ? 20 : 22}
-        color={item.spinnerei ? "var(--terra)" : "var(--sage)"}
+        color="var(--sage)"
         ariaLabel={item.done ? "Wieder offen" : "Gekauft"}
       />
       <div className="flex-1 min-w-0">
@@ -292,7 +250,6 @@ function ShoppingRow({
           className={`${dense ? "text-[13.5px]" : "text-[14px]"} flex items-center gap-1.5`}
           style={item.done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}
         >
-          {item.spinnerei && !item.done && <span style={{ color: "var(--terra)" }}>✦</span>}
           <span className="truncate">{item.text}</span>
         </div>
         {(item.qty || item.addedAt) && (

@@ -9,6 +9,8 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { Card } from "@/components/Card";
 import { ClientOnly } from "@/components/ClientOnly";
 import { Sheet } from "@/components/Sheet";
+import { ChapterCard } from "@/components/ChapterCard";
+import { useLife } from "@/lib/lifeStore";
 import { Label } from "@/components/sheets/TodoAddSheet";
 
 export default function LernenPage() {
@@ -70,11 +72,13 @@ function LernenContent() {
     }
   };
 
+  const refreshLife = useLife((s) => s.refresh);
   const reload = useCallback(async () => {
+    refreshLife();
     const r = await load();
     setData(r);
     setError(r === null);
-  }, []);
+  }, [refreshLife]);
 
   useEffect(() => {
     let alive = true;
@@ -90,7 +94,6 @@ function LernenContent() {
 
   const stats = data?.stats;
   const todo = stats ? stats.due + stats.newToday : 0;
-  const goalPct = stats ? Math.min(100, Math.round((stats.reviewedToday / Math.max(1, stats.dailyGoal)) * 100)) : 0;
   const modeQuery = mode === "mix" ? "" : `mode=${mode}`;
   const href = (extra?: number, deck?: string) => {
     const q = [modeQuery, extra ? `extra=${extra}` : "", deck ? `deck=${encodeURIComponent(deck)}` : ""].filter(Boolean).join("&");
@@ -122,78 +125,64 @@ function LernenContent() {
           </p>
         )}
 
+        <ChapterCard showReviews={false} />
+
+        <div
+          className="grid grid-cols-3 gap-1 p-1 rounded-2xl"
+          style={{ background: "var(--cream-deep)" }}
+          role="radiogroup"
+          aria-label="Richtung"
+        >
+          {MODES.map((m) => (
+            <button
+              key={m.v}
+              type="button"
+              role="radio"
+              aria-checked={mode === m.v}
+              onClick={() => setMode(m.v)}
+              className="tap h-10 rounded-xl text-[13px] font-bold"
+              style={mode === m.v ? { background: "var(--paper)", color: "var(--ink)" } : { color: "var(--ink-soft)" }}
+            >
+              {m.l}
+            </button>
+          ))}
+        </div>
+
         {stats && (
-          <section className="rounded-[22px] p-4 flex flex-col gap-3" style={{ background: "var(--privat)", color: "var(--ink)" }}>
-            <div className="flex items-start justify-between gap-3">
+          <Card className="p-3.5 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="text-[13px] font-bold">Heute offen</div>
-                <div className="serif text-[44px] leading-none mt-1">{todo}</div>
-                <div className="text-[13px] font-medium mt-1">
-                  {stats.due === 1 ? "1 Wiederholung" : `${stats.due} Wiederholungen`} · {stats.newToday} neu
+                <div className="text-[14.5px] font-semibold">Wiederholen</div>
+                <div className="text-[12.5px]" style={{ color: "var(--ink-soft)" }}>
+                  {stats.due === 1 ? "1 Karte fällig" : `${stats.due} Karten fällig`} · {stats.newToday} neue verfügbar
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-1 text-[12.5px] font-semibold">
-                <span className="inline-flex items-center gap-1">
-                  <Flame size={15} strokeWidth={2.2} aria-hidden="true" />
-                  {stats.streak === 1 ? "1 Tag" : `${stats.streak} Tage`}
-                </span>
-              </div>
+              <span className="inline-flex items-center gap-1 text-[12.5px] font-bold" style={{ color: "var(--privat-text)" }}>
+                <Flame size={14} strokeWidth={2.2} aria-hidden="true" />
+                {stats.streak === 1 ? "1 Tag" : `${stats.streak} Tage`}
+              </span>
             </div>
-
-            <div>
-              <div className="flex justify-between text-[12px] font-semibold mb-1">
-                <span>Tagesziel</span>
-                <span>
-                  {stats.reviewedToday} / {stats.dailyGoal}
-                </span>
-              </div>
-              <div className="h-2 rounded-full" style={{ background: "rgba(20,22,28,0.15)" }}>
-                <div className="h-2 rounded-full" style={{ width: `${goalPct}%`, background: "var(--ink)" }} />
-              </div>
-            </div>
-
-            <div
-              className="grid grid-cols-3 gap-1 p-1 rounded-2xl"
-              style={{ background: "rgba(20,22,28,0.12)" }}
-              role="radiogroup"
-              aria-label="Richtung"
-            >
-              {MODES.map((m) => (
-                <button
-                  key={m.v}
-                  type="button"
-                  role="radio"
-                  aria-checked={mode === m.v}
-                  onClick={() => setMode(m.v)}
-                  className="tap h-10 rounded-xl text-[13px] font-bold"
-                  style={mode === m.v ? { background: "var(--paper)", color: "var(--ink)" } : { color: "var(--ink)" }}
+            <div className="flex gap-2">
+              {todo > 0 && (
+                <Link
+                  href={href()}
+                  className="tap flex-1 h-11 rounded-2xl inline-flex items-center justify-center gap-1.5 text-[14px] font-bold"
+                  style={{ background: "var(--ink)", color: "white" }}
                 >
-                  {m.l}
-                </button>
-              ))}
+                  <Play size={15} strokeWidth={2.4} aria-hidden="true" /> Wiederholen
+                </Link>
+              )}
+              {stats.fresh > stats.newToday && (
+                <Link
+                  href={href(EXTRA)}
+                  className="tap flex-1 h-11 rounded-2xl inline-flex items-center justify-center gap-1.5 text-[14px] font-bold"
+                  style={{ background: "var(--cream-deep)", color: "var(--ink)" }}
+                >
+                  <Plus size={15} strokeWidth={2.4} aria-hidden="true" /> {EXTRA} neue
+                </Link>
+              )}
             </div>
-
-            {todo > 0 ? (
-              <Link
-                href={href()}
-                className="tap h-12 rounded-2xl inline-flex items-center justify-center gap-2 text-[15px] font-bold"
-                style={{ background: "var(--ink)", color: "white" }}
-              >
-                <Play size={16} strokeWidth={2.4} aria-hidden="true" /> Lernen starten
-              </Link>
-            ) : (
-              <p className="text-[13.5px] font-semibold">Für heute alles erledigt.</p>
-            )}
-            {stats.fresh > stats.newToday && (
-              <Link
-                href={href(EXTRA)}
-                className="tap h-11 rounded-2xl inline-flex items-center justify-center gap-1.5 text-[14px] font-bold"
-                style={{ background: "rgba(255,255,255,0.55)", color: "var(--ink)" }}
-              >
-                <Plus size={15} strokeWidth={2.4} aria-hidden="true" /> Mehr lernen: {EXTRA} neue Karten
-              </Link>
-            )}
-          </section>
+          </Card>
         )}
 
         {data && (
@@ -347,15 +336,7 @@ function SettingsForm({ initial, onClose, onSaved }: { initial: StudySettings; o
           <Label>Neue Karten pro Tag</Label>
           <Stepper value={s.newPerDay} onChange={(v) => setS({ ...s, newPerDay: v })} step={5} min={0} max={100} unit="neue" />
           <p className="text-[12px] mt-1.5" style={{ color: "var(--muted)" }}>
-            Jede neue Karte kommt in den nächsten Tagen mehrmals wieder. Mehr neue heisst später mehr Wiederholungen.
-          </p>
-        </div>
-
-        <div>
-          <Label>Tagesziel</Label>
-          <Stepper value={s.dailyGoal} onChange={(v) => setS({ ...s, dailyGoal: v })} step={10} min={10} max={300} unit="Karten" />
-          <p className="text-[12px] mt-1.5" style={{ color: "var(--muted)" }}>
-            Neue und Wiederholungen zusammen. Etwa 6 bis 8 Karten pro Minute.
+            Gilt für „Wiederholen“. Das Kapitel des Tages geht immer ganz durch.
           </p>
         </div>
 
@@ -384,7 +365,7 @@ function SettingsForm({ initial, onClose, onSaved }: { initial: StudySettings; o
             </label>
           </div>
           <p className="text-[12px] mt-1.5" style={{ color: "var(--muted)" }}>
-            Nur wenn das Tagesziel noch offen ist, einmal pro Tag.
+            Einmal pro Tag, nur wenn das Kapitel des Tages noch offen ist.
           </p>
         </div>
 
