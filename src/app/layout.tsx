@@ -1,21 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Manrope } from "next/font/google";
 import { AuthGate } from "@/components/AuthGate";
+import "@fontsource-variable/manrope";
+import "@fontsource-variable/bricolage-grotesque";
 import "./globals.css";
 
-const display = Bricolage_Grotesque({
-  variable: "--font-display",
-  weight: ["700", "800"],
-  subsets: ["latin"],
-  display: "swap",
-});
+// Schriften liegen im Paket (Fontsource), nicht bei Google: der Build
+// braucht so kein Netz, und die vietnamesischen Zeichen sind dabei.
 
-const body = Manrope({
-  variable: "--font-body",
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Life-App",
@@ -51,7 +42,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="de" className={`${display.variable} ${body.variable} h-full antialiased`}>
+    <html lang="de" className="h-full antialiased">
       <body className="min-h-full">
         <AuthGate>{children}</AuthGate>
       </body>

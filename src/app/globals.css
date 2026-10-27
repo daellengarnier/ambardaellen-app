@@ -8,6 +8,9 @@
   /* Richtung "Zwei Welten" (2026-10). Die Namen der Variablen stammen
      aus der Paar-App und bleiben, damit nicht jede Komponente angefasst
      werden muss: cream = Grund, paper = Karte, terra = Hauptakzent. */
+  --font-display: "Bricolage Grotesque Variable";
+  --font-body: "Manrope Variable";
+
   --cream:      #EDF0F5;
   --cream-deep: #E3E7EF;
   --paper:      #FFFFFF;
