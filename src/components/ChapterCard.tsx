@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Check, Flame, Play, RefreshCw, ChevronRight } from "lucide-react";
+import { Check, Flame, Play, RefreshCw } from "lucide-react";
 import { useLife } from "@/lib/lifeStore";
 import type { ChapterInfo } from "@/lib/life";
 import { shortDate } from "@/lib/date";
@@ -24,7 +23,7 @@ function modeQuery(): string {
  * Kapitel des Tages: jeden Tag eine Lektion ganz durcharbeiten.
  * Auf Heute und auf der Lernseite.
  */
-export function ChapterCard({ showReviews = true }: { showReviews?: boolean }) {
+export function ChapterCard() {
   const chapter = useLife((s) => s.chapter);
   const study = useLife((s) => s.study);
   const chooseChapter = useLife((s) => s.chooseChapter);
@@ -35,7 +34,6 @@ export function ChapterCard({ showReviews = true }: { showReviews?: boolean }) {
   const current = chapter.chapter;
   const suggested = chapter.chapters.find((c) => c.id === chapter.suggestion);
   const pct = chapter.total ? Math.round((chapter.done / chapter.total) * 100) : 0;
-  const reviewsDue = study?.due ?? 0;
   const startHref = `/lernen/ueben?chapter=1${modeQuery()}`;
 
   return (
@@ -142,19 +140,6 @@ export function ChapterCard({ showReviews = true }: { showReviews?: boolean }) {
         </>
       )}
 
-      {showReviews && reviewsDue > 0 && (
-        <Link
-          href={`/lernen/ueben${modeQuery().replace("&", "?")}`}
-          className="tap flex items-center justify-between text-[13px] font-semibold pt-1"
-          style={{ color: "#C3C8D2" }}
-        >
-          <span>
-            Dazu {reviewsDue} {reviewsDue === 1 ? "Wiederholung" : "Wiederholungen"} fällig
-          </span>
-          <ChevronRight size={15} aria-hidden="true" />
-        </Link>
-      )}
-
       <ChapterPicker
         open={pickerOpen}
         chapters={chapter.chapters}
@@ -205,7 +190,9 @@ function ChapterPicker({
                   </span>
                   <span className="block text-[12px] mt-0.5" style={{ color: active ? "#C3C8D2" : "var(--muted)" }}>
                     {c.cards} Karten ·{" "}
-                    {c.lastCompleted ? `zuletzt am ${shortDate(c.lastCompleted)}` : "noch nie durchgearbeitet"}
+                    {c.timesCompleted === 0
+                      ? "noch nie durchgearbeitet"
+                      : `${c.timesCompleted}× durch, zuletzt ${shortDate(c.lastCompleted!)}`}
                   </span>
                 </span>
                 {c.id === suggestion && !active && (

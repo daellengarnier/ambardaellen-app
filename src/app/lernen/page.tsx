@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { Flame, Play, Upload, ChevronRight, Settings2, Plus, Minus, Bell, BellOff } from "lucide-react";
+import { Play, Upload, ChevronRight, Settings2, Bell, BellOff } from "lucide-react";
 import type { DeckDto, StudyStats } from "@/lib/life";
 import { currentSubscription, disablePush, enablePush, pushSupported } from "@/lib/push";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -11,6 +10,7 @@ import { ClientOnly } from "@/components/ClientOnly";
 import { Sheet } from "@/components/Sheet";
 import { ChapterCard } from "@/components/ChapterCard";
 import { useLife } from "@/lib/lifeStore";
+import { shortDate } from "@/lib/date";
 import { Label } from "@/components/sheets/TodoAddSheet";
 
 export default function LernenPage() {
@@ -28,7 +28,6 @@ const MODES: Array<{ v: Mode; l: string }> = [
   { v: "de_vi", l: "DE → VI" },
 ];
 const MODE_KEY = "lernen.mode";
-const EXTRA = 10;
 
 type StudySettings = { newPerDay: number; dailyGoal: number; reminderEnabled: boolean; reminderTime: string };
 type Loaded = { decks: DeckDto[]; stats: StudyStats; settings: StudySettings };
@@ -93,12 +92,9 @@ function LernenContent() {
   }, []);
 
   const stats = data?.stats;
-  const todo = stats ? stats.due + stats.newToday : 0;
-  const modeQuery = mode === "mix" ? "" : `mode=${mode}`;
-  const href = (extra?: number, deck?: string) => {
-    const q = [modeQuery, extra ? `extra=${extra}` : "", deck ? `deck=${encodeURIComponent(deck)}` : ""].filter(Boolean).join("&");
-    return `/lernen/ueben${q ? `?${q}` : ""}`;
-  };
+  const chapter = useLife((s) => s.chapter);
+  const chooseChapter = useLife((s) => s.chooseChapter);
+  const modeQuery = mode === "mix" ? "" : `&mode=${mode}`;
 
   return (
     <>
@@ -125,7 +121,7 @@ function LernenContent() {
           </p>
         )}
 
-        <ChapterCard showReviews={false} />
+        <ChapterCard />
 
         <div
           className="grid grid-cols-3 gap-1 p-1 rounded-2xl"
@@ -148,40 +144,22 @@ function LernenContent() {
           ))}
         </div>
 
-        {stats && (
-          <Card className="p-3.5 flex flex-col gap-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <div className="text-[14.5px] font-semibold">Wiederholen</div>
-                <div className="text-[12.5px]" style={{ color: "var(--ink-soft)" }}>
-                  {stats.due === 1 ? "1 Karte fällig" : `${stats.due} Karten fällig`} · {stats.newToday} neue verfügbar
-                </div>
+        {/* Freiwillig: Karten aus früheren Kapiteln, deren Abstand abgelaufen ist. */}
+        {stats && stats.due > 0 && (
+          <Card className="p-3.5 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="text-[14.5px] font-semibold">Auffrischen</div>
+              <div className="text-[12.5px]" style={{ color: "var(--ink-soft)" }}>
+                Freiwillig: {stats.due === 1 ? "1 Karte" : `${stats.due} Karten`} aus früheren Kapiteln sind wieder dran.
               </div>
-              <span className="inline-flex items-center gap-1 text-[12.5px] font-bold" style={{ color: "var(--privat-text)" }}>
-                <Flame size={14} strokeWidth={2.2} aria-hidden="true" />
-                {stats.streak === 1 ? "1 Tag" : `${stats.streak} Tage`}
-              </span>
             </div>
-            <div className="flex gap-2">
-              {todo > 0 && (
-                <Link
-                  href={href()}
-                  className="tap flex-1 h-11 rounded-2xl inline-flex items-center justify-center gap-1.5 text-[14px] font-bold"
-                  style={{ background: "var(--ink)", color: "white" }}
-                >
-                  <Play size={15} strokeWidth={2.4} aria-hidden="true" /> Wiederholen
-                </Link>
-              )}
-              {stats.fresh > stats.newToday && (
-                <Link
-                  href={href(EXTRA)}
-                  className="tap flex-1 h-11 rounded-2xl inline-flex items-center justify-center gap-1.5 text-[14px] font-bold"
-                  style={{ background: "var(--cream-deep)", color: "var(--ink)" }}
-                >
-                  <Plus size={15} strokeWidth={2.4} aria-hidden="true" /> {EXTRA} neue
-                </Link>
-              )}
-            </div>
+            <a
+              href={`/lernen/ueben?review=1${modeQuery}`}
+              className="tap shrink-0 h-11 px-4 rounded-2xl inline-flex items-center gap-1.5 text-[14px] font-bold"
+              style={{ background: "var(--ink)", color: "white" }}
+            >
+              <Play size={15} strokeWidth={2.4} aria-hidden="true" /> Los
+            </a>
           </Card>
         )}
 
@@ -198,26 +176,42 @@ function LernenContent() {
                 <Upload size={14} strokeWidth={2} aria-hidden="true" /> Importieren
               </button>
             </div>
-            {data.decks.map((d) => {
-              const pct = d.items ? Math.round((d.learned / d.items) * 100) : 0;
+            {chapter?.chapters.map((c) => {
+              const isToday = chapter.chapter?.id === c.id;
               return (
-                <Link key={d.id} href={href(undefined, d.id)} className="block">
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={async () => {
+                    // Antippen = als Kapitel des Tages nehmen und loslegen.
+                    if (!isToday) await chooseChapter(c.id);
+                    window.location.href = `/lernen/ueben?chapter=1${modeQuery}`;
+                  }}
+                  className="tap block w-full text-left"
+                >
                   <Card className="p-3 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="text-[14.5px] font-semibold truncate" lang="vi">
-                        {d.title}
+                        {c.title}
                       </div>
-                      <div className="mt-1.5 h-1.5 rounded-full" style={{ background: "var(--cream-deep)" }}>
-                        <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: "var(--sage)" }} />
-                      </div>
-                      <div className="text-[11.5px] mt-1" style={{ color: "var(--muted)" }}>
-                        {d.cards} Karten · {pct}% gelernt
-                        {d.due > 0 && ` · ${d.due} fällig`}
+                      <div className="text-[12px] mt-0.5" style={{ color: "var(--muted)" }}>
+                        {c.cards} Karten ·{" "}
+                        {c.timesCompleted === 0
+                          ? "noch nie durchgearbeitet"
+                          : `${c.timesCompleted}× durchgearbeitet, zuletzt ${shortDate(c.lastCompleted!)}`}
                       </div>
                     </div>
+                    {isToday && (
+                      <span
+                        className="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-lg"
+                        style={{ background: "var(--privat-soft)", color: "var(--privat-text)" }}
+                      >
+                        heute
+                      </span>
+                    )}
                     <ChevronRight size={16} strokeWidth={1.8} color="var(--muted)" aria-hidden="true" />
                   </Card>
-                </Link>
+                </button>
               );
             })}
           </section>
@@ -237,34 +231,6 @@ function LernenContent() {
   );
 }
 
-function Stepper({ value, onChange, step, min, max, unit }: { value: number; onChange: (v: number) => void; step: number; min: number; max: number; unit: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <button
-        type="button"
-        onClick={() => onChange(Math.max(min, value - step))}
-        className="tap w-11 h-11 rounded-full inline-flex items-center justify-center"
-        style={{ background: "var(--cream-deep)" }}
-        aria-label={`Weniger ${unit}`}
-      >
-        <Minus size={16} strokeWidth={2.2} />
-      </button>
-      <span className="serif text-[26px] w-14 text-center tabular-nums">{value}</span>
-      <button
-        type="button"
-        onClick={() => onChange(Math.min(max, value + step))}
-        className="tap w-11 h-11 rounded-full inline-flex items-center justify-center"
-        style={{ background: "var(--cream-deep)" }}
-        aria-label={`Mehr ${unit}`}
-      >
-        <Plus size={16} strokeWidth={2.2} />
-      </button>
-      <span className="text-[13px]" style={{ color: "var(--ink-soft)" }}>
-        {unit}
-      </span>
-    </div>
-  );
-}
 
 function SettingsSheet({
   open,
@@ -332,14 +298,6 @@ function SettingsForm({ initial, onClose, onSaved }: { initial: StudySettings; o
   return (
     <Sheet open onClose={onClose} title="Lernen einstellen">
       <div className="mt-3 space-y-5">
-        <div>
-          <Label>Neue Karten pro Tag</Label>
-          <Stepper value={s.newPerDay} onChange={(v) => setS({ ...s, newPerDay: v })} step={5} min={0} max={100} unit="neue" />
-          <p className="text-[12px] mt-1.5" style={{ color: "var(--muted)" }}>
-            Gilt für „Wiederholen“. Das Kapitel des Tages geht immer ganz durch.
-          </p>
-        </div>
-
         <div>
           <Label>Erinnerung</Label>
           <div className="flex items-center gap-3">

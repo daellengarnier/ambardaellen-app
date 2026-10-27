@@ -154,6 +154,8 @@ export type ChapterInfo = {
   cards: number;
   /** Letzter Tag, an dem das Kapitel komplett durchgearbeitet wurde. */
   lastCompleted: string | null;
+  /** An wie vielen Tagen das Kapitel komplett durchgearbeitet wurde. */
+  timesCompleted: number;
 };
 
 /** Kapitel des Tages: jeden Tag eine Lektion ganz durcharbeiten. */

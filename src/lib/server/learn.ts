@@ -192,7 +192,8 @@ export async function listDecks(today: string): Promise<DeckDto[]> {
       (SELECT count(*)::int FROM cards c WHERE c.deck_id = d.id) AS cards,
       count(s.card_id)::int AS items,
       count(s.card_id) FILTER (WHERE s.introduced_on IS NOT NULL)::int AS learned,
-      count(s.card_id) FILTER (WHERE s.introduced_on IS NOT NULL AND s.due <= ${today}::date)::int AS due,
+      count(s.card_id) FILTER (WHERE s.introduced_on IS NOT NULL AND s.due <= ${today}::date
+        AND (s.last_reviewed_at IS NULL OR (s.last_reviewed_at AT TIME ZONE 'Europe/Zurich')::date < ${today}::date))::int AS due,
       count(s.card_id) FILTER (WHERE s.introduced_on IS NULL)::int AS fresh
     FROM decks d
     LEFT JOIN cards c ON c.deck_id = d.id
@@ -293,6 +294,19 @@ async function introducedToday(today: string): Promise<number> {
 export type StudyMode = "mix" | Direction;
 
 /**
+ * Fällig = schon gelernt, Termin erreicht und heute noch nicht geübt.
+ * Was heute im Kapitel dran war (auch mit "Nochmal"), zählt nicht als offen.
+ */
+function dueCond(today: string) {
+  const s = schema.cardStates;
+  return and(
+    isNotNull(s.introducedOn),
+    lte(s.due, today),
+    sql`(${s.lastReviewedAt} IS NULL OR (${s.lastReviewedAt} AT TIME ZONE 'Europe/Zurich')::date < ${today}::date)`,
+  );
+}
+
+/**
  * Was heute zu lernen ist: fällige Wiederholungen, dann neue Karten bis
  * zum Tageslimit (plus `extra`, wenn Alain mehr will). Im gemischten
  * Modus kommt die Gegenrichtung (DE→VI) einer Karte erst an einem
@@ -300,7 +314,7 @@ export type StudyMode = "mix" | Direction;
  */
 export async function getQueue(
   today: string,
-  opts: { deckId?: string; mode?: StudyMode; extra?: number } = {},
+  opts: { deckId?: string; mode?: StudyMode; extra?: number; includeNew?: boolean } = {},
 ): Promise<StudyItem[]> {
   const s = schema.cardStates;
   const c = schema.cards;
@@ -312,12 +326,13 @@ export async function getQueue(
     .select({ state: s, card: c })
     .from(s)
     .innerJoin(c, eq(s.cardId, c.id))
-    .where(and(isNotNull(s.introducedOn), lte(s.due, today), deckCond, dirCond))
+    .where(and(dueCond(today), deckCond, dirCond))
     .orderBy(asc(s.due), asc(c.position))
     .limit(500);
 
   const { newPerDay } = await getStudySettings();
-  const budget = Math.max(0, newPerDay - (await introducedToday(today))) + Math.max(0, opts.extra ?? 0);
+  const budget =
+    opts.includeNew === false ? 0 : Math.max(0, newPerDay - (await introducedToday(today))) + Math.max(0, opts.extra ?? 0);
   let fresh: typeof due = [];
   if (budget > 0) {
     const sibling = sql`(SELECT introduced_on FROM card_states x WHERE x.card_id = ${s.cardId} AND x.direction = 'vi_de')`;
@@ -397,7 +412,7 @@ export async function getStats(today: string): Promise<StudyStats> {
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(schema.cardStates)
-      .where(and(isNotNull(schema.cardStates.introducedOn), lte(schema.cardStates.due, today))),
+      .where(dueCond(today)),
     introducedToday(today),
     db
       .select({ n: sql<number>`count(*)::int` })
@@ -444,7 +459,7 @@ export async function getStats(today: string): Promise<StudyStats> {
 // wurde. Die Bewertungen fliessen wie sonst in die Wiederholung ein.
 
 async function listChapters(): Promise<ChapterInfo[]> {
-  const rows = await db.execute<{ id: string; title: string; position: number; cards: number; last_completed: string | null }>(sql`
+  const rows = await db.execute<{ id: string; title: string; position: number; cards: number; last_completed: string | null; times: number }>(sql`
     WITH per_day AS (
       SELECT c.deck_id, (r.reviewed_at AT TIME ZONE 'Europe/Zurich')::date AS day, count(DISTINCT r.card_id) AS n
       FROM card_reviews r JOIN cards c ON c.id = r.card_id
@@ -453,7 +468,8 @@ async function listChapters(): Promise<ChapterInfo[]> {
       SELECT deck_id, count(*) AS total FROM cards GROUP BY 1
     )
     SELECT d.id, d.title, d.position, t.total::int AS cards,
-      to_char(max(p.day) FILTER (WHERE p.n >= t.total), 'YYYY-MM-DD') AS last_completed
+      to_char(max(p.day) FILTER (WHERE p.n >= t.total), 'YYYY-MM-DD') AS last_completed,
+      count(p.day) FILTER (WHERE p.n >= t.total)::int AS times
     FROM decks d
     JOIN totals t ON t.deck_id = d.id
     LEFT JOIN per_day p ON p.deck_id = d.id
@@ -466,6 +482,7 @@ async function listChapters(): Promise<ChapterInfo[]> {
     position: r.position,
     cards: r.cards,
     lastCompleted: r.last_completed,
+    timesCompleted: r.times,
   }));
 }
 

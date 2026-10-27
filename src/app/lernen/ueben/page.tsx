@@ -165,8 +165,6 @@ function Session() {
   const total = queue ? queue.length : 0;
   const urlParams = new URLSearchParams(window.location.search);
   const isChapter = urlParams.get("chapter") === "1";
-  const modeParam = urlParams.get("mode");
-  const moreQuery = modeParam ? `&mode=${encodeURIComponent(modeParam)}` : "";
   const tips = item && view ? tipsFor(item, view.answer) : [];
 
   return (
@@ -212,7 +210,7 @@ function Session() {
             {total === 0
               ? isChapter
                 ? "Heute ist dieses Kapitel durch. Auf Heute kannst du ein weiteres wählen."
-                : "Für heute ist alles gelernt. Morgen kommen neue Karten."
+                : "Gerade ist nichts zum Auffrischen dran."
               : `${done} Karten gelernt.`}
           </p>
           {stats && stats.streak > 0 && (
@@ -222,16 +220,6 @@ function Session() {
             </p>
           )}
           <div className="flex flex-col gap-2 mt-4 w-full max-w-[280px]">
-            {!isChapter && stats && stats.fresh > 0 && (
-              // Volles Neuladen: dieselbe Seite mit neuer Runde.
-              <a
-                href={`/lernen/ueben?extra=10${moreQuery}`}
-                className="tap h-12 rounded-2xl inline-flex items-center justify-center text-[15px] font-bold"
-                style={{ background: "var(--privat)", color: "var(--ink)" }}
-              >
-                Mehr lernen: 10 neue
-              </a>
-            )}
             <Link
               href={isChapter ? "/" : "/lernen"}
               className="tap h-12 rounded-2xl inline-flex items-center justify-center text-[15px] font-bold"
