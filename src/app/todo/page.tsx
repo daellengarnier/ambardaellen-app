@@ -58,7 +58,8 @@ function TodoContent() {
   const filtered = useMemo(() => {
     let arr = todos.filter((t) => t.status !== "verworfen");
     if (world === "ohne") arr = arr.filter((t) => !t.area);
-    else if (world !== "alle") arr = arr.filter((t) => areaByKey(areas, t.area)?.world === world);
+    // Ohne Bereich zählt als Privat, wie auf Heute.
+    else if (world !== "alle") arr = arr.filter((t) => (areaByKey(areas, t.area)?.world ?? "privat") === world);
     if (areaFilter) arr = arr.filter((t) => t.area === areaFilter);
     if (query.trim()) {
       const q = query.toLowerCase();

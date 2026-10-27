@@ -27,6 +27,7 @@ import { DeleteAction } from "@/components/DeleteAction";
 import { TagChips } from "@/components/TagChips";
 import { TodoRow } from "@/components/TodoRow";
 import { ChapterCard } from "@/components/ChapterCard";
+import { WorldTile, chronological } from "@/components/WorldTile";
 import { ClientOnly } from "@/components/ClientOnly";
 import { QuickAddMenu } from "@/components/QuickAddMenu";
 import { HamburgerMenu } from "@/components/HamburgerMenu";
@@ -53,10 +54,7 @@ function HeuteSkeleton() {
 
 const byPrio = (a: TodoDto, b: TodoDto) => PRIO[a.prio].rank - PRIO[b.prio].rank;
 
-const WORLDS = [
-  { key: "spinnerei", label: "Spinnerei", bg: "var(--spinnerei)", fg: "#FFFFFF" },
-  { key: "privat", label: "Privat", bg: "var(--privat)", fg: "var(--ink)" },
-] as const;
+
 
 function HeuteContent() {
   const currentUser = useStore((s) => s.currentUser);
@@ -121,7 +119,6 @@ function HeuteContent() {
     (t) => t.status === "erledigt" && t.doneAt && todayZurich(new Date(t.doneAt)) === todayZ,
   );
   const todayList = [...planned, ...dueToday];
-  const forToday = [...todayList, ...overdue];
   const worldOf = (t: TodoDto) => areaByKey(areas, t.area)?.world ?? null;
 
   const todayActs = activities
@@ -171,28 +168,24 @@ function HeuteContent() {
         </div>
       </div>
 
-      {/* Zwei Welten: was heute in Spinnerei und Privat ansteht */}
+      {/* Zwei Welten: alle offenen Todos, chronologisch. Ohne Bereich zählt als Privat. */}
       <div className="px-4 mb-3 grid grid-cols-2 gap-2.5">
-        {WORLDS.map((w) => {
-          const todayCount = forToday.filter((t) => worldOf(t) === w.key).length;
-          const overdueCount = overdue.filter((t) => worldOf(t) === w.key).length;
-          const openCount = open.filter((t) => worldOf(t) === w.key).length;
-          return (
-            <Link
-              key={w.key}
-              href={`/todo?welt=${w.key}`}
-              className="tap rounded-[22px] p-3.5 flex flex-col gap-2"
-              style={{ background: w.bg, color: w.fg, minHeight: 128 }}
-            >
-              <span className="text-[13px] font-bold">{w.label}</span>
-              <span className="serif text-[40px] leading-none">{todayCount}</span>
-              <span className="text-[12.5px] leading-snug font-medium">
-                heute
-                {overdueCount > 0 ? ` · ${overdueCount} überfällig` : ` · ${openCount} offen`}
-              </span>
-            </Link>
-          );
-        })}
+        <WorldTile
+          label="Spinnerei"
+          href="/todo?welt=spinnerei"
+          colors={{ bg: "var(--spinnerei)", fg: "#FFFFFF", ring: "rgba(255,255,255,0.75)", soft: "#D6DCFF", danger: "#FFD4CC" }}
+          todos={open.filter((t) => worldOf(t) === "spinnerei").sort(chronological)}
+          onToggle={toggleTodo}
+          onOpen={setOpenTodoId}
+        />
+        <WorldTile
+          label="Privat"
+          href="/todo?welt=privat"
+          colors={{ bg: "var(--privat)", fg: "var(--ink)", ring: "rgba(20,22,28,0.55)", soft: "#4A2A08", danger: "#8F1D12" }}
+          todos={open.filter((t) => worldOf(t) !== "spinnerei").sort(chronological)}
+          onToggle={toggleTodo}
+          onOpen={setOpenTodoId}
+        />
       </div>
 
       {/* Notiz von Jarvis für den Tag */}
