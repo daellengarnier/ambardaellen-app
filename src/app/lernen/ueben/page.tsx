@@ -30,6 +30,7 @@ const TYPE_LABEL: Record<string, string> = {
   vocab: "Vokabel",
   grammar: "Grammatik",
   phrase: "Satz",
+  sentence: "Satz",
 };
 
 const RATING_STYLE: Record<Rating, { bg: string; fg: string }> = {
@@ -44,6 +45,11 @@ type Side = { text: string; vi: boolean; hint?: string };
 /** Was gefragt und was aufgedeckt wird, je nach Kartentyp und Richtung. */
 function sides(item: StudyItem): { prompt: Side; answer: Side } {
   const c = item.card;
+  if (c.type === "sentence") {
+    return item.direction === "vi_de"
+      ? { prompt: { text: c.front, vi: true }, answer: { text: c.backDe, vi: false, hint: c.note } }
+      : { prompt: { text: c.backDe, vi: false }, answer: { text: c.front, vi: true, hint: c.note } };
+  }
   if (c.type === "phrase") {
     return item.direction === "vi_de"
       ? { prompt: { text: c.backVi, vi: true }, answer: { text: c.backDe, vi: false, hint: c.front } }
@@ -55,6 +61,25 @@ function sides(item: StudyItem): { prompt: Side; answer: Side } {
   return item.direction === "vi_de"
     ? { prompt: { text: c.front, vi: true }, answer: { text: c.backDe, vi: false } }
     : { prompt: { text: c.backDe, vi: false }, answer: { text: c.front, vi: true } };
+}
+
+/**
+ * Stufenweise Tipps, wenn Vietnamesisch gesucht ist: erst die Struktur
+ * (bei Sätzen) oder Englisch (bei Wörtern), dann der Anfang.
+ */
+function tipsFor(item: StudyItem, answer: Side): string[] {
+  if (!answer.vi) return [];
+  const c = item.card;
+  const words = answer.text.replace(/[.!?,]/g, "").split(/\s+/).filter(Boolean);
+  const tips: string[] = [];
+  if ((c.type === "sentence" || c.type === "phrase") && c.note) tips.push(c.note);
+  if (c.type === "vocab" && c.backEn) tips.push(`Englisch: ${c.backEn}`);
+  if (c.type === "vocab") {
+    tips.push(`${words.length} ${words.length === 1 ? "Silbe" : "Silben"}, beginnt mit „${answer.text.slice(0, 2)}…“`);
+  } else if (words.length > 2) {
+    tips.push(`Anfang: „${words.slice(0, 2).join(" ")} …“`);
+  }
+  return tips;
 }
 
 function Session() {
@@ -69,6 +94,7 @@ function Session() {
   const [done, setDone] = useState(0);
   const [stats, setStats] = useState<StudyStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tipLevel, setTipLevel] = useState(0);
 
   // Vollbild: Navigation ausblenden, solange geübt wird.
   useEffect(() => {
@@ -77,9 +103,15 @@ function Session() {
   }, [incSheetOpen, decSheetOpen]);
 
   useEffect(() => {
-    const deck = new URLSearchParams(window.location.search).get("deck");
+    // deck, mode und extra kommen unverändert von der Lernseite.
+    const q = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams();
+    for (const k of ["deck", "mode", "extra"]) {
+      const v = q.get(k);
+      if (v) params.set(k, v);
+    }
     let alive = true;
-    fetch(`/api/v1/study/queue${deck ? `?deck=${encodeURIComponent(deck)}` : ""}`, { cache: "no-store" })
+    fetch(`/api/v1/study/queue${params.size ? `?${params}` : ""}`, { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<{ items: StudyItem[] }>) : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((b) => alive && setQueue(b.items))
       .catch((e: Error) => alive && setError(e.message));
@@ -122,6 +154,7 @@ function Session() {
     }
     setIndex(index + 1);
     setRevealed(false);
+    setTipLevel(0);
   };
 
   const reveal = () => {
@@ -130,6 +163,9 @@ function Session() {
   };
 
   const total = queue ? queue.length : 0;
+  const modeParam = new URLSearchParams(window.location.search).get("mode");
+  const moreQuery = modeParam ? `&mode=${encodeURIComponent(modeParam)}` : "";
+  const tips = item && view ? tipsFor(item, view.answer) : [];
 
   return (
     <div className="min-h-dvh flex flex-col px-4 pt-4 pb-6">
@@ -179,13 +215,25 @@ function Session() {
               {stats.streak === 1 ? "1 Tag in Folge" : `${stats.streak} Tage in Folge`}
             </p>
           )}
-          <Link
-            href="/lernen"
-            className="tap mt-4 h-12 px-8 rounded-2xl inline-flex items-center justify-center text-[15px] font-bold"
-            style={{ background: "var(--ink)", color: "white" }}
-          >
-            Zurück
-          </Link>
+          <div className="flex flex-col gap-2 mt-4 w-full max-w-[280px]">
+            {stats && stats.fresh > 0 && (
+              // Volles Neuladen: dieselbe Seite mit neuer Runde.
+              <a
+                href={`/lernen/ueben?extra=10${moreQuery}`}
+                className="tap h-12 rounded-2xl inline-flex items-center justify-center text-[15px] font-bold"
+                style={{ background: "var(--privat)", color: "var(--ink)" }}
+              >
+                Mehr lernen: 10 neue
+              </a>
+            )}
+            <Link
+              href="/lernen"
+              className="tap h-12 rounded-2xl inline-flex items-center justify-center text-[15px] font-bold"
+              style={{ background: "var(--ink)", color: "white" }}
+            >
+              Zurück
+            </Link>
+          </div>
         </div>
       )}
 
@@ -218,6 +266,20 @@ function Session() {
                 </p>
                 {view.prompt.vi && hasVoice && <SpeakButton text={view.prompt.text} />}
               </div>
+
+              {!revealed && tipLevel > 0 && (
+                <ul className="flex flex-col gap-1.5">
+                  {tips.slice(0, tipLevel).map((t) => (
+                    <li
+                      key={t}
+                      className="text-[13.5px] rounded-xl px-3 py-2"
+                      style={{ background: "var(--spinnerei-soft)", color: "var(--spinnerei-text)" }}
+                    >
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
               {revealed && (
                 <div className="pt-4 flex flex-col gap-2" style={{ borderTop: "1px solid var(--cream-deep)" }}>
@@ -283,14 +345,26 @@ function Session() {
               ))}
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={reveal}
-              className="tap h-14 rounded-2xl text-[16px] font-bold"
-              style={{ background: "var(--ink)", color: "white" }}
-            >
-              Aufdecken
-            </button>
+            <div className="flex gap-2">
+              {tipLevel < tips.length && (
+                <button
+                  type="button"
+                  onClick={() => setTipLevel(tipLevel + 1)}
+                  className="tap h-14 px-5 rounded-2xl text-[15px] font-bold"
+                  style={{ background: "var(--paper)", color: "var(--ink)" }}
+                >
+                  Tipp
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={reveal}
+                className="tap flex-1 h-14 rounded-2xl text-[16px] font-bold"
+                style={{ background: "var(--ink)", color: "white" }}
+              >
+                Aufdecken
+              </button>
+            </div>
           )}
         </>
       )}

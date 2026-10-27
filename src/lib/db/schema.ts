@@ -161,6 +161,8 @@ export const decks = pgTable("decks", {
   topic: text("topic").notNull().default(""),
   source: text("source").notNull().default(""),
   language: text("language").notNull().default("vi"),
+  // Reihenfolge beim Lernen neuer Karten (z.B. Lektionsnummer).
+  position: integer("position").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -172,7 +174,7 @@ export const cards = pgTable(
     deckId: text("deck_id")
       .notNull()
       .references(() => decks.id, { onDelete: "cascade" }),
-    type: text("type").notNull(), // "vocab" | "grammar" | "phrase"
+    type: text("type").notNull(), // "vocab" | "grammar" | "phrase" | "sentence"
     front: text("front").notNull(),
     backDe: text("back_de").notNull().default(""),
     backEn: text("back_en").notNull().default(""),
@@ -227,3 +229,20 @@ export const cardReviews = pgTable(
 export type DeckRow = typeof decks.$inferSelect;
 export type CardRow = typeof cards.$inferSelect;
 export type CardStateRow = typeof cardStates.$inferSelect;
+
+// Einstellungen der App als Schlüssel/Wert, z.B. "study" (Lernen).
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Web-Push-Abos der Geräte (Erinnerungen ans Lernen).
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userAgent: text("user_agent").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

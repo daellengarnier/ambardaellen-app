@@ -22,8 +22,11 @@ export const metadata: Metadata = {
   description: "Todos, Ziele und Alltag von Alain, verbunden mit Jarvis.",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg" }],
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   appleWebApp: {
     capable: true,

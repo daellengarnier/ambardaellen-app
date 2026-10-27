@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Flame, Play, Upload, ChevronRight } from "lucide-react";
+import { Flame, Play, Upload, ChevronRight, Settings2, Plus, Minus, Bell, BellOff } from "lucide-react";
 import type { DeckDto, StudyStats } from "@/lib/life";
+import { currentSubscription, disablePush, enablePush, pushSupported } from "@/lib/push";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Card } from "@/components/Card";
 import { ClientOnly } from "@/components/ClientOnly";
 import { Sheet } from "@/components/Sheet";
+import { Label } from "@/components/sheets/TodoAddSheet";
 
 export default function LernenPage() {
   return (
@@ -17,21 +19,56 @@ export default function LernenPage() {
   );
 }
 
-type Loaded = { decks: DeckDto[]; stats: StudyStats };
+type Mode = "mix" | "vi_de" | "de_vi";
+const MODES: Array<{ v: Mode; l: string }> = [
+  { v: "mix", l: "Gemischt" },
+  { v: "vi_de", l: "VI → DE" },
+  { v: "de_vi", l: "DE → VI" },
+];
+const MODE_KEY = "lernen.mode";
+const EXTRA = 10;
+
+type StudySettings = { newPerDay: number; dailyGoal: number; reminderEnabled: boolean; reminderTime: string };
+type Loaded = { decks: DeckDto[]; stats: StudyStats; settings: StudySettings };
 
 async function load(): Promise<Loaded | null> {
-  const [d, s] = await Promise.all([
+  const [d, s, st] = await Promise.all([
     fetch("/api/v1/decks", { cache: "no-store" }),
     fetch("/api/v1/study/stats", { cache: "no-store" }),
+    fetch("/api/v1/study/settings", { cache: "no-store" }),
   ]);
-  if (!d.ok || !s.ok) return null;
-  return { decks: ((await d.json()) as { decks: DeckDto[] }).decks, stats: (await s.json()) as StudyStats };
+  if (!d.ok || !s.ok || !st.ok) return null;
+  return {
+    decks: ((await d.json()) as { decks: DeckDto[] }).decks,
+    stats: (await s.json()) as StudyStats,
+    settings: (await st.json()) as StudySettings,
+  };
+}
+
+function readMode(): Mode {
+  try {
+    const m = localStorage.getItem(MODE_KEY);
+    return m === "vi_de" || m === "de_vi" ? m : "mix";
+  } catch {
+    return "mix";
+  }
 }
 
 function LernenContent() {
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mode, setModeState] = useState<Mode>(readMode);
+
+  const setMode = (m: Mode) => {
+    setModeState(m);
+    try {
+      localStorage.setItem(MODE_KEY, m);
+    } catch {
+      // ohne Speicher gilt die Wahl nur für diese Sitzung
+    }
+  };
 
   const reload = useCallback(async () => {
     const r = await load();
@@ -53,10 +90,30 @@ function LernenContent() {
 
   const stats = data?.stats;
   const todo = stats ? stats.due + stats.newToday : 0;
+  const goalPct = stats ? Math.min(100, Math.round((stats.reviewedToday / Math.max(1, stats.dailyGoal)) * 100)) : 0;
+  const modeQuery = mode === "mix" ? "" : `mode=${mode}`;
+  const href = (extra?: number, deck?: string) => {
+    const q = [modeQuery, extra ? `extra=${extra}` : "", deck ? `deck=${encodeURIComponent(deck)}` : ""].filter(Boolean).join("&");
+    return `/lernen/ueben${q ? `?${q}` : ""}`;
+  };
 
   return (
     <>
-      <ScreenHeader title="Lernen" subtitle="Vietnamesisch · Ziel B1 Mitte 2027" />
+      <ScreenHeader
+        title="Lernen"
+        subtitle="Vietnamesisch · Ziel B1 Mitte 2027"
+        right={
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            className="tap w-11 h-11 rounded-full inline-flex items-center justify-center shadow-card"
+            style={{ background: "var(--paper)" }}
+            aria-label="Lern-Einstellungen"
+          >
+            <Settings2 size={18} strokeWidth={1.9} />
+          </button>
+        }
+      />
 
       <div className="px-4 space-y-3">
         {error && (
@@ -66,13 +123,10 @@ function LernenContent() {
         )}
 
         {stats && (
-          <section
-            className="rounded-[22px] p-4 flex flex-col gap-3"
-            style={{ background: "var(--privat)", color: "var(--ink)" }}
-          >
+          <section className="rounded-[22px] p-4 flex flex-col gap-3" style={{ background: "var(--privat)", color: "var(--ink)" }}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-[13px] font-bold">Heute</div>
+                <div className="text-[13px] font-bold">Heute offen</div>
                 <div className="serif text-[44px] leading-none mt-1">{todo}</div>
                 <div className="text-[13px] font-medium mt-1">
                   {stats.due === 1 ? "1 Wiederholung" : `${stats.due} Wiederholungen`} · {stats.newToday} neu
@@ -83,12 +137,45 @@ function LernenContent() {
                   <Flame size={15} strokeWidth={2.2} aria-hidden="true" />
                   {stats.streak === 1 ? "1 Tag" : `${stats.streak} Tage`}
                 </span>
-                <span>{stats.reviewedToday} heute geübt</span>
               </div>
             </div>
+
+            <div>
+              <div className="flex justify-between text-[12px] font-semibold mb-1">
+                <span>Tagesziel</span>
+                <span>
+                  {stats.reviewedToday} / {stats.dailyGoal}
+                </span>
+              </div>
+              <div className="h-2 rounded-full" style={{ background: "rgba(20,22,28,0.15)" }}>
+                <div className="h-2 rounded-full" style={{ width: `${goalPct}%`, background: "var(--ink)" }} />
+              </div>
+            </div>
+
+            <div
+              className="grid grid-cols-3 gap-1 p-1 rounded-2xl"
+              style={{ background: "rgba(20,22,28,0.12)" }}
+              role="radiogroup"
+              aria-label="Richtung"
+            >
+              {MODES.map((m) => (
+                <button
+                  key={m.v}
+                  type="button"
+                  role="radio"
+                  aria-checked={mode === m.v}
+                  onClick={() => setMode(m.v)}
+                  className="tap h-10 rounded-xl text-[13px] font-bold"
+                  style={mode === m.v ? { background: "var(--paper)", color: "var(--ink)" } : { color: "var(--ink)" }}
+                >
+                  {m.l}
+                </button>
+              ))}
+            </div>
+
             {todo > 0 ? (
               <Link
-                href="/lernen/ueben"
+                href={href()}
                 className="tap h-12 rounded-2xl inline-flex items-center justify-center gap-2 text-[15px] font-bold"
                 style={{ background: "var(--ink)", color: "white" }}
               >
@@ -97,13 +184,22 @@ function LernenContent() {
             ) : (
               <p className="text-[13.5px] font-semibold">Für heute alles erledigt.</p>
             )}
+            {stats.fresh > stats.newToday && (
+              <Link
+                href={href(EXTRA)}
+                className="tap h-11 rounded-2xl inline-flex items-center justify-center gap-1.5 text-[14px] font-bold"
+                style={{ background: "rgba(255,255,255,0.55)", color: "var(--ink)" }}
+              >
+                <Plus size={15} strokeWidth={2.4} aria-hidden="true" /> Mehr lernen: {EXTRA} neue Karten
+              </Link>
+            )}
           </section>
         )}
 
         {data && (
           <section className="space-y-2">
             <div className="flex items-center justify-between px-1 pt-1">
-              <h2 className="serif-i text-[20px]">Decks</h2>
+              <h2 className="serif-i text-[20px]">Lektionen</h2>
               <button
                 type="button"
                 onClick={() => setImportOpen(true)}
@@ -116,25 +212,17 @@ function LernenContent() {
             {data.decks.map((d) => {
               const pct = d.items ? Math.round((d.learned / d.items) * 100) : 0;
               return (
-                <Link key={d.id} href={`/lernen/ueben?deck=${encodeURIComponent(d.id)}`} className="block">
-                  <Card className="p-3.5 flex items-center gap-3">
+                <Link key={d.id} href={href(undefined, d.id)} className="block">
+                  <Card className="p-3 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="text-[11.5px] font-bold" style={{ color: "var(--muted)" }}>
-                        {[d.level, d.course].filter(Boolean).join(" · ")}
-                      </div>
-                      <div className="text-[15px] font-semibold truncate mt-0.5" lang="vi">
+                      <div className="text-[14.5px] font-semibold truncate" lang="vi">
                         {d.title}
                       </div>
-                      {d.topic && (
-                        <div className="text-[12.5px] truncate" style={{ color: "var(--ink-soft)" }}>
-                          {d.topic}
-                        </div>
-                      )}
-                      <div className="mt-2 h-1.5 rounded-full" style={{ background: "var(--cream-deep)" }}>
+                      <div className="mt-1.5 h-1.5 rounded-full" style={{ background: "var(--cream-deep)" }}>
                         <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: "var(--sage)" }} />
                       </div>
                       <div className="text-[11.5px] mt-1" style={{ color: "var(--muted)" }}>
-                        {d.cards} Karten · {d.learned}/{d.items} gelernt
+                        {d.cards} Karten · {pct}% gelernt
                         {d.due > 0 && ` · ${d.due} fällig`}
                       </div>
                     </div>
@@ -148,7 +236,205 @@ function LernenContent() {
       </div>
 
       <ImportSheet open={importOpen} onClose={() => setImportOpen(false)} onDone={reload} />
+      {data && (
+        <SettingsSheet
+          open={settingsOpen}
+          initial={data.settings}
+          onClose={() => setSettingsOpen(false)}
+          onSaved={reload}
+        />
+      )}
     </>
+  );
+}
+
+function Stepper({ value, onChange, step, min, max, unit }: { value: number; onChange: (v: number) => void; step: number; min: number; max: number; unit: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(min, value - step))}
+        className="tap w-11 h-11 rounded-full inline-flex items-center justify-center"
+        style={{ background: "var(--cream-deep)" }}
+        aria-label={`Weniger ${unit}`}
+      >
+        <Minus size={16} strokeWidth={2.2} />
+      </button>
+      <span className="serif text-[26px] w-14 text-center tabular-nums">{value}</span>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(max, value + step))}
+        className="tap w-11 h-11 rounded-full inline-flex items-center justify-center"
+        style={{ background: "var(--cream-deep)" }}
+        aria-label={`Mehr ${unit}`}
+      >
+        <Plus size={16} strokeWidth={2.2} />
+      </button>
+      <span className="text-[13px]" style={{ color: "var(--ink-soft)" }}>
+        {unit}
+      </span>
+    </div>
+  );
+}
+
+function SettingsSheet({
+  open,
+  initial,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  initial: StudySettings;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  if (!open) return null;
+  return <SettingsForm initial={initial} onClose={onClose} onSaved={onSaved} />;
+}
+
+function SettingsForm({ initial, onClose, onSaved }: { initial: StudySettings; onClose: () => void; onSaved: () => void }) {
+  const [s, setS] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [deviceOn, setDeviceOn] = useState<boolean | null>(null);
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    currentSubscription().then((sub) => alive && setDeviceOn(sub !== null));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const save = async () => {
+    setBusy(true);
+    await fetch("/api/v1/study/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(s),
+    });
+    setBusy(false);
+    onSaved();
+    onClose();
+  };
+
+  const toggleDevice = async () => {
+    setPushMsg(null);
+    if (deviceOn) {
+      await disablePush();
+      setDeviceOn(false);
+      return;
+    }
+    const r = await enablePush();
+    if (r.ok) {
+      setDeviceOn(true);
+      setS((x) => ({ ...x, reminderEnabled: true }));
+    } else {
+      setPushMsg(r.error);
+    }
+  };
+
+  const test = async () => {
+    const res = await fetch("/api/v1/push/test", { method: "POST" });
+    const r = (await res.json().catch(() => ({}))) as { sent?: number };
+    setPushMsg(r.sent ? "Test gesendet." : "Kein Gerät hat die Nachricht angenommen.");
+  };
+
+  return (
+    <Sheet open onClose={onClose} title="Lernen einstellen">
+      <div className="mt-3 space-y-5">
+        <div>
+          <Label>Neue Karten pro Tag</Label>
+          <Stepper value={s.newPerDay} onChange={(v) => setS({ ...s, newPerDay: v })} step={5} min={0} max={100} unit="neue" />
+          <p className="text-[12px] mt-1.5" style={{ color: "var(--muted)" }}>
+            Jede neue Karte kommt in den nächsten Tagen mehrmals wieder. Mehr neue heisst später mehr Wiederholungen.
+          </p>
+        </div>
+
+        <div>
+          <Label>Tagesziel</Label>
+          <Stepper value={s.dailyGoal} onChange={(v) => setS({ ...s, dailyGoal: v })} step={10} min={10} max={300} unit="Karten" />
+          <p className="text-[12px] mt-1.5" style={{ color: "var(--muted)" }}>
+            Neue und Wiederholungen zusammen. Etwa 6 bis 8 Karten pro Minute.
+          </p>
+        </div>
+
+        <div>
+          <Label>Erinnerung</Label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={s.reminderEnabled}
+              onClick={() => setS({ ...s, reminderEnabled: !s.reminderEnabled })}
+              className="tap h-11 px-4 rounded-full text-[13.5px] font-bold"
+              style={s.reminderEnabled ? { background: "var(--ink)", color: "white" } : { background: "var(--cream-deep)", color: "var(--ink)" }}
+            >
+              {s.reminderEnabled ? "An" : "Aus"}
+            </button>
+            <label className="flex items-center gap-2 text-[13.5px]">
+              um
+              <input
+                type="time"
+                value={s.reminderTime}
+                onChange={(e) => setS({ ...s, reminderTime: e.target.value })}
+                className="h-11 rounded-xl px-3 text-[15px]"
+                style={{ background: "var(--cream-deep)" }}
+              />
+            </label>
+          </div>
+          <p className="text-[12px] mt-1.5" style={{ color: "var(--muted)" }}>
+            Nur wenn das Tagesziel noch offen ist, einmal pro Tag.
+          </p>
+        </div>
+
+        <div className="rounded-2xl p-3" style={{ background: "var(--paper-2)" }}>
+          <div className="text-[13.5px] font-semibold">Benachrichtigungen auf diesem Gerät</div>
+          <p className="text-[12px] mt-0.5" style={{ color: "var(--muted)" }}>
+            {pushSupported()
+              ? "Auf dem iPhone nur aus der App auf dem Home-Bildschirm."
+              : "Hier nicht möglich. Auf dem iPhone: in Safari Teilen → Zum Home-Bildschirm, dann dort öffnen."}
+          </p>
+          <div className="flex gap-2 mt-2">
+            <button
+              type="button"
+              onClick={toggleDevice}
+              disabled={deviceOn === null}
+              className="tap h-11 px-4 rounded-xl text-[13.5px] font-bold inline-flex items-center gap-1.5"
+              style={{ background: "var(--ink)", color: "white" }}
+            >
+              {deviceOn ? <BellOff size={15} aria-hidden="true" /> : <Bell size={15} aria-hidden="true" />}
+              {deviceOn ? "Ausschalten" : "Einschalten"}
+            </button>
+            {deviceOn && (
+              <button
+                type="button"
+                onClick={test}
+                className="tap h-11 px-4 rounded-xl text-[13.5px] font-semibold"
+                style={{ background: "var(--cream-deep)", color: "var(--ink)" }}
+              >
+                Testen
+              </button>
+            )}
+          </div>
+          {pushMsg && (
+            <p className="text-[12.5px] mt-2 font-semibold" style={{ color: "var(--ink-soft)" }}>
+              {pushMsg}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={save}
+        disabled={busy}
+        className="w-full mt-5 py-3.5 rounded-2xl text-white text-[15.5px] font-semibold tap"
+        style={{ background: "var(--terra)" }}
+      >
+        {busy ? "…" : "Speichern"}
+      </button>
+    </Sheet>
   );
 }
 
@@ -175,34 +461,34 @@ function ImportSheet({ open, onClose, onDone }: { open: boolean; onClose: () => 
     });
     setBusy(false);
     const r = (await res.json().catch(() => ({}))) as {
-      created?: number;
-      updated?: number;
+      decks?: Array<{ created: number; updated: number; skipped: number }>;
       error?: string;
       details?: Array<{ path: (string | number)[]; message: string }>;
     };
-    if (!res.ok) {
+    if (!res.ok || !r.decks) {
       const first = r.details?.[0];
       setMsg({ ok: false, text: first ? `${first.path.join(".")}: ${first.message}` : (r.error ?? "Fehler") });
       return;
     }
-    setMsg({ ok: true, text: `${r.created} neue, ${r.updated} aktualisierte Karten.` });
+    const sum = r.decks.reduce((a, d) => ({ c: a.c + d.created, u: a.u + d.updated }), { c: 0, u: 0 });
+    setMsg({ ok: true, text: `${r.decks.length} ${r.decks.length === 1 ? "Lektion" : "Lektionen"}: ${sum.c} neue, ${sum.u} aktualisierte Karten.` });
     setJson("");
     onDone();
   };
 
   return (
-    <Sheet open onClose={onClose} title="Deck importieren">
+    <Sheet open onClose={onClose} title="Importieren">
       <p className="text-[13px] mt-2" style={{ color: "var(--ink-soft)" }}>
-        JSON mit <code>deck</code> und <code>cards</code>, wie die Lektionen im Jarvis-Repo. Ein bestehendes Deck wird
-        aktualisiert, dein Lernstand bleibt.
+        Kursexport (<code>kurs</code>, <code>karten</code>) oder ein Deck (<code>deck</code>, <code>cards</code>). Bestehende
+        Lektionen werden ergänzt, dein Lernstand bleibt.
       </p>
       <label className="block mt-3">
-        <span className="sr-only">Deck als JSON</span>
+        <span className="sr-only">JSON</span>
         <textarea
           value={json}
           onChange={(e) => setJson(e.target.value)}
           rows={10}
-          placeholder='{ "deck": { "id": "...", "title": "..." }, "cards": [ ... ] }'
+          placeholder='{ "kurs": "...", "karten": [ ... ] }'
           className="w-full rounded-2xl p-3 text-[13px] font-mono resize-none"
           style={{ background: "var(--cream-deep)" }}
         />

@@ -96,7 +96,7 @@ export function todayZurich(now: Date = new Date()): ISODate {
 
 // ─── Lernen ─────────────────────────────────────────────────
 
-export type CardType = "vocab" | "grammar" | "phrase";
+export type CardType = "vocab" | "grammar" | "phrase" | "sentence";
 
 export type CardDto = {
   id: string;
@@ -142,4 +142,7 @@ export type StudyStats = {
   newLimit: number;
   reviewedToday: number;
   streak: number;
+  /** Noch nie gelernte Lernrichtungen insgesamt. */
+  fresh: number;
+  dailyGoal: number;
 };

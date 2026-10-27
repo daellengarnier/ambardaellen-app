@@ -36,6 +36,20 @@
       "when": 1793108016400,
       "tag": "0004_seed_svff_l2_b1",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793109344165,
+      "tag": "0005_settings_push",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793109345187,
+      "tag": "0006_seed_svff_l2_lektionen",
+      "breakpoints": true
     }
   ]
 }
