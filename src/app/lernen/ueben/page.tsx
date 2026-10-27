@@ -220,7 +220,16 @@ function Session() {
   const tips = item && view ? tipsFor(item, view.answer) : [];
 
   return (
-    <div className="min-h-dvh flex flex-col px-4 pt-4 pb-6">
+    <div
+      className="fixed inset-0 z-40 mx-auto max-w-[480px] flex flex-col px-4 overflow-y-auto"
+      style={{
+        background: "var(--cream)",
+        // Eigene Vollbildansicht: die App-Hülle hält unten Platz für die
+        // Navigation frei, die beim Üben ausgeblendet ist.
+        paddingTop: "max(env(safe-area-inset-top), 1rem)",
+        paddingBottom: "max(env(safe-area-inset-bottom), 1.5rem)",
+      }}
+    >
       <div className="flex items-center gap-3">
         <Link
           href={isChapter ? "/" : "/lernen"}
