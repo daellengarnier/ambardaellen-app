@@ -57,6 +57,13 @@
       "when": 1793143545382,
       "tag": "0007_glossary",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793143546382,
+      "tag": "0008_thu_2026_11_16",
+      "breakpoints": true
     }
   ]
 }
