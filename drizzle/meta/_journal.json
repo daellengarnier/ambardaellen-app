@@ -64,6 +64,13 @@
       "when": 1793143546382,
       "tag": "0008_thu_2026_11_16",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793143547382,
+      "tag": "0009_thu_2026_11_16_kuerzen",
+      "breakpoints": true
     }
   ]
 }
