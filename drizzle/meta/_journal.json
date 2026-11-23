@@ -78,6 +78,13 @@
       "when": 1793143548382,
       "tag": "0010_thu_2026_11_16_ohne_vorstellung",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793143549382,
+      "tag": "0011_thu_2026_11_23",
+      "breakpoints": true
     }
   ]
 }
