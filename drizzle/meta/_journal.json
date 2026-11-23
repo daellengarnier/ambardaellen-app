@@ -71,6 +71,13 @@
       "when": 1793143547382,
       "tag": "0009_thu_2026_11_16_kuerzen",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793143548382,
+      "tag": "0010_thu_2026_11_16_ohne_vorstellung",
+      "breakpoints": true
     }
   ]
 }
